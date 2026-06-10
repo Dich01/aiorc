@@ -902,6 +902,12 @@ without skipping any or using your own judgment to modify them.</pre>
       const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
       localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
       applySidebarState();
+    // MCP snippets follow the origin the user is browsing from (localhost in
+    // dev, the public tunnel/domain when shared) - never a hardcoded URL.
+    document.querySelectorAll('.info-code').forEach(el => {
+      if (el.textContent.includes('__AIORC_ORIGIN__')) el.textContent = el.textContent.split('__AIORC_ORIGIN__').join(location.origin);
+    });
+
     }
     applySidebarState();
 
@@ -995,9 +1001,12 @@ without skipping any or using your own judgment to modify them.</pre>
         ? '<span style="color:#22c55e">● Public</span> — clients only need the project ID.'
         : '<span style="color:#f59e0b">● Private</span> — the API key is required.';
 
+      // The MCP URL follows whatever origin the user is browsing from —
+      // localhost in dev, the public tunnel/domain when shared with the team.
+      const mcpUrl = location.origin + '/mcp';
       const env = isPublic
-        ? { AIORC_PROJECT_ID: p.id, AIORC_URL:'http://localhost:3000/mcp' }
-        : { AIORC_PROJECT_KEY: p.api_key, AIORC_URL:'http://localhost:3000/mcp' };
+        ? { AIORC_PROJECT_ID: p.id, AIORC_URL: mcpUrl }
+        : { AIORC_PROJECT_KEY: p.api_key, AIORC_URL: mcpUrl };
       const cfg = JSON.stringify({ mcpServers:{ aiorc:{ type:'stdio', command:'node', args:['/path/to/mcp-bridge.js'], env } } }, null, 2);
       document.getElementById('mcp-config').textContent = cfg;
       document.getElementById('copy-mcp-btn').onclick = () => copyText(cfg,'MCP config copied!');
@@ -2755,7 +2764,7 @@ without skipping any or using your own judgment to modify them.</pre>
       "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
       "env": {
         "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
-        "AIORC_URL": "http://localhost:3000/mcp"
+        "AIORC_URL": "__AIORC_ORIGIN__/mcp"
       }
     }
   }

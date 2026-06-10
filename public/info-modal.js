@@ -76,7 +76,7 @@
       "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
       "env": {
         "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
-        "AIORC_URL": "http://localhost:3000/mcp"
+        "AIORC_URL": "${location.origin}/mcp"
       }
     }
   }

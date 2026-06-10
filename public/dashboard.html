@@ -601,7 +601,7 @@
       "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
       "env": {
         "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
-        "AIORC_URL": "http://localhost:3000/mcp"
+        "AIORC_URL": "__AIORC_ORIGIN__/mcp"
       }
     }
   }
@@ -705,6 +705,12 @@ workflow({
       const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
       localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
       applySidebarState();
+    // MCP snippets follow the origin the user is browsing from (localhost in
+    // dev, the public tunnel/domain when shared) - never a hardcoded URL.
+    document.querySelectorAll('.info-code').forEach(el => {
+      if (el.textContent.includes('__AIORC_ORIGIN__')) el.textContent = el.textContent.split('__AIORC_ORIGIN__').join(location.origin);
+    });
+
     }
     applySidebarState();
 
