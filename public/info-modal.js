@@ -57,10 +57,10 @@
           <li class="info-step"><div class="info-step-num">1</div><span><strong>Define the agents</strong> — In the <em>Agents</em> tab, create one for each logical step. Each agent is a Markdown prompt that the target model will execute verbatim as a section of the compiled flow.</span></li>
           <li class="info-step"><div class="info-step-num">2</div><span><strong>Define skills (optional)</strong> — Skills are auxiliary documents (TDD, standards, security patterns) that appear in the flow builder panel and that agents can reference by name.</span></li>
           <li class="info-step"><div class="info-step-num">3</div><span><strong>Create a project</strong> — In <em>Projects</em>. An API key is generated (format <code>key-XXXX...</code>) that you will use in the target configuration.</span></li>
-          <li class="info-step"><div class="info-step-num">4</div><span><strong>Build the flow</strong> — Open the project → <em>Flow Builder</em>. Drag agents from the left panel and connect them. For branching use <em>Decision</em>; for verdicts <em>Gate</em>; for iteration <em>Loop</em>.</span></li>
+          <li class="info-step"><div class="info-step-num">4</div><span><strong>Build the flow</strong> — Open the project → <em>Flow Builder</em>. Drag agents from the left panel and connect them. Branch with natural-language conditions on the edges; fork with <em>Parallel</em>; iterate with back-edges.</span></li>
           <li class="info-step"><div class="info-step-num">5</div><span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors, they are shown inline and saving is blocked.</span></li>
           <li class="info-step"><div class="info-step-num">6</div><span><strong>Configure the target project</strong> — Add <code>.mcp.json</code> + rule in <code>CLAUDE.md</code> (next tab).</span></li>
-          <li class="info-step"><div class="info-step-num">7</div><span><strong>Done</strong> — When Claude receives a task, it will call <code>workflow(request)</code> and AIOrc returns a deterministic step-by-step mega-prompt.</span></li>
+          <li class="info-step"><div class="info-step-num">7</div><span><strong>Done</strong> — When Claude receives a task it calls <code>workflow.start</code> (verified mode — the server hands it one step at a time and validates every transition) or <code>workflow</code> (compiled mode — the whole flow in one prompt).</span></li>
         </ol>
       </div>
 
@@ -90,11 +90,15 @@
           <div class="info-code">## Mandatory rule
 
 For any technical task (planning, implementation, code review,
-security, quality, bugs), always call AIOrc's \`workflow\` tool
-before responding. Never respond with a direct technical solution.
+security, quality, bugs), always start by calling AIOrc's
+\`workflow.start\` tool (or \`workflow\` if start is unavailable).
+Never respond with a direct technical solution.
+
+In stepped mode, execute ONLY the agent the server hands you
+and advance with \`workflow.next\` — never skip or modify steps.
 
 \`\`\`
-workflow({
+workflow.start({
   request: "<task description>",
   context: "<optional context>"
 })
@@ -107,28 +111,28 @@ workflow({
       </div>
 
       <div id="info-tab-blocks" class="info-tab-panel">
-        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:18px">Three control flow primitives in addition to linear agents. They are dragged from the top bar of the Flow Builder.</p>
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:18px">Decision, Gate and Loop are not separate node types — they are patterns built from plain agent nodes plus edges with conditions, priorities and back-edges. The only structural nodes besides Start/End are <strong>Parallel</strong> forks, whose branches ALL execute.</p>
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-decision">◇</span> Decision — content-based branching</h4>
-          <p>Reads the output of the previous step and picks <strong>a single</strong> branch based on natural language conditions. Branches are evaluated in priority order; the first match wins.</p>
+          <p><em>Pattern:</em> an agent followed by several outgoing edges with natural-language conditions. Edges are evaluated by ascending priority and a single transition is taken; an edge without condition acts as the fallback.</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> branch between agents (bug-resolver vs. new-fix), skip optional steps, pick a tool based on task type.</p>
         </div>
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-gate">⛔</span> Gate — mandatory verdict</h4>
-          <p>The previous agent must emit a literal verdict (PASS / FAIL / BLOCKED). The gate branches based on that token. <code>BLOCKED</code> ends the flow with a report; other verdicts continue down the corresponding branch.</p>
+          <p><em>Pattern:</em> the agent emits a literal verdict (PASS / FAIL / score ≥ X) and its outgoing edges carry conditions matching that verdict. Same structure as a branch — the verdict text is the condition.</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> after code-reviewer, security-qa, quality-gate, or any agent that returns a structured verdict.</p>
         </div>
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-loop">↻</span> Loop — capped iteration</h4>
-          <p>Repeats the body steps up to N iterations (max 20) or until the exit condition is met. The back-edge is created automatically when the block is dropped.</p>
+          <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent carries <code>max_invocations</code> (default 10, max 50) which caps the repetition.</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> review→fix→review until it passes, iterative refactor, test retries with backoff.</p>
         </div>
 
         <div class="info-note">
-          The three blocks can be nested freely (loops inside decisions, gates inside loops). The compiler handles convergence and back-edges automatically.
+          The patterns combine freely (loops inside branches, gates after forks). In compiled mode the target model honors conditions and caps from the instructions; in verified mode (<code>workflow.start</code> / <code>workflow.next</code>) the server validates every transition against the graph and enforces the caps itself.
         </div>
       </div>
 

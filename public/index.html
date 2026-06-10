@@ -486,13 +486,13 @@
 
   <!-- ===== HERO ===== -->
   <section class="hero">
-    <div class="hero-eyebrow">AI agent orchestration · MCP · Design-time compilation</div>
+    <div class="hero-eyebrow">AI agent orchestration · MCP · Server-verified execution</div>
     <h1 class="hero-title">
       <span class="hero-title-main">AI<span style="color:#4361ee">Orc</span> is a platform for teams &amp; developers to build AI workflows, share them, and reuse across projects.</span><br><em>"One developer builds a flow... everyone uses it."</em>
 
     </h1>
     <p class="hero-subtitle">
-      AIOrc converts visual agent flows into deterministic instructions. Define the process once, share it with your team, run it with a single call.
+      AIOrc turns visual agent flows into instructions any MCP client can execute — and, in verified mode, the server validates every step the model takes. Define the process once, share it with your team, and prove it ran as designed.
     </p>
     <div class="hero-actions">
       <button class="btn-hero-primary" onclick="openRegisterModal()">Get started free</button>
@@ -516,7 +516,7 @@
           <div class="step-num">Step 01</div>
           <div class="step-icon">🎨</div>
           <h3>Design the flow</h3>
-          <p>Connect agents in the visual Flow Builder. Add conditional decisions, quality gates and iteration loops with drag &amp; drop.</p>
+          <p>Connect agents in the visual Flow Builder. Branch with natural-language conditions on the edges, fork with Parallel nodes, iterate with back-edges.</p>
         </div>
         <div class="step-card">
           <div class="step-num">Step 02</div>
@@ -534,7 +534,7 @@
           <div class="step-num">Step 04</div>
           <div class="step-icon">🚀</div>
           <h3>Execute</h3>
-          <p>A single MCP call. Claude receives the compiled instructions and executes each agent in exact order, no callbacks, no planning loops.</p>
+          <p>Compiled mode: one MCP call returns the whole flow. Verified mode: the server hands the model one step at a time, rejecting any transition the graph does not allow.</p>
         </div>
       </div>
     </div>
@@ -551,13 +551,13 @@
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-glyph">⚡</div>
-          <h3>One call per run</h3>
-          <p>The compiler collapses the entire flow into a single MCP response. No back-and-forth, no accumulated latency between agents.</p>
+          <h3>Two execution modes</h3>
+          <p>Compiled: the whole flow in a single MCP response, zero orchestration latency. Verified: server-driven stepping where illegal transitions are rejected and every dispatch is recorded as ground truth.</p>
         </div>
         <div class="feature-card">
           <div class="feature-glyph">🔀</div>
-          <h3>Decisions and gates</h3>
-          <p>Decision nodes with YES/NO branches and quality gates with score threshold. The flow adapts to each agent's output.</p>
+          <h3>Conditional routing</h3>
+          <p>Natural-language conditions on edges, priorities, parallel forks and loops via back-edges with per-agent caps. Decisions and gates are patterns, not extra plumbing.</p>
         </div>
         <div class="feature-card">
           <div class="feature-glyph">📋</div>
@@ -572,12 +572,27 @@
         <div class="feature-card">
           <div class="feature-glyph">🛡️</div>
           <h3>Fail-closed by design</h3>
-          <p>Graph validation before compiling: cycle detection (Kahn's algorithm), broken references and dead-end flows.</p>
+          <p>Structural validation before compiling: single Start, valid agent references, well-formed forks. Cycles are legal loops, capped per agent — and in verified mode the server enforces the caps at runtime.</p>
         </div>
         <div class="feature-card">
           <div class="feature-glyph">🔑</div>
           <h3>Multi-project with auth</h3>
-          <p>API keys per project, user roles, run history and admin panel. Team-ready.</p>
+          <p>API keys per project, user roles, run history and admin panel. Multi-team from day one — not a paid tier.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">📚</div>
+          <h3>Contexts: domain apart from capability</h3>
+          <p>Business knowledge lives in Contexts, not inside agents. The same generic crew serves every project — inject the domain, reuse the capability.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">📈</div>
+          <h3>Live usage analytics</h3>
+          <p>Which agents, skills and contexts actually run — per project and per teammate, minute by minute. Graph-aware skip detection separates real failures from branches not taken.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">✅</div>
+          <h3>Deterministic evals</h3>
+          <p>Test cases per flow, graded by the server against the verified execution path. Know whether a change to an agent improved the flow or broke it — before your team finds out.</p>
         </div>
       </div>
     </div>
@@ -589,14 +604,14 @@
       <div class="section-eyebrow">Architecture</div>
       <h2 class="section-title">The compiler, under the hood</h2>
       <p class="section-body">
-        <code>compileFlow()</code> traverses the graph recursively, emits instruction blocks per node and concatenates them into an ordered payload. The model receives exact instructions and executes them in sequence, with no room for interpretation.
+        <code>compileFlow()</code> walks the graph, emits an instruction block per node and concatenates them into an ordered payload for compiled mode. In verified mode the engine goes further: it keeps the state machine on the server, dispatches one step at a time and validates every transition against the graph's edges.
       </p>
       <div class="arch-flow">
         <div class="arch-step">
           <div class="arch-step-icon">🖼️</div>
           <div class="arch-step-label">Canvas</div>
           <div class="arch-step-title">Flow Builder</div>
-          <div class="arch-step-desc">Agent, decision and gate nodes connected visually</div>
+          <div class="arch-step-desc">Start, agent, parallel and end nodes connected visually</div>
         </div>
         <div class="arch-step">
           <div class="arch-step-icon">🔁</div>
@@ -608,20 +623,20 @@
           <div class="arch-step-icon">📜</div>
           <div class="arch-step-label">Output</div>
           <div class="arch-step-title">Instructions</div>
-          <div class="arch-step-desc">STRICT_HEADER + imperative blocks per node + dividers</div>
+          <div class="arch-step-desc">Context + skills + agent blocks + topology &amp; execution rules</div>
         </div>
         <div class="arch-step">
           <div class="arch-step-icon">🤖</div>
           <div class="arch-step-label">Execution</div>
           <div class="arch-step-title">Target model</div>
-          <div class="arch-step-desc">Claude executes each agent in exact sequence, no additional planning</div>
+          <div class="arch-step-desc">Claude executes each step; in verified mode the server confirms every transition</div>
         </div>
       </div>
       <div class="arch-diagram" style="margin-top:32px;">
 <span class="dim">// Compiled instructions — sample fragment</span>
 
-<span class="hl">YOU MUST</span> execute this workflow exactly as written.
-DO NOT skip, reorder, paraphrase, or merge steps.
+<span class="hl">FOLLOW</span> the topology. After each agent, take exactly
+ONE of its allowed transitions — never skip or invent steps.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 <span class="hl">## Agent 1: task-planner</span>
@@ -629,9 +644,9 @@ Analyze the requirement and produce an action plan.
 <span class="ok">**Expected output format:**</span> Structured plan with tasks
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<span class="hl">## DECISION: Requires security review?</span>
-If YES → run Agent 2 (security-qa)
-If NO  → <span class="dim">skip to AFTER DECISION</span>
+<span class="hl">## Transitions from task-planner</span>
+→ security-qa   <span class="ok">when:</span> the plan touches auth or tenant data
+→ code-reviewer <span class="dim">(no condition — fallback)</span>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <span class="hl">## Agent 3: code-reviewer</span>
@@ -650,7 +665,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
           <img src="Screen_Icon.png" alt="Flow Builder — agent canvas" />
           <div class="screenshot-caption">
             <h3>Flow Builder</h3>
-            <p>Design multi-agent flows visually. Connect nodes, define gates and decisions — the compiler does the rest.</p>
+            <p>Design multi-agent flows visually. Connect nodes, set edge conditions and parallel branches — the compiler does the rest.</p>
           </div>
         </div>
         <div class="screenshot-card" onclick="openLightbox('Screen_flow.png', 'Project panel')">
@@ -676,6 +691,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
         <div class="usecase-card"><div class="usecase-glyph">🏢</div><div><h3>Multiple projects, same know-how</h3><p>Keep a library of specialized agents and deploy it across different projects. Team knowledge accumulates, not repeats.</p></div></div>
         <div class="usecase-card"><div class="usecase-glyph">🏗️</div><div><h3>Development pipelines</h3><p>Planner → Developer → Code Reviewer → Security QA. Deterministic CI flows any team member can run with a single call.</p></div></div>
         <div class="usecase-card"><div class="usecase-glyph">📝</div><div><h3>Standardized processes</h3><p>Define the process once, execute it consistently. From code review to content generation, with the same agents and the same rules every time.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">🔍</div><div><h3>Engineering leads</h3><p>See which of your agents the team actually relies on and which are noise. Audit any run step by step, with every transition validated and recorded by the server.</p></div></div>
       </div>
     </div>
   </section>
@@ -718,7 +734,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
           Everything is oriented toward agents and automation with a clear goal: reduce execution time, gain reliability in the LLM and eliminate slop — that scattered, unreliable output models generate when they don't have a deterministic flow to follow.
         </p>
         <p>
-          It's just getting started. Today you can already create projects, orchestrate flows, add agents and skills, share them with your team privately, make public the ones you want and consume others'. The idea is to build a community of experts in web2, web3, blockchain, Python, C# and everything else we can think of, sharing secure databases, cloud connections, interface design and software architecture.
+          It's just getting started. Today you can already create projects, orchestrate flows in compiled or server-verified mode, define eval suites that grade runs against the graph, watch live usage analytics per agent, skill and teammate, share everything with your team privately, make public what you want and consume others'. The idea is to build a community of experts in web2, web3, blockchain, Python, C# and everything else we can think of, sharing secure databases, cloud connections, interface design and software architecture.
         </p>
         <p>
           AIOrc is still a prototype in its early steps. What it needs now are people who try it, break it and share what happened. Early feedback is what defines where it goes, and the community is what will turn it into something truly useful. If what I'm building resonates with you, join in.
@@ -731,7 +747,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
   <!-- ===== CTA ===== -->
   <section class="cta-section">
     <h2>Start orchestrating today</h2>
-    <p>Create your account, design your first flow and share it with your team in minutes.</p>
+    <p>Create your account, design your first flow and share it with your team in minutes. Multi-team workspaces, permissions and audit — the features others put behind enterprise plans — are simply included.</p>
     <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
       <button class="btn-hero-primary" onclick="openRegisterModal()">Create free account</button>
       <a class="btn-hero-secondary" href="faq.html">Read the docs</a>
@@ -743,7 +759,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
     <div class="footer-inner">
       <div class="footer-brand">
         <a href="/" class="nav-logo">AI<span>Orc</span></a>
-        <p>AI agent orchestration over MCP. Design, compile and share flows with your team.</p>
+        <p>AI agent orchestration over MCP. Design, share and verify agent flows with your team.</p>
       </div>
       <div class="footer-links">
         <div class="footer-col">
