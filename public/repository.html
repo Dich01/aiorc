@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Public repository</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Sidebar (cloned from dashboard.html to maintain consistency) ── */
+    body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo,
+    .sidebar.collapsed .sidebar-section-title,
+    .sidebar.collapsed .sidebar-item-label,
+    .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .sidebar.collapsed .sidebar-footer { padding:12px 8px; align-items:center; }
+    .team-badge { margin-left:auto; background:#ef4444; color:#fff; font-size:0.66rem; font-weight:700; padding:1px 6px; border-radius:9px; min-width:16px; text-align:center; line-height:1.4; }
+    .sidebar.collapsed .team-badge { position:absolute; top:6px; right:6px; padding:0 4px; min-width:14px; font-size:0.6rem; }
+    .sidebar.collapsed #sb-team { position:relative; }
+
+    /* ── Top nav for anonymous mode ── */
+    .anon-nav { background:#1a1a2e; color:#e0e0ff; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.3); position:sticky; top:0; z-index:100; }
+    .anon-nav .logo { font-size:1.25rem; font-weight:700; color:inherit; text-decoration:none; }
+    .anon-nav .logo span { color:var(--primary); }
+    .anon-nav-cta { display:flex; gap:10px; align-items:center; }
+    .anon-nav-cta a { color:#e0e0ff; text-decoration:none; font-size:0.88rem; }
+    .anon-nav-cta a.cta { background:var(--primary); color:#fff; padding:7px 16px; border-radius:6px; font-weight:600; }
+    .anon-nav-cta a.cta:hover { background:var(--primary-dark); }
+
+    .main-area { flex:1; min-width:0; }
+    .main-container { max-width:1100px; margin:0 auto; padding:32px 32px 60px; }
+
+    /* ── Page header ── */
+    .repo-header { margin-bottom:24px; }
+    .repo-eyebrow { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--primary); margin-bottom:8px; }
+    .repo-title { font-size:1.75rem; font-weight:700; line-height:1.2; margin-bottom:10px; color:var(--text); }
+    .repo-deck { font-size:0.95rem; color:var(--muted); line-height:1.55; max-width:680px; }
+
+    /* ── Tabs ── */
+    .repo-tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); }
+    .repo-tab-btn {
+      background:none; border:none; cursor:pointer;
+      padding:10px 18px; font-size:0.92rem; color:var(--muted);
+      border-bottom:2px solid transparent; margin-bottom:-1px;
+      font-family:inherit; transition:color .15s, border-color .15s;
+      display:inline-flex; align-items:center; gap:8px;
+    }
+    .repo-tab-btn:hover { color:var(--text); }
+    .repo-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+    .repo-tab-count {
+      background:var(--bg); color:var(--muted);
+      font-size:0.72rem; font-weight:600;
+      padding:1px 7px; border-radius:9px; min-width:18px; text-align:center;
+      border:1px solid var(--border);
+    }
+    .repo-tab-btn.active .repo-tab-count { background:#eef2ff; color:var(--primary); border-color:#c7d2fe; }
+
+    /* ── Search + sort ── */
+    .repo-controls { display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
+    .search-input-wrap { flex:1; min-width:240px; position:relative; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; transition:border-color .15s; }
+    .search-input-wrap:focus-within { border-color:var(--primary); }
+    .search-input-wrap::before { content:'⌕'; position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); }
+    .search-input { width:100%; box-sizing:border-box; background:transparent; border:none; outline:none; padding:11px 14px 11px 40px; font-size:0.9rem; color:var(--text); font-family:inherit; }
+    .search-input::placeholder { color:var(--muted); opacity:0.7; }
+    .sort-select { padding:11px 14px; border:1px solid var(--border); border-radius:8px; background:var(--card-bg); color:var(--text); font-family:inherit; font-size:0.88rem; cursor:pointer; }
+
+    .search-meta { font-size:0.82rem; color:var(--muted); margin-bottom:18px; }
+
+    /* ── Grid ── */
+    .repo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
+    .repo-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 20px; display:flex; flex-direction:column; gap:12px; transition:border-color .15s, transform .15s, box-shadow .15s; }
+    .repo-card:hover { border-color:var(--primary); transform:translateY(-2px); box-shadow:0 8px 20px rgba(67,97,238,0.08); }
+
+    .repo-card-header { display:flex; align-items:flex-start; gap:12px; }
+    .repo-icon { width:38px; height:38px; border-radius:9px; background:linear-gradient(135deg,#4361ee,#7c3aed); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.85rem; flex-shrink:0; }
+    .repo-card-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .repo-card-name { font-size:1rem; font-weight:600; color:var(--text); word-break:break-word; }
+    .repo-card-owner { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+    .repo-card-owner a { color:var(--primary); text-decoration:none; font-weight:500; }
+    .repo-card-owner a:hover { text-decoration:underline; }
+
+    .pc-visibility { display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:10px; font-weight:600; background:#d1fae5; color:#065f46; }
+
+    .repo-card-desc { font-size:0.86rem; color:var(--text); line-height:1.55; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; min-height:44px; }
+    .repo-card-desc.empty { color:var(--muted); font-style:italic; }
+
+    .pc-section { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:5px; }
+    .pc-badges { display:flex; flex-wrap:wrap; gap:5px; }
+    .pc-badge { font-size:0.72rem; padding:3px 9px; border-radius:12px; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+    .pc-badge.skill { background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+    .pc-badge.more { background:#f3f4f6; color:#6b7280; border-color:var(--border); }
+    .pc-empty-row { font-size:0.74rem; color:var(--muted); font-style:italic; }
+
+    .pc-flow-preview { background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:8px; height:78px; position:relative; overflow:hidden; }
+    .pc-flow-preview svg { width:100%; height:100%; display:block; }
+    .pc-flow-empty { display:flex; align-items:center; justify-content:center; height:100%; font-size:0.74rem; color:#475569; }
+    .pc-flow-node { fill:#3730a3; stroke:#6366f1; stroke-width:1; }
+    .pc-flow-node.decision { fill:#92400e; stroke:#f59e0b; }
+    .pc-flow-node.gate     { fill:#991b1b; stroke:#ef4444; }
+    .pc-flow-node.loop     { fill:#065f46; stroke:#10b981; }
+    .pc-flow-edge { stroke:#475569; stroke-width:1; fill:none; }
+
+    /* ── Star + Fork buttons & counters ── */
+    .repo-card-stats { display:flex; gap:14px; align-items:center; font-size:0.82rem; color:var(--muted); }
+    .repo-stat { display:inline-flex; align-items:center; gap:4px; }
+    .star-btn, .fork-btn {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:5px 11px; border:1px solid var(--border); border-radius:6px;
+      background:var(--card-bg); color:var(--text);
+      font-family:inherit; font-size:0.8rem; cursor:pointer;
+      transition:background .12s, border-color .12s, color .12s;
+    }
+    .star-btn:hover { background:#fffbeb; border-color:#fbbf24; color:#92400e; }
+    .star-btn.is-starred { background:#fef3c7; border-color:#fbbf24; color:#92400e; }
+    /* Yellow whenever there's at least one star on the project (community signal) */
+    .star-btn.has-stars { color:#b45309; border-color:#fcd34d; }
+    .star-btn.has-stars.is-starred { color:#92400e; background:#fef3c7; border-color:#fbbf24; }
+    .repo-stat.has-stars { color:#b45309; font-weight:600; }
+    .fork-btn:hover { background:#eef2ff; border-color:var(--primary); color:var(--primary); }
+
+    .repo-card-footer {
+      margin-top:auto; padding-top:12px;
+      border-top:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:0.78rem;
+    }
+    .repo-id-pill { background:var(--bg); padding:3px 8px; border-radius:5px; font-family:'SFMono-Regular',Consolas,monospace; color:var(--muted); }
+    .copy-id-btn { background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem; font-family:inherit; padding:2px 6px; border-radius:4px; }
+    .copy-id-btn:hover { background:#eef2ff; }
+
+    /* Tooltip above the Copy MCP ID button */
+    .has-tooltip { position:relative; }
+    .has-tooltip::after {
+      content: attr(data-tooltip);
+      position:absolute; bottom:calc(100% + 8px); right:0;
+      background:#0f172a; color:#e2e8f0;
+      padding:8px 10px; border-radius:6px;
+      font-size:0.74rem; font-weight:400; line-height:1.45;
+      white-space:normal; width:240px;
+      box-shadow:0 6px 16px rgba(0,0,0,0.25);
+      opacity:0; pointer-events:none; transition:opacity .15s;
+      z-index:10;
+    }
+    .has-tooltip::before {
+      content:''; position:absolute; bottom:calc(100% + 2px); right:14px;
+      border:5px solid transparent; border-top-color:#0f172a;
+      opacity:0; transition:opacity .15s; pointer-events:none;
+    }
+    .has-tooltip:hover::after, .has-tooltip:hover::before { opacity:1; }
+    .has-tooltip code {
+      background:rgba(251,191,36,0.18); color:#fde68a;
+      padding:1px 4px; border-radius:3px;
+      font-family:'SFMono-Regular',Consolas,monospace; font-size:0.72rem;
+    }
+
+    /* ── Empty / loading ── */
+    .repo-empty { grid-column:1 / -1; text-align:center; padding:60px 24px; color:var(--muted); }
+    .repo-empty h3 { font-size:1.05rem; color:var(--text); margin-bottom:8px; font-weight:600; }
+    .repo-empty p { font-size:0.88rem; line-height:1.55; max-width:420px; margin:0 auto; }
+
+    /* ── Toast ── */
+    .copy-toast { position:fixed; bottom:20px; right:20px; background:#1a1a2e; color:#fff; padding:8px 16px; border-radius:6px; font-size:0.85rem; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+
+    /* ── Clickable card names → content viewer ── */
+    .repo-card-name.clickable { cursor:pointer; transition:color 0.12s, text-decoration-color 0.12s; text-decoration:underline; text-decoration-color:transparent; text-underline-offset:3px; }
+    .repo-card-name.clickable:hover { color:#6366f1; text-decoration-color:#6366f1; }
+
+    /* ── Content modal ── */
+    .rc-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:10000; display:none; align-items:center; justify-content:center; padding:20px; }
+    .rc-modal-backdrop.open { display:flex; }
+    .rc-modal-box { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; max-width:780px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 16px 48px rgba(0,0,0,0.6); }
+    .rc-modal-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .rc-modal-title { font-size:1.05rem; font-weight:700; color:var(--text); margin:0; }
+    .rc-modal-meta { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+    .rc-modal-close { background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:1.5rem; line-height:1; padding:0 6px; }
+    .rc-modal-close:hover { color:var(--text); }
+    .rc-modal-body { padding:18px; overflow-y:auto; flex:1; }
+    .rc-modal-content { white-space:pre-wrap; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:0.85rem; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:14px; line-height:1.55; }
+    .rc-modal-hint { background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:6px; padding:10px 12px; color:#a5b4fc; font-size:0.85rem; line-height:1.5; }
+
+    @media (max-width:768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+      .main-container { padding:24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar (logged-in) or top nav (anonymous) — set by JS based on token -->
+  <div id="shell-mount"></div>
+
+  <main class="main-area">
+    <div class="main-container">
+      <section class="repo-header">
+        <div class="repo-eyebrow">Public repository</div>
+        <h1 class="repo-title">AIOrc Community</h1>
+        <p class="repo-deck">
+          Explore projects, agents and skills that other users have made public.
+          Fork what's useful — everything is copied to your workspace so you can modify it without affecting the original.
+        </p>
+      </section>
+
+      <!-- Tabs -->
+      <div class="repo-tabs">
+        <button class="repo-tab-btn active" data-tab="projects" onclick="switchRepoTab('projects')">
+          Projects <span class="repo-tab-count" id="count-projects">0</span>
+        </button>
+        <button class="repo-tab-btn" data-tab="agents" onclick="switchRepoTab('agents')">
+          Agents <span class="repo-tab-count" id="count-agents">0</span>
+        </button>
+        <button class="repo-tab-btn" data-tab="skills" onclick="switchRepoTab('skills')">
+          Skills <span class="repo-tab-count" id="count-skills">0</span>
+        </button>
+        <button class="repo-tab-btn" data-tab="contexts" onclick="switchRepoTab('contexts')">
+          Contexts <span class="repo-tab-count" id="count-contexts">0</span>
+        </button>
+      </div>
+
+      <div class="repo-controls">
+        <div class="search-input-wrap">
+          <input type="text" id="search-input" class="search-input" placeholder="Search…" autocomplete="off" />
+        </div>
+        <select id="sort-select" class="sort-select">
+          <option value="recent">Most recent</option>
+          <option value="stars">Most popular (★)</option>
+          <option value="forks">Most forks (🍴)</option>
+          <option value="usage">Most used (▶)</option>
+        </select>
+      </div>
+
+      <div class="search-meta" id="search-meta">Loading…</div>
+      <div class="repo-grid" id="repo-grid"></div>
+    </div>
+  </main>
+
+  <!-- Content viewer modal (read-only) -->
+  <div class="rc-modal-backdrop" id="rc-modal" onclick="closeContentModal(event)">
+    <div class="rc-modal-box" onclick="event.stopPropagation()">
+      <div class="rc-modal-header">
+        <div>
+          <h3 class="rc-modal-title" id="rc-modal-title">—</h3>
+          <div class="rc-modal-meta" id="rc-modal-meta"></div>
+        </div>
+        <button class="rc-modal-close" onclick="closeContentModal()" title="Close">×</button>
+      </div>
+      <div class="rc-modal-body" id="rc-modal-body">…</div>
+    </div>
+  </div>
+
+  <script src="info-modal.js"></script>
+  <script src="ui-dialogs.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token;
+    const userNickname = localStorage.getItem('userNickname') || '';
+    const userEmail = localStorage.getItem('userEmail') || '';
+
+    // ── Render the shell (sidebar if logged in; top nav if anonymous) ──
+    const mount = document.getElementById('shell-mount');
+    if (isLoggedIn) {
+      document.body.classList.add('has-sidebar');
+      mount.outerHTML = `
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+            <button class="sidebar-collapse-btn" id="sidebar-toggle" title="Collapse/expand menu" onclick="toggleSidebar()">‹</button>
+          </div>
+          <div class="sidebar-section-title">Workspace</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="dashboard.html?tab=projects" title="Projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=agents" title="Agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=skills" title="Skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=contexts" title="Contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>
+            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team" title="Team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
+          </nav>
+          <div class="sidebar-section-title">Insights</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="analytics.html" title="Usage analytics"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
+          </nav>
+          <div class="sidebar-section-title">Community</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item active" href="repository.html" title="Public repository"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>
+            <a class="sidebar-item" href="issues.html" title="Issues"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
+          </nav>
+          <div class="sidebar-section-title">Help</div>
+          <nav class="sidebar-nav">
+            <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>
+            <a class="sidebar-item" href="faq.html" title="Documentation"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>
+          </nav>
+          <div class="sidebar-footer">
+            <div class="sidebar-user" style="font-weight:600">${userNickname ? '@' + esc(userNickname) : esc(userEmail)}</div>
+            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(userEmail)}</div>
+            <a href="#" class="sidebar-logout" id="logout-btn">Log out</a>
+          </div>
+        </aside>`;
+      // Sidebar collapse persistence (same key as dashboard)
+      const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+      const applySidebarState = () => {
+        const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebar-toggle');
+        if (sb) sb.classList.toggle('collapsed', collapsed);
+        if (btn) btn.textContent = collapsed ? '›' : '‹';
+      };
+      window.toggleSidebar = () => {
+        const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+        localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
+        applySidebarState();
+      };
+      applySidebarState();
+      document.getElementById('logout-btn').addEventListener('click', e => {
+        e.preventDefault(); localStorage.clear(); window.location.href = 'index.html';
+      });
+      // Pending invitations badge (inline fetch — authedFetch isn't defined yet at this point)
+      (async () => {
+        try {
+          const res = await fetch('/invitations/incoming', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (!res.ok) return;
+          const list = await res.json();
+          const pending = list.filter(i => i.status === 'pending').length;
+          const badge = document.getElementById('team-badge');
+          if (!badge) return;
+          if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+        } catch {}
+      })();
+    } else {
+      mount.outerHTML = `
+        <nav class="anon-nav">
+          <a href="index.html" class="logo">AI<span>Orc</span></a>
+          <div style="display:flex;gap:32px;align-items:center">
+            <a href="faq.html" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">Documentation</a>
+            <a href="repository.html" style="color:#fff;text-decoration:none;font-size:0.9rem;font-weight:600">Public repository</a>
+            <a href="index.html#origen" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">About</a>
+          </div>
+          <div class="anon-nav-cta">
+            <a href="index.html">Log in</a>
+            <a href="index.html" class="cta">Create account</a>
+          </div>
+        </nav>`;
+    }
+
+    // ── Helpers ──
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function initials(n) { return String(n||'').split(/[\s_-]+/).filter(Boolean).map(p=>p[0]).join('').toUpperCase().slice(0,2) || '?'; }
+    function toast(msg) {
+      document.querySelectorAll('.copy-toast').forEach(x => x.remove());
+      const el = Object.assign(document.createElement('div'), { className:'copy-toast', textContent: msg });
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2000);
+    }
+    async function authedFetch(url, opts = {}) {
+      const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      return fetch(url, { ...opts, headers });
+    }
+
+    window.copyProjectId = function(id) {
+      navigator.clipboard.writeText(id).then(() => toast('Project ID copied'));
+    };
+
+    // ── Read-only content viewer ──────────────────────────────────────────────
+    window.closeContentModal = function(e) {
+      if (e && e.target.id !== 'rc-modal' && e.type === 'click') return;
+      document.getElementById('rc-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    };
+    function openContentModal(title, meta, bodyHtml) {
+      document.getElementById('rc-modal-title').textContent = title;
+      document.getElementById('rc-modal-meta').textContent = meta || '';
+      document.getElementById('rc-modal-body').innerHTML = bodyHtml;
+      document.getElementById('rc-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContentModal(); });
+
+    window.viewAgentContent = async function(id, name) {
+      if (!isLoggedIn) {
+        openContentModal(name, 'Public agent', `<div class="rc-modal-hint">Log in and fork this agent to see its full content. The name and description are available in the public list; the agent body stays private until you copy it to your workspace.</div>`);
+        return;
+      }
+      openContentModal(name, 'Loading…', '<p style="color:var(--muted)">…</p>');
+      try {
+        const res = await authedFetch(`/agents/${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const a = await res.json();
+        const skills = a.skills || [];
+        const skillsHtml = skills.length
+          ? skills.map(s => `<span class="pc-badge skill">${esc(s.name)}</span>`).join('')
+          : '<span style="color:var(--muted);font-size:0.82rem;font-style:italic">no associated skills</span>';
+        const listItem = itemsById[id];
+        const usageMeta = listItem && typeof listItem.usage_runs === 'number'
+          ? ` · executed in ${listItem.usage_runs} run(s), ${listItem.usage_invocations || 0} invocation(s)`
+          : '';
+        const meta = (a.owner_nickname ? `by @${esc(a.owner_nickname)}` : '') + (a.is_public ? ' · public' : '') + usageMeta;
+        const body = `
+          <div style="margin-bottom:14px">
+            <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Skills</div>
+            <div class="pc-badges">${skillsHtml}</div>
+          </div>
+          <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
+          <div class="rc-modal-content">${esc(a.content || '(no content)')}</div>`;
+        openContentModal(a.name, meta, body);
+      } catch (err) {
+        openContentModal(name, '', `<div class="rc-modal-hint">Could not load content: ${esc(err.message)}</div>`);
+      }
+    };
+
+    window.viewContextContent = async function(id, name) {
+      if (!isLoggedIn) {
+        openContentModal(name, 'Public context', `<div class="rc-modal-hint">Log in and fork this context to see its full content. The body stays private until you copy it to your workspace.</div>`);
+        return;
+      }
+      openContentModal(name, 'Loading…', '<p style="color:var(--muted)">…</p>');
+      try {
+        const res = await authedFetch(`/contexts/${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const c = await res.json();
+        const ctxItem = itemsById[id];
+        const ctxUsageMeta = ctxItem && typeof ctxItem.usage_runs === 'number'
+          ? ` · included in ${ctxItem.usage_runs} run(s)`
+          : '';
+        const meta = (c.owner_nickname ? `by @${esc(c.owner_nickname)}` : '') + (c.is_public ? ' · public' : '') + ctxUsageMeta;
+        const body = `
+          ${c.description ? `<div style="margin-bottom:14px;font-size:0.86rem;color:var(--text);line-height:1.5">${esc(c.description)}</div>` : ''}
+          <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
+          <div class="rc-modal-content">${esc(c.content || '(no content)')}</div>`;
+        openContentModal(c.name, meta, body);
+      } catch (err) {
+        openContentModal(name, '', `<div class="rc-modal-hint">Could not load content: ${esc(err.message)}</div>`);
+      }
+    };
+
+    window.viewSkillContent = async function(id, name) {
+      if (!isLoggedIn) {
+        openContentModal(name, 'Public skill', `<div class="rc-modal-hint">Log in and fork this skill to see its full content. The skill body stays private until you copy it to your workspace.</div>`);
+        return;
+      }
+      openContentModal(name, 'Loading…', '<p style="color:var(--muted)">…</p>');
+      try {
+        const res = await authedFetch(`/skills/${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const s = await res.json();
+        const skillItem = itemsById[id];
+        const skillUsageMeta = skillItem && typeof skillItem.usage_runs === 'number'
+          ? ` · executed in ${skillItem.usage_runs} run(s), ${skillItem.usage_invocations || 0} invocation(s)`
+          : '';
+        const meta = (s.owner_nickname ? `by @${esc(s.owner_nickname)}` : '') + (s.is_public ? ' · public' : '') + skillUsageMeta;
+        const files = Array.isArray(s.files) && s.files.length > 0
+          ? s.files.slice().sort((a, b) => (b.is_entry ? 1 : 0) - (a.is_entry ? 1 : 0) || (a.ordinal ?? 0) - (b.ordinal ?? 0))
+          : [{ name: 'SKILL.md', description: '', content: s.content || '', is_entry: 1 }];
+        const filesHtml = '<div class="skill-files-readonly skill-files-list">' + files.map((f, idx) => {
+          const isEntry = !!f.is_entry;
+          const tag = isEntry ? '<span class="skill-file-tag">entry</span>' : '';
+          const desc = f.description ? `<span class="skill-file-desc-preview">${esc(f.description)}</span>` : '';
+          const openClass = idx === 0 ? 'open' : '';
+          return `
+            <div class="skill-file-row ${isEntry ? 'entry' : ''} ${openClass}">
+              <div class="skill-file-head" onclick="this.parentElement.classList.toggle('open')">
+                <span class="skill-file-caret">▼</span>
+                <span class="skill-file-name-label">${esc(f.name)}</span>
+                ${tag}
+                ${desc}
+              </div>
+              <div class="skill-file-body"><pre>${esc(f.content || '(empty)')}</pre></div>
+            </div>`;
+        }).join('') + '</div>';
+        const body = `
+          ${s.description ? `<div style="margin-bottom:14px;font-size:0.86rem;color:var(--text);line-height:1.5">${esc(s.description)}</div>` : ''}
+          ${filesHtml}`;
+        openContentModal(s.name, meta, body);
+      } catch (err) {
+        openContentModal(name, '', `<div class="rc-modal-hint">Could not load content: ${esc(err.message)}</div>`);
+      }
+    };
+
+    window.viewProjectContent = function(id, name, description) {
+      const body = description
+        ? `<div style="font-size:0.92rem;color:var(--text);line-height:1.6;margin-bottom:14px">${esc(description)}</div>`
+          + `<div class="rc-modal-hint">To see the full agents, skills and flow, fork this project to your workspace.</div>`
+        : `<div class="rc-modal-hint">This project has no description. Fork it to inspect it in your workspace.</div>`;
+      const projItem = itemsById[id];
+      const projUsageMeta = projItem && typeof projItem.usage_runs === 'number'
+        ? `Public project · ${projItem.usage_runs} run(s), ${projItem.usage_reported_runs || 0} with execution report`
+        : 'Public project';
+      openContentModal(name, projUsageMeta, body);
+    };
+
+    // ── Star / Fork actions (logged-in only) ──
+    // ── Generic star/fork actions parametrized by entity type ──
+    const TYPE_PATHS = {
+      projects: { base: '/projects', after: id => `project.html?id=${encodeURIComponent(id)}` },
+      agents:   { base: '/agents',   after: () => `dashboard.html?tab=agents` },
+      skills:   { base: '/skills',   after: () => `dashboard.html?tab=skills` },
+      contexts: { base: '/contexts', after: () => `dashboard.html?tab=contexts` },
+    };
+
+    window.toggleStarOn = async function(type, id, btnEl) {
+      if (!isLoggedIn) { window.location.href = 'index.html'; return; }
+      btnEl.disabled = true;
+      try {
+        const res = await authedFetch(`${TYPE_PATHS[type].base}/${id}/star`, { method:'POST' });
+        if (!res.ok) { toast('Could not star.'); return; }
+        const data = await res.json();
+        btnEl.classList.toggle('is-starred', data.is_starred);
+        btnEl.classList.toggle('has-stars', data.stars_count > 0);
+        const countEl = btnEl.querySelector('.star-count');
+        if (countEl) countEl.textContent = data.stars_count;
+        const card = btnEl.closest('.repo-card');
+        const stat = card?.querySelector('.repo-stat-stars-count');
+        if (stat) {
+          stat.textContent = data.stars_count;
+          stat.parentElement?.classList.toggle('has-stars', data.stars_count > 0);
+        }
+      } finally {
+        btnEl.disabled = false;
+      }
+    };
+
+    window.forkOn = async function(type, id, btnEl) {
+      if (!isLoggedIn) { window.location.href = 'index.html'; return; }
+      const labels = { projects:'project', agents:'agent', skills:'skill', contexts:'context' };
+      if (!await uiConfirm(`Fork this ${labels[type]} to your workspace? You'll get an editable copy.`)) return;
+      btnEl.disabled = true;
+      try {
+        const res = await authedFetch(`${TYPE_PATHS[type].base}/${id}/fork`, { method:'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({}));
+          await uiAlert(err.error || 'Could not fork.');
+          return;
+        }
+        const fork = await res.json();
+        window.location.href = TYPE_PATHS[type].after(fork.id);
+      } finally {
+        btnEl.disabled = false;
+      }
+    };
+
+    // ── Flow preview SVG ──
+    function renderFlowPreview(flow) {
+      const nodes = (flow && Array.isArray(flow.nodes)) ? flow.nodes : [];
+      const edges = (flow && Array.isArray(flow.edges)) ? flow.edges : [];
+      if (!nodes.length) return `<div class="pc-flow-empty">No flow configured</div>`;
+      const W = 280, H = 64, PAD = 8, NW = 14, NH = 9;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      nodes.forEach(n => {
+        if (typeof n.x === 'number') { minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x); }
+        if (typeof n.y === 'number') { minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y); }
+      });
+      if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+      const dx = Math.max(1, maxX - minX), dy = Math.max(1, maxY - minY);
+      const sx = (W - 2*PAD - NW) / dx, sy = (H - 2*PAD - NH) / dy;
+      const proj = n => ({ x: PAD + ((n.x ?? 0) - minX) * sx, y: PAD + ((n.y ?? 0) - minY) * sy });
+      const byId = {};
+      const placed = nodes.map(n => { const p = proj(n); byId[n.id] = p; return { n, p }; });
+      const edgesSvg = edges.map(e => {
+        const a = byId[e.from], b = byId[e.to];
+        if (!a || !b) return '';
+        return `<line class="pc-flow-edge" x1="${a.x + NW/2}" y1="${a.y + NH/2}" x2="${b.x + NW/2}" y2="${b.y + NH/2}"/>`;
+      }).join('');
+      const nodesSvg = placed.map(({ n, p }) => {
+        const t = n.node_type ?? 'agent';
+        const cls = t === 'decision' ? 'decision' : t === 'gate' ? 'gate' : (t === 'loop_start' || t === 'loop_end') ? 'loop' : '';
+        return `<rect class="pc-flow-node ${cls}" x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="2"/>`;
+      }).join('');
+      return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${edgesSvg}${nodesSvg}</svg>`;
+    }
+
+    // ── Card renderers per type ──
+    function ownerLink(p) {
+      return p.owner_nickname
+        ? `<a href="user.html?nick=${encodeURIComponent(p.owner_nickname)}">@${esc(p.owner_nickname)}</a>`
+        : esc(p.owner_email || 'unknown');
+    }
+
+    function actionsRow(type, item) {
+      const stars = item.stars_count || 0;
+      const forks = item.forks_count || 0;
+      const isStarred = !!item.is_starred;
+      const starHl = stars > 0 ? 'has-stars' : '';
+      if (isLoggedIn) {
+        return `<button class="star-btn ${starHl} ${isStarred ? 'is-starred' : ''}" onclick="toggleStarOn('${type}', '${esc(item.id)}', this)">
+                  ★ <span class="star-count">${stars}</span>
+                </button>
+                <button class="fork-btn" onclick="forkOn('${type}', '${esc(item.id)}', this)">🍴 Fork</button>`;
+      }
+      return `<span class="repo-stat ${starHl}" title="Log in to star">★ ${stars}</span>
+              <span class="repo-stat" title="Log in to fork">🍴 ${forks}</span>`;
+    }
+    function statsBadges(item) {
+      if (!isLoggedIn) return '';
+      const stars = item.stars_count || 0;
+      const forks = item.forks_count || 0;
+      const starHl = stars > 0 ? 'has-stars' : '';
+      // usage_runs is provided for projects (total runs), agents and skills
+      // (runs where they actually executed). Contexts have no usage concept.
+      const usageBadge = (typeof item.usage_runs === 'number')
+        ? `<span class="repo-stat" title="${typeof item.usage_invocations === 'number'
+              ? `Executed in ${item.usage_runs} run(s), ${item.usage_invocations} invocation(s) total`
+              : `${item.usage_runs} run(s)`}">▶ ${item.usage_runs}</span>`
+        : '';
+      return `<div class="repo-card-stats">
+                <span class="repo-stat ${starHl}" title="Stars">★ <span class="repo-stat-stars-count">${stars}</span></span>
+                <span class="repo-stat" title="Forks">🍴 ${forks}</span>
+                ${usageBadge}
+              </div>`;
+    }
+
+    function renderProjectCard(p) {
+      const desc = (p.description || '').trim();
+      const agents = p.agents || [];
+      const skills = p.skills || [];
+      const aMore = Math.max(0, (p.agents_count || 0) - agents.length);
+      const sMore = Math.max(0, (p.skills_count || 0) - skills.length);
+      const flowNodeCount = (p.flow && Array.isArray(p.flow.nodes)) ? p.flow.nodes.length : 0;
+      const agentsBlock = agents.length
+        ? `<div class="pc-badges">${agents.map(a => `<span class="pc-badge">${esc(a.name)}</span>`).join('')}${aMore ? `<span class="pc-badge more">+${aMore}</span>` : ''}</div>`
+        : '<div class="pc-empty-row">No associated agents</div>';
+      const skillsBlock = skills.length
+        ? `<div class="pc-badges">${skills.map(s => `<span class="pc-badge skill">${esc(s.name)}</span>`).join('')}${sMore ? `<span class="pc-badge more">+${sMore}</span>` : ''}</div>`
+        : '<div class="pc-empty-row">No associated skills</div>';
+      const tagList = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      const tagsBlock = tagList.length
+        ? `<div class="tag-chips" style="margin-top:8px">${tagList.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`
+        : '';
+      return `
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">${esc(initials(p.name))}</div>
+            <div style="min-width:0;flex:1">
+              <div class="repo-card-title-row">
+                <span class="repo-card-name clickable" onclick="viewProjectContent('${esc(p.id)}','${esc(p.name).replace(/'/g, "\\'")}','${esc(desc).replace(/'/g, "\\'")}')" title="Click to view description">${esc(p.name)}</span>
+                <span class="pc-visibility">● Public</span>
+              </div>
+              <div class="repo-card-owner">by ${ownerLink(p)}</div>
+            </div>
+          </div>
+          <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${tagsBlock}
+          ${statsBadges(p)}
+          <div><div class="pc-section">Agents (${p.agents_count ?? 0})</div>${agentsBlock}</div>
+          <div><div class="pc-section">Skills (${p.skills_count ?? 0})</div>${skillsBlock}</div>
+          <div><div class="pc-section">Flow (${flowNodeCount} nodes)</div><div class="pc-flow-preview">${renderFlowPreview(p.flow)}</div></div>
+          <div style="display:flex;gap:8px;align-items:center">${actionsRow('projects', p)}</div>
+          ${isLoggedIn ? `
+          <div class="repo-card-footer">
+            <span class="repo-id-pill" title="${esc(p.id)}">${esc(p.id.slice(0,8))}…</span>
+            <button class="copy-id-btn has-tooltip"
+                    data-tooltip="Paste this ID into the AIORC_PROJECT_ID variable in the MCP bridge. It replaces the MCP key when the project is public — the client sends it in the x-project-id header."
+                    onclick="copyProjectId('${esc(p.id)}')">
+              Copy MCP ID
+            </button>
+          </div>` : ''}
+        </div>`;
+    }
+
+    function renderAgentCard(a) {
+      const desc = (a.description || '').trim();
+      const skills = a.skills || [];
+      const skillsBlock = skills.length
+        ? `<div class="pc-badges">${skills.map(s => `<span class="pc-badge skill">${esc(s.name)}</span>`).join('')}</div>`
+        : '<div class="pc-empty-row">No associated skills</div>';
+      return `
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">${esc(initials(a.name))}</div>
+            <div style="min-width:0;flex:1">
+              <div class="repo-card-title-row">
+                <span class="repo-card-name clickable" onclick="viewAgentContent('${esc(a.id)}','${esc(a.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(a.name)}</span>
+                <span class="pc-visibility">● Public</span>
+              </div>
+              <div class="repo-card-owner">by ${ownerLink(a)}</div>
+            </div>
+          </div>
+          <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${statsBadges(a)}
+          <div><div class="pc-section">Included skills (${skills.length})</div>${skillsBlock}</div>
+          <div style="display:flex;gap:8px;align-items:center">${actionsRow('agents', a)}</div>
+        </div>`;
+    }
+
+    function renderSkillCard(s) {
+      const desc = (s.description || '').trim();
+      return `
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">${esc(initials(s.name))}</div>
+            <div style="min-width:0;flex:1">
+              <div class="repo-card-title-row">
+                <span class="repo-card-name clickable" onclick="viewSkillContent('${esc(s.id)}','${esc(s.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(s.name)}</span>
+                <span class="pc-visibility">● Public</span>
+              </div>
+              <div class="repo-card-owner">by ${ownerLink(s)}</div>
+            </div>
+          </div>
+          <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${statsBadges(s)}
+          <div style="font-size:0.78rem;color:var(--muted);font-style:italic;border:1px dashed var(--border);border-radius:6px;padding:8px 10px">
+            The full skill content is included when forking.
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">${actionsRow('skills', s)}</div>
+        </div>`;
+    }
+
+    function renderContextCard(c) {
+      const desc = (c.description || '').trim();
+      return `
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb)">${esc(initials(c.name))}</div>
+            <div style="min-width:0;flex:1">
+              <div class="repo-card-title-row">
+                <span class="repo-card-name clickable" onclick="viewContextContent('${esc(c.id)}','${esc(c.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(c.name)}</span>
+                <span class="pc-visibility">● Public</span>
+              </div>
+              <div class="repo-card-owner">by ${ownerLink(c)}</div>
+            </div>
+          </div>
+          <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${statsBadges(c)}
+          <div style="font-size:0.78rem;color:var(--muted);font-style:italic;border:1px dashed var(--border);border-radius:6px;padding:8px 10px">
+            Business documentation / know-how. Full content is included when forking.
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">${actionsRow('contexts', c)}</div>
+        </div>`;
+    }
+
+    // ── Tab state ──
+    let currentTab = 'projects';
+    const tabRender = { projects: renderProjectCard, agents: renderAgentCard, skills: renderSkillCard, contexts: renderContextCard };
+    const tabLabel = {
+      projects: { single: '1 public project', plural: 'public projects', empty: 'No public projects yet.' },
+      agents:   { single: '1 public agent',   plural: 'public agents',   empty: 'No public agents yet.' },
+      skills:   { single: '1 public skill',   plural: 'public skills',   empty: 'No public skills yet.' },
+      contexts: { single: '1 public context', plural: 'public contexts', empty: 'No public contexts yet.' },
+    };
+
+    window.switchRepoTab = function(name) {
+      currentTab = name;
+      document.querySelectorAll('.repo-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      const search = document.getElementById('search-input');
+      search.placeholder = name === 'projects' ? 'Search projects…'
+        : name === 'agents' ? 'Search agents…'
+        : name === 'skills' ? 'Search skills…'
+        : 'Search contexts…';
+      load(search.value.trim());
+    };
+
+    // Index of the currently rendered items, so detail modals can show
+    // usage stats without an extra request.
+    let itemsById = {};
+
+    function render(items, query) {
+      itemsById = {};
+      for (const it of items) itemsById[it.id] = it;
+      const grid = document.getElementById('repo-grid');
+      const labels = tabLabel[currentTab];
+      if (!items.length) {
+        grid.innerHTML = `<div class="repo-empty">
+          <h3>${query ? 'No results' : labels.empty.replace(/\.$/,'')}</h3>
+          <p>${query ? 'Try different search terms.' : 'When users make their content public, you\'ll see it here.'}</p>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = items.map(tabRender[currentTab]).join('');
+    }
+
+    async function load(query = '') {
+      const sort = document.getElementById('sort-select').value;
+      const base = '/' + currentTab + '/public';
+      const url = base + '?sort=' + encodeURIComponent(sort) + (query ? `&q=${encodeURIComponent(query)}` : '');
+      const meta = document.getElementById('search-meta');
+      try {
+        const res = await authedFetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const items = await res.json();
+        document.getElementById('count-' + currentTab).textContent = items.length;
+        const labels = tabLabel[currentTab];
+        meta.textContent = items.length === 1
+          ? labels.single
+          : `${items.length} ${labels.plural}${query ? ` for "${query}"` : ''}`;
+        render(items, query);
+      } catch (err) {
+        meta.textContent = 'Could not load data.';
+        document.getElementById('repo-grid').innerHTML = `<div class="repo-empty"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+      }
+    }
+
+    // Pre-load all three counts so the tab badges show on first paint.
+    async function preloadCounts() {
+      for (const t of ['projects', 'agents', 'skills', 'contexts']) {
+        try {
+          const res = await authedFetch(`/${t}/public`);
+          if (res.ok) {
+            const items = await res.json();
+            const el = document.getElementById('count-' + t);
+            if (el) el.textContent = items.length;
+          }
+        } catch {}
+      }
+    }
+
+    let searchTimer = null;
+    document.getElementById('search-input').addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      const q = e.target.value.trim();
+      searchTimer = setTimeout(() => load(q), 200);
+    });
+    document.getElementById('sort-select').addEventListener('change', () => load(document.getElementById('search-input').value.trim()));
+
+    preloadCounts();
+    load();
+  </script>
+</body>
+</html>

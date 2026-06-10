@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Usage Analytics</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Sidebar layout (shared with dashboard) ──────────────────────────── */
+    body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo,
+    .sidebar.collapsed .sidebar-section-title,
+    .sidebar.collapsed .sidebar-item-label,
+    .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .sidebar.collapsed .sidebar-footer { padding:12px 8px; align-items:center; }
+
+    .main-area { flex:1; min-width:0; }
+    .main-container { max-width:1100px; margin:0 auto; padding:36px 40px 60px; }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; gap:20px; flex-wrap:wrap; }
+    .page-header h1 { font-size:1.6rem; font-weight:700; margin:0; color:var(--text); }
+    .page-header .page-subtitle { font-size:0.88rem; color:var(--muted); margin-top:6px; }
+    .page-header-text { display:flex; flex-direction:column; }
+
+    /* ── Filters ─────────────────────────────────────────────────────────── */
+    .an-filters { display:flex; gap:10px; align-items:center; }
+    .an-filters select { padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.85rem; font-family:inherit; background:var(--card-bg); color:var(--text); cursor:pointer; }
+
+    /* ── Summary cards ───────────────────────────────────────────────────── */
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:32px; }
+    .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; }
+    .stat-value { font-size:1.7rem; font-weight:700; color:var(--text); line-height:1.2; }
+    .stat-value small { font-size:0.95rem; font-weight:600; color:var(--muted); }
+    .stat-label { font-size:0.78rem; color:var(--muted); margin-top:4px; }
+    .stat-hint { font-size:0.72rem; color:var(--muted); opacity:0.8; margin-top:6px; line-height:1.4; }
+
+    /* ── Sections & table ────────────────────────────────────────────────── */
+    .an-section { margin-bottom:36px; }
+    .an-section h2 { font-size:1.05rem; font-weight:700; margin:0 0 4px; color:var(--text); }
+    .an-section .an-sub { font-size:0.82rem; color:var(--muted); margin-bottom:14px; }
+    .an-legend { font-size:0.8rem; color:var(--muted); margin:0 0 14px; padding:0; list-style:none; display:flex; flex-direction:column; gap:3px; }
+    .an-legend dt { display:inline; font-weight:700; color:var(--text); }
+    .an-legend dd { display:inline; margin:0; }
+    .an-legend div { line-height:1.5; }
+    .an-table-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow-x:auto; }
+    table.an-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+    .an-table th { text-align:left; padding:10px 14px; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .an-table td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .an-table tr:last-child td { border-bottom:none; }
+    .an-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .an-table th.num { text-align:right; }
+    .an-agent-name { font-weight:600; color:var(--text); }
+    .an-projects { font-size:0.74rem; color:var(--muted); margin-top:2px; }
+
+    .usage-bar { height:6px; border-radius:3px; background:#eef2ff; overflow:hidden; min-width:90px; }
+    .usage-bar > div { height:100%; background:linear-gradient(90deg,#4361ee,#7c3aed); border-radius:3px; }
+
+    .pill { display:inline-block; font-size:0.72rem; padding:2px 9px; border-radius:10px; font-weight:600; white-space:nowrap; }
+    .pill-good { background:#d1fae5; color:#065f46; }
+    .pill-warn { background:#fef3c7; color:#92400e; }
+    .pill-bad  { background:#fee2e2; color:#b91c1c; }
+    .pill-muted { background:#f3f4f6; color:#6b7280; }
+
+    .an-empty { padding:36px 20px; text-align:center; color:var(--muted); font-size:0.88rem; }
+    .unused-grid { display:flex; flex-wrap:wrap; gap:8px; }
+    .unused-chip { background:#f3f4f6; border:1px solid var(--border); color:#4b5563; border-radius:16px; padding:5px 14px; font-size:0.8rem; display:inline-flex; align-items:center; gap:8px; }
+    .unused-chip.in-flows { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+
+    /* ── Entity tabs ─────────────────────────────────────────────────────── */
+    .an-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:18px; }
+    .an-tab-btn { background:none; border:none; cursor:pointer; padding:9px 16px; font-size:0.88rem; font-weight:600; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; font-family:inherit; transition:color .15s; }
+    .an-tab-btn:hover { color:var(--text); }
+    .an-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .an-tab-panel { display:none; }
+    .an-tab-panel.active { display:block; }
+
+    /* ── Usage chart (trading style) ─────────────────────────────────────── */
+    .chart-panel { background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:16px 18px 10px; position:relative; }
+    .chart-legend { display:flex; gap:18px; margin-bottom:8px; font-size:0.74rem; color:#94a3b8; align-items:center; flex-wrap:wrap; }
+    #chart-legend-series { display:inline-flex; gap:14px; flex-wrap:wrap; }
+    #chart-legend-series span { display:inline-flex; align-items:center; gap:6px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #chart-legend-series i { width:14px; height:3px; border-radius:2px; display:inline-block; flex-shrink:0; }
+    .chart-controls { margin-left:auto; display:flex; gap:4px; align-items:center; }
+    .tf-btn { background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:6px; cursor:pointer; font-family:inherit; transition:all .12s; }
+    .tf-select { background:#1e293b; border:1px solid #334155; color:#e2e8f0; font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:6px; cursor:pointer; font-family:inherit; }
+    .tf-btn:hover { color:#e2e8f0; }
+    .tf-btn.active { background:#4361ee; border-color:#4361ee; color:#fff; }
+    .live-badge { display:inline-flex; align-items:center; gap:5px; font-size:0.66rem; font-weight:700; letter-spacing:0.06em; color:#34d399; }
+    .live-badge .live-dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:livepulse 1.6s ease-in-out infinite; }
+    @keyframes livepulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(16,185,129,0.5); } 50% { opacity:0.55; box-shadow:0 0 0 5px rgba(16,185,129,0); } }
+    .chart-legend span { display:inline-flex; align-items:center; gap:6px; }
+    .chart-legend i { width:14px; height:3px; border-radius:2px; display:inline-block; }
+    .chart-tooltip { position:absolute; pointer-events:none; background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 12px; font-size:0.74rem; color:#e2e8f0; box-shadow:0 6px 18px rgba(0,0,0,0.45); display:none; z-index:10; white-space:nowrap; line-height:1.6; }
+    #usage-chart svg { display:block; width:100%; }
+    .chart-empty { color:#475569; text-align:center; padding:60px 0 70px; font-size:0.85rem; }
+
+    /* ── Run detail modal ────────────────────────────────────────────────── */
+    .run-modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .run-modal-backdrop.open { display:flex; }
+    .run-modal-box { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; width:100%; max-width:860px; max-height:90vh; overflow-y:auto; padding:24px 28px; }
+    .run-modal-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+    .run-modal-head h3 { margin:0; font-size:1.1rem; }
+    .run-modal-meta { font-size:0.8rem; color:var(--muted); margin-bottom:16px; }
+    .run-modal-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--muted); line-height:1; }
+    .run-section-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:16px 0 8px; }
+    .run-path-step { display:flex; gap:10px; align-items:baseline; padding:7px 0; border-bottom:1px dashed var(--border); font-size:0.84rem; }
+    .run-path-step:last-child { border-bottom:none; }
+    .run-path-num { color:var(--muted); font-size:0.74rem; min-width:22px; }
+    .run-path-agent { font-weight:600; }
+    .run-path-via { color:var(--muted); font-size:0.78rem; }
+    .run-path-output { color:var(--muted); font-size:0.78rem; flex:1; }
+    .run-pre { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:12px 14px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.74rem; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-height:340px; overflow-y:auto; }
+    details.run-collapse summary { cursor:pointer; font-size:0.82rem; color:var(--primary); margin-bottom:8px; }
+    tr.run-row { cursor:pointer; }
+    tr.run-row:hover td { background:rgba(67,97,238,0.05); }
+
+    @media (max-width: 768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+      .sidebar.collapsed { width:100% !important; }
+      .sidebar.collapsed .sidebar-logo,
+      .sidebar.collapsed .sidebar-section-title,
+      .sidebar.collapsed .sidebar-item-label,
+      .sidebar.collapsed .sidebar-user { display:initial; }
+      .main-container { padding:24px 20px; }
+      .sidebar-footer { flex-direction:row; justify-content:space-between; align-items:center; }
+    }
+  </style>
+</head>
+<body class="has-sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+      <button class="sidebar-collapse-btn" id="sidebar-toggle" title="Collapse/expand menu" onclick="toggleSidebar()">‹</button>
+    </div>
+
+    <div class="sidebar-section-title">Workspace</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="dashboard.html?tab=projects" title="Projects">
+        <span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=agents" title="Agents">
+        <span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=skills" title="Skills">
+        <span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=contexts" title="Contexts">
+        <span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=team" title="Team">
+        <span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Insights</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item active" href="analytics.html" title="Usage analytics">
+        <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
+      </a>
+      <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
+        <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Community</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="repository.html" title="Public repository">
+        <span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span>
+      </a>
+      <a class="sidebar-item" href="issues.html" title="Issues">
+        <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Help</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="faq.html" title="Documentation">
+        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-user" id="user-nickname" style="font-weight:600;text-decoration:none;color:inherit">...</a>
+      <div class="sidebar-user" id="user-email" style="font-size:0.74rem;opacity:0.6">...</div>
+      <a href="#" class="sidebar-logout" id="logout-btn" title="Log out">Log out</a>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <div class="main-container">
+      <div class="page-header">
+        <div class="page-header-text">
+          <h1>Usage analytics</h1>
+          <span class="page-subtitle">Which agents your flows actually use — and which ones get skipped or never run.</span>
+        </div>
+        <div class="an-filters">
+          <select id="filter-project">
+            <option value="">All projects</option>
+          </select>
+          <select id="filter-period">
+            <option value="">All time</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="error-msg" class="alert alert-error hidden"></div>
+
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <div class="an-section">
+        <h2>Activity</h2>
+        <div class="an-sub">Workflow activity in the selected scope, refreshed live every 5 seconds. Hover for exact values.</div>
+        <div class="chart-panel">
+          <div class="chart-legend">
+            <span id="chart-legend-series"></span>
+            <div class="chart-controls">
+              <button class="tf-btn bd-btn active" data-bd="" onclick="setBreakdown('')">Total</button>
+              <button class="tf-btn bd-btn" data-bd="agents" onclick="setBreakdown('agents')">Agents</button>
+              <button class="tf-btn bd-btn" data-bd="projects" onclick="setBreakdown('projects')">Projects</button>
+              <button class="tf-btn bd-btn" data-bd="skills" onclick="setBreakdown('skills')">Skills</button>
+              <button class="tf-btn bd-btn" data-bd="contexts" onclick="setBreakdown('contexts')">Contexts</button>
+              <span style="width:10px"></span>
+              <select class="tf-select" id="range-select" onchange="setRange(this.value)" title="Time range — the chart keeps refreshing live every 5s">
+                <option value="1h" selected>Last hour (1m)</option>
+                <option value="1d">Last day (5m)</option>
+                <option value="1w">Last week (1h)</option>
+                <option value="1m">Last month (6h)</option>
+                <option value="3m">Last 3 months (1d)</option>
+                <option value="6m">Last 6 months (1d)</option>
+                <option value="all">All time (1d)</option>
+              </select>
+              <span style="width:8px"></span>
+              <span class="live-badge" id="live-badge"><span class="live-dot"></span>LIVE</span>
+            </div>
+          </div>
+          <div id="usage-chart"></div>
+          <div class="chart-tooltip" id="chart-tooltip"></div>
+        </div>
+      </div>
+
+      <div class="an-tabs">
+        <button class="an-tab-btn active" data-tab="agents" onclick="switchAnTab('agents')">Agents</button>
+        <button class="an-tab-btn" data-tab="projects" onclick="switchAnTab('projects')">Projects</button>
+        <button class="an-tab-btn" data-tab="skills" onclick="switchAnTab('skills')">Skills</button>
+        <button class="an-tab-btn" data-tab="contexts" onclick="switchAnTab('contexts')">Contexts</button>
+      </div>
+
+      <div class="an-tab-panel active" id="an-tab-agents">
+      <div class="an-section">
+        <h2>Agent usage</h2>
+        <dl class="an-legend">
+          <div><dt>Planned runs</dt><dd> — runs whose compiled flow included the agent.</dd></div>
+          <div><dt>Executed runs</dt><dd> — runs whose execution report names the agent.</dd></div>
+          <div><dt>Invocations</dt><dd> — total times the agent ran, counting loops and retries.</dd></div>
+          <div><dt>Skipped</dt><dd> — runs where the taken path required the agent (per the flow's edges) and it never executed.</dd></div>
+          <div><dt>Off path</dt><dd> — runs where the flow took another branch, so the agent was correctly not executed. Does not count as Skipped.</dd></div>
+          <div><dt>Compliance</dt><dd> — Executed runs ÷ (Executed runs + Skipped). Off path runs are excluded.</dd></div>
+        </dl>
+        <div class="an-table-wrap">
+          <table class="an-table" id="agents-table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Usage</th>
+                <th class="num">Planned runs</th>
+                <th class="num">Executed runs</th>
+                <th class="num">Invocations</th>
+                <th class="num">Skipped</th>
+                <th class="num">Off path</th>
+                <th class="num">Compliance</th>
+                <th>Last used</th>
+              </tr>
+            </thead>
+            <tbody id="agents-tbody"></tbody>
+          </table>
+          <div id="agents-empty" class="an-empty hidden">No usage recorded yet. Run a workflow through the MCP endpoint and come back.</div>
+        </div>
+      </div>
+
+      <div class="an-section">
+        <h2>Never executed</h2>
+        <div class="an-sub">Registered agents with zero Executed runs. Red chips were planned in flows but the LLM never invoked them; gray chips are not part of any executed flow.</div>
+        <div class="unused-grid" id="unused-grid"></div>
+      </div>
+      </div><!-- /an-tab-agents -->
+
+      <div class="an-tab-panel" id="an-tab-projects">
+        <div class="an-section">
+          <h2>Usage by project</h2>
+          <div class="an-sub">Runs per project in the selected period. Audited = run has a report or was server-driven; Verified = stepped mode.</div>
+          <div class="an-table-wrap">
+            <table class="an-table">
+              <thead><tr><th>Project</th><th class="num">Runs</th><th class="num">Audited</th><th class="num">Verified</th><th class="num">Eval cases</th><th>Last activity</th></tr></thead>
+              <tbody id="projects-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-tab-panel" id="an-tab-skills">
+        <div class="an-section">
+          <h2>Usage by skill</h2>
+          <div class="an-sub">A skill runs whenever an agent that carries it executes. Carrying agents = agents that declare the skill.</div>
+          <div class="an-table-wrap">
+            <table class="an-table">
+              <thead><tr><th>Skill</th><th>Usage</th><th class="num">Executed runs</th><th class="num">Invocations</th><th class="num">Carrying agents</th><th>Last used</th></tr></thead>
+              <tbody id="skills-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-tab-panel" id="an-tab-contexts">
+        <div class="an-section">
+          <h2>Usage by context</h2>
+          <div class="an-sub">A context is injected into every compiled workflow of the projects that include it.</div>
+          <div class="an-table-wrap">
+            <table class="an-table">
+              <thead><tr><th>Context</th><th class="num">Linked projects</th><th class="num">Runs included</th><th>Last used</th></tr></thead>
+              <tbody id="contexts-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-section">
+        <h2>Usage by user</h2>
+        <div class="an-sub">Attribution uses the caller's email when the MCP client sends it (set AIORC_USER_EMAIL in the bridge config). Runs without it are attributed to the project owner.</div>
+        <div class="an-table-wrap">
+          <table class="an-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th class="num">Runs</th>
+                <th class="num">Invocations</th>
+                <th class="num">Agents used</th>
+                <th>Last activity</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+          <div id="users-empty" class="an-empty hidden">No usage recorded yet.</div>
+        </div>
+      </div>
+
+      <div class="an-section">
+        <h2>Evals</h2>
+        <div class="an-sub">
+          Test cases for a project's flow. Runs execute in server-verified stepped mode and are graded automatically:
+          the run must complete, reach the expected End outcome, and have executed every required agent.
+          Run the suite from any MCP client by calling the <code>workflow.eval</code> tool.
+        </div>
+        <div id="evals-pick-project" class="an-empty" style="text-align:left;padding:14px 4px">Select a project in the filter above to manage its eval cases.</div>
+        <div id="evals-body" class="hidden">
+          <div class="an-table-wrap" style="margin-bottom:14px">
+            <table class="an-table">
+              <thead>
+                <tr>
+                  <th>Case</th>
+                  <th>Expected outcome</th>
+                  <th>Required agents</th>
+                  <th class="num">Graded runs</th>
+                  <th class="num">Pass rate</th>
+                  <th>Last verdict</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="evals-tbody"></tbody>
+            </table>
+            <div id="evals-empty" class="an-empty hidden">No eval cases yet for this project.</div>
+          </div>
+          <form id="eval-form" style="display:grid;grid-template-columns:1fr 2fr 1fr 1fr auto;gap:8px;align-items:start">
+            <input id="ev-name" placeholder="Case name" required style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-input" placeholder="Input (the request fed to the workflow)" required style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-outcome" placeholder="Expected outcome (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-agents" placeholder="Required agents, comma-separated (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <button type="submit" class="btn btn-primary" style="padding:9px 16px">Add case</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="an-section">
+        <h2>Recent runs</h2>
+        <div class="an-sub">Last 15 workflow compilations delivered over MCP. Runs without a report cannot be audited for skips.</div>
+        <div class="an-table-wrap">
+          <table class="an-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Project</th>
+                <th>Caller</th>
+                <th class="num">Agents planned</th>
+                <th class="num">Agents executed</th>
+                <th>Report</th>
+              </tr>
+            </thead>
+            <tbody id="runs-tbody"></tbody>
+          </table>
+          <div id="runs-empty" class="an-empty hidden">No runs yet.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="run-modal-backdrop" id="run-modal" onclick="if(event.target.id==='run-modal')closeRunModal()">
+    <div class="run-modal-box">
+      <div class="run-modal-head">
+        <h3 id="run-modal-title">Run</h3>
+        <button class="run-modal-close" onclick="closeRunModal()" title="Close">×</button>
+      </div>
+      <div class="run-modal-meta" id="run-modal-meta"></div>
+      <div id="run-modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'index.html';
+
+    const userEmail = localStorage.getItem('userEmail') || '';
+    const userNickname = localStorage.getItem('userNickname') || '';
+    document.getElementById('user-email').textContent = userEmail;
+    const nickEl = document.getElementById('user-nickname');
+    nickEl.textContent = userNickname ? '@' + userNickname : userEmail;
+    if (userNickname) nickEl.href = `user.html?nick=${encodeURIComponent(userNickname)}`;
+    if (localStorage.getItem('userRole') === 'admin') document.getElementById('sb-admin').style.display = '';
+
+    document.getElementById('logout-btn').addEventListener('click', e => {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+
+    const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+    function applySidebarState() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      const sb = document.getElementById('sidebar');
+      const btn = document.getElementById('sidebar-toggle');
+      if (sb) sb.classList.toggle('collapsed', collapsed);
+      if (btn) btn.textContent = collapsed ? '›' : '‹';
+    }
+    function toggleSidebar() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
+      applySidebarState();
+    }
+    applySidebarState();
+
+    async function authFetch(url, opts = {}) {
+      const res = await fetch(url, {
+        ...opts,
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+      });
+      if (res.status === 401) { localStorage.clear(); window.location.href = 'index.html'; }
+      return res;
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return '—';
+      const s = Math.floor((Date.now() - ts) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+      return new Date(ts).toLocaleDateString();
+    }
+
+    function compliancePill(c) {
+      if (c === null || c === undefined) return '<span class="pill pill-muted">no data</span>';
+      const cls = c >= 90 ? 'pill-good' : c >= 60 ? 'pill-warn' : 'pill-bad';
+      return `<span class="pill ${cls}">${c}%</span>`;
+    }
+
+    function statCard(value, label, hint) {
+      return `<div class="stat-card"><div class="stat-value">${value}</div><div class="stat-label">${escHtml(label)}</div>${hint ? `<div class="stat-hint">${escHtml(hint)}</div>` : ''}</div>`;
+    }
+
+    let projectsLoaded = false;
+
+    window.switchAnTab = function(name) {
+      document.querySelectorAll('.an-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.an-tab-panel').forEach(p => p.classList.toggle('active', p.id === 'an-tab-' + name));
+    };
+
+    // ── Usage chart (SVG, trading style, live, multi-series) ─────────────────
+    const CHART_PALETTE = ['#6366f1', '#f59e0b', '#10b981', '#ec4899', '#06b6d4', '#a78bfa', '#f43f5e', '#84cc16'];
+
+    function renderChart(chart) {
+      const host = document.getElementById('usage-chart');
+      const legendEl = document.getElementById('chart-legend-series');
+      const labels = chart && chart.labels ? chart.labels : [];
+      const series = (chart && chart.series ? chart.series : []).map((s, i) => ({ ...s, color: CHART_PALETTE[i % CHART_PALETTE.length] }));
+
+      legendEl.innerHTML = series.map(s => `<span title="${escHtml(s.name)}"><i style="background:${s.color}"></i> ${escHtml(s.name)}</span>`).join('');
+
+      if (labels.length === 0 || series.length === 0 || series.every(s => s.values.every(v => v === 0))) {
+        host.innerHTML = '<div class="chart-empty">No activity in the selected scope yet.</div>';
+        return;
+      }
+
+      const W = host.clientWidth || 900, H = 240;
+      const padL = 44, padR = 14, padT = 12, padB = 26;
+      const innerW = W - padL - padR, innerH = H - padT - padB;
+      const n = labels.length;
+      const maxY = Math.max(1, ...series.flatMap(s => s.values));
+      const niceMax = Math.ceil(maxY * 1.15);
+      const x = i => padL + (i / (n - 1)) * innerW;
+      const y = v => padT + innerH - (v / niceMax) * innerH;
+
+      const linePath = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+
+      const gridLines = [];
+      const ticks = 4;
+      for (let t = 0; t <= ticks; t++) {
+        const v = Math.round((niceMax / ticks) * t);
+        const yy = y(v);
+        gridLines.push(`<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#1e293b" stroke-width="1"/>`);
+        gridLines.push(`<text x="${padL - 8}" y="${yy + 3}" text-anchor="end" font-size="10" fill="#64748b">${v}</text>`);
+      }
+      const labelEvery = Math.max(1, Math.floor(n / 8));
+      const xLabels = labels.map((l, i) => i % labelEvery === 0
+        ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#64748b">${escHtml(l)}</text>` : '').join('');
+
+      const paths = series.map((s, si) => {
+        const lp = linePath(s.values);
+        const area = s.area
+          ? `<path d="${lp} L${x(n - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z" fill="url(#grad-${si})"/>
+             <defs><linearGradient id="grad-${si}" x1="0" y1="0" x2="0" y2="1">
+               <stop offset="0%" stop-color="${s.color}" stop-opacity="0.35"/>
+               <stop offset="100%" stop-color="${s.color}" stop-opacity="0.02"/>
+             </linearGradient></defs>`
+          : '';
+        return `${area}<path d="${lp}" fill="none" stroke="${s.color}" stroke-width="${si === 0 ? 2 : 1.6}"/>`;
+      }).join('');
+
+      const hoverDots = series.map((s, si) =>
+        `<circle class="chart-dot" data-si="${si}" r="3.2" fill="${s.color}" stroke="#0f172a" stroke-width="1.5" style="display:none"/>`
+      ).join('');
+
+      host.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" height="${H}">
+          ${gridLines.join('')}
+          ${paths}
+          ${xLabels}
+          <line id="chart-cross" x1="0" y1="${padT}" x2="0" y2="${padT + innerH}" stroke="#475569" stroke-dasharray="3,3" style="display:none"/>
+          ${hoverDots}
+          <rect id="chart-hover" x="${padL}" y="${padT}" width="${innerW}" height="${innerH}" fill="transparent"/>
+        </svg>`;
+
+      const svg = host.querySelector('svg');
+      const tooltip = document.getElementById('chart-tooltip');
+      const hover = svg.querySelector('#chart-hover');
+      const cross = svg.querySelector('#chart-cross');
+      const dotEls = [...svg.querySelectorAll('.chart-dot')];
+
+      hover.addEventListener('mousemove', ev => {
+        const rect = svg.getBoundingClientRect();
+        const px = (ev.clientX - rect.left) * (W / rect.width);
+        const i = Math.max(0, Math.min(n - 1, Math.round(((px - padL) / innerW) * (n - 1))));
+        const cx = x(i);
+        cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.display = '';
+        dotEls.forEach(dot => {
+          const si = Number(dot.dataset.si);
+          dot.setAttribute('cx', cx);
+          dot.setAttribute('cy', y(series[si].values[i]));
+          dot.style.display = '';
+        });
+        tooltip.innerHTML = `<strong>${escHtml(labels[i])}</strong><br>` +
+          series.map(s => `<span style="color:${s.color}">●</span> ${escHtml(s.name)}: <strong>${s.values[i]}</strong>`).join('<br>');
+        tooltip.style.display = 'block';
+        const panel = host.closest('.chart-panel').getBoundingClientRect();
+        let left = ev.clientX - panel.left + 16;
+        if (left + 200 > panel.width) left -= 220;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = (ev.clientY - panel.top - 10) + 'px';
+      });
+      hover.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        cross.style.display = 'none';
+        dotEls.forEach(d => d.style.display = 'none');
+      });
+    }
+
+    async function load() {
+      const projectId = document.getElementById('filter-project').value;
+      const period = document.getElementById('filter-period').value;
+      const params = new URLSearchParams();
+      if (projectId) params.set('project_id', projectId);
+      if (period) params.set('period', period);
+
+      const res = await authFetch('/analytics' + (params.toString() ? '?' + params.toString() : ''));
+      if (!res.ok) {
+        const el = document.getElementById('error-msg');
+        el.textContent = 'Failed to load analytics (' + res.status + ')';
+        el.classList.remove('hidden');
+        return;
+      }
+      const data = await res.json();
+      const s = data.summary;
+
+      if (!projectsLoaded) {
+        const sel = document.getElementById('filter-project');
+        sel.innerHTML = '<option value="">All projects</option>' +
+          data.projects.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`).join('');
+        projectsLoaded = true;
+      }
+
+      document.getElementById('stat-grid').innerHTML = [
+        statCard(s.total_runs, 'Total runs', 'Workflow compilations delivered over MCP'),
+        statCard(s.report_rate + '<small>%</small>', 'Audited runs', s.runs_with_report + ' of ' + s.total_runs + ' runs auditable — ' + (s.runs_verified || 0) + ' server-verified (stepped mode)'),
+        statCard(s.agents_executed + ' <small>/ ' + s.agents_registered + '</small>', 'Agents executed', 'Agents with at least one Executed run'),
+        statCard(s.agents_never_executed, 'Never executed', 'Registered agents with zero Executed runs'),
+      ].join('');
+
+      document.getElementById('projects-tbody').innerHTML = data.projects_stats.map(p => `
+        <tr>
+          <td><span class="an-agent-name">${escHtml(p.name)}</span></td>
+          <td class="num">${p.runs}</td>
+          <td class="num">${p.audited ?? 0}</td>
+          <td class="num">${p.verified > 0 ? `<span class="pill pill-good">${p.verified}</span>` : '0'}</td>
+          <td class="num">${p.eval_cases}</td>
+          <td>${timeAgo(p.last_run_at)}</td>
+        </tr>`).join('');
+
+      const maxSkillInv = Math.max(1, ...data.skills_stats.map(s => s.invocations));
+      document.getElementById('skills-tbody').innerHTML = data.skills_stats.map(s => `
+        <tr>
+          <td><span class="an-agent-name">${escHtml(s.name)}</span></td>
+          <td><div class="usage-bar"><div style="width:${Math.round((s.invocations / maxSkillInv) * 100)}%"></div></div></td>
+          <td class="num">${s.runs_executed}</td>
+          <td class="num">${s.invocations}</td>
+          <td class="num">${s.agents_carrying}</td>
+          <td>${timeAgo(s.last_used)}</td>
+        </tr>`).join('');
+
+      document.getElementById('contexts-tbody').innerHTML = data.contexts_stats.length === 0
+        ? '<tr><td colspan="4" class="an-empty">No contexts registered.</td></tr>'
+        : data.contexts_stats.map(c => `
+        <tr>
+          <td><span class="an-agent-name">${escHtml(c.name)}</span></td>
+          <td class="num">${c.projects_linked}</td>
+          <td class="num">${c.runs_included}</td>
+          <td>${timeAgo(c.last_used)}</td>
+        </tr>`).join('');
+
+      const tbody = document.getElementById('agents-tbody');
+      const maxInv = Math.max(1, ...data.agents.map(a => a.invocations));
+      document.getElementById('agents-empty').classList.toggle('hidden', data.agents.length > 0);
+      tbody.innerHTML = data.agents.map(a => {
+        const userBreakdown = a.users.length
+          ? a.users.map(u => `@${escHtml(u.nickname)}: ${u.invocations}`).join(' · ')
+          : '';
+        return `
+          <tr>
+            <td>
+              <div class="an-agent-name">${escHtml(a.agent_name)}${a.registered ? '' : ' <span class="pill pill-muted" title="Name reported by the LLM but not matched to a registered agent">unmatched</span>'}</div>
+              <div class="an-projects">${escHtml(a.projects.join(', '))}${userBreakdown ? ' — ' + userBreakdown : ''}</div>
+            </td>
+            <td><div class="usage-bar"><div style="width:${Math.round((a.invocations / maxInv) * 100)}%"></div></div></td>
+            <td class="num">${a.runs_planned}</td>
+            <td class="num">${a.runs_executed}</td>
+            <td class="num">${a.invocations}</td>
+            <td class="num">${a.skipped > 0 ? `<span class="pill pill-bad">${a.skipped}</span>` : '0'}</td>
+            <td class="num" style="color:var(--muted)">${a.off_path}</td>
+            <td class="num">${compliancePill(a.compliance)}</td>
+            <td>${timeAgo(a.last_used)}</td>
+          </tr>`;
+      }).join('');
+
+      const usersBody = document.getElementById('users-tbody');
+      document.getElementById('users-empty').classList.toggle('hidden', data.users.length > 0);
+      usersBody.innerHTML = data.users.map(u => `
+        <tr>
+          <td><span class="an-agent-name">@${escHtml(u.nickname)}</span></td>
+          <td class="num">${u.runs}</td>
+          <td class="num">${u.invocations}</td>
+          <td class="num">${u.agents_used}</td>
+          <td>${timeAgo(u.last_used)}</td>
+        </tr>`).join('');
+
+      const unusedGrid = document.getElementById('unused-grid');
+      unusedGrid.innerHTML = data.never_executed.length === 0
+        ? '<span class="an-sub" style="margin:0">All registered agents have at least one Executed run.</span>'
+        : data.never_executed.map(u => `
+            <span class="unused-chip${u.in_flows ? ' in-flows' : ''}" title="${escHtml(u.description || '')}">
+              ${escHtml(u.agent_name)}
+              ${u.in_flows ? '<span class="pill pill-bad">planned, never invoked</span>' : '<span class="pill pill-muted">not in executed flows</span>'}
+            </span>`).join('');
+
+      const runsBody = document.getElementById('runs-tbody');
+      document.getElementById('runs-empty').classList.toggle('hidden', data.recent_runs.length > 0);
+      runsBody.innerHTML = data.recent_runs.map(r => `
+        <tr class="run-row" onclick="openRunDetail('${escHtml(r.id)}')" title="Click to inspect this run">
+          <td>${timeAgo(r.created_at)}</td>
+          <td>${escHtml(r.project_name)}</td>
+          <td>${r.caller_email ? escHtml(r.caller_email) : '@' + escHtml(r.owner_nickname || '')}</td>
+          <td class="num">${r.agents_planned}</td>
+          <td class="num">${r.has_report ? r.agents_reported : '—'}</td>
+          <td>${r.verified
+            ? '<span class="pill pill-good" title="Server-driven stepped run: every transition was validated and recorded by the server">verified</span>'
+            : r.has_report
+              ? (r.agents_reported < r.agents_planned
+                  ? '<span class="pill pill-warn">partial path</span>'
+                  : '<span class="pill pill-good">reported</span>')
+              : '<span class="pill pill-muted">no report</span>'}</td>
+        </tr>`).join('');
+    }
+
+    // ── Run detail modal ─────────────────────────────────────────────────────
+    window.closeRunModal = function() {
+      document.getElementById('run-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
+
+    window.openRunDetail = async function(id) {
+      const modal = document.getElementById('run-modal');
+      document.getElementById('run-modal-title').textContent = 'Run ' + id.slice(0, 8) + '…';
+      document.getElementById('run-modal-meta').textContent = 'Loading…';
+      document.getElementById('run-modal-body').innerHTML = '';
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      const res = await authFetch('/runs/' + encodeURIComponent(id));
+      if (!res.ok) {
+        document.getElementById('run-modal-meta').textContent = 'Could not load run (' + res.status + ')';
+        return;
+      }
+      const run = await res.json();
+
+      const metaBits = [
+        run.project_name,
+        run.caller_email || null,
+        new Date(run.created_at).toLocaleString(),
+        run.mode === 'stepped' ? 'server-verified (stepped)' : 'compiled mode',
+        run.status,
+      ].filter(Boolean);
+      document.getElementById('run-modal-meta').textContent = metaBits.join(' · ');
+
+      const parts = [];
+
+      if (run.eval_case) {
+        const reasons = Array.isArray(run.eval_reasons) ? run.eval_reasons.join('; ') : '';
+        parts.push(`<div class="run-section-title">Eval</div>
+          <div style="font-size:0.86rem">
+            ${escHtml(run.eval_case.name)} —
+            ${run.eval_verdict === 'pass' ? '<span class="pill pill-good">pass</span>'
+              : run.eval_verdict === 'fail' ? `<span class="pill pill-bad">fail</span> <span style="color:var(--muted);font-size:0.8rem">${escHtml(reasons)}</span>`
+              : '<span class="pill pill-muted">not graded</span>'}
+          </div>`);
+      }
+
+      const input = run.input && typeof run.input === 'object' ? (run.input.request || JSON.stringify(run.input)) : String(run.input || '');
+      if (input) {
+        parts.push(`<div class="run-section-title">Input</div><div style="font-size:0.86rem;line-height:1.5">${escHtml(input)}</div>`);
+      }
+
+      const engine = run.engine_state && typeof run.engine_state === 'object' ? run.engine_state : null;
+      if (engine && Array.isArray(engine.path) && engine.path.length > 0) {
+        parts.push(`<div class="run-section-title">Verified execution path (${engine.path.length} steps${engine.outcome ? ' — ' + escHtml(engine.outcome) : ''})</div>
+          <div>${engine.path.map((s, i) => `
+            <div class="run-path-step">
+              <span class="run-path-num">${i + 1}.</span>
+              <span class="run-path-agent">${escHtml(s.agent)}</span>
+              ${s.via ? `<span class="run-path-via">via "${escHtml(s.via)}"</span>` : ''}
+              ${s.output ? `<span class="run-path-output">${escHtml(s.output)}</span>` : ''}
+            </div>`).join('')}
+          </div>`);
+      }
+
+      if (run.execution_report) {
+        const reportText = typeof run.execution_report === 'object'
+          ? JSON.stringify(run.execution_report, null, 2) : String(run.execution_report);
+        parts.push(`<div class="run-section-title">Execution report (self-declared by the LLM)</div>
+          <pre class="run-pre">${escHtml(reportText)}</pre>`);
+      }
+
+      if (run.workflow_snapshot) {
+        parts.push(`<div class="run-section-title">Compiled prompt</div>
+          <details class="run-collapse">
+            <summary>Show the full compiled workflow (${Math.round(run.workflow_snapshot.length / 1000)}k chars)</summary>
+            <pre class="run-pre">${escHtml(run.workflow_snapshot)}</pre>
+          </details>`);
+      }
+
+      if (parts.length === 0) parts.push('<div style="color:var(--muted);font-size:0.86rem">No details recorded for this run.</div>');
+      document.getElementById('run-modal-body').innerHTML = parts.join('');
+    };
+
+    // ── Evals ───────────────────────────────────────────────────────────────
+    async function loadEvals() {
+      const projectId = document.getElementById('filter-project').value;
+      document.getElementById('evals-pick-project').classList.toggle('hidden', !!projectId);
+      document.getElementById('evals-body').classList.toggle('hidden', !projectId);
+      if (!projectId) return;
+
+      const res = await authFetch('/evals?project_id=' + encodeURIComponent(projectId));
+      if (!res.ok) return;
+      const cases = await res.json();
+      document.getElementById('evals-empty').classList.toggle('hidden', cases.length > 0);
+      document.getElementById('evals-tbody').innerHTML = cases.map(c => {
+        const rate = c.runs_graded > 0 ? Math.round((c.passes / c.runs_graded) * 100) : null;
+        let reasons = '';
+        try { reasons = c.last_reasons ? JSON.parse(c.last_reasons).join('; ') : ''; } catch {}
+        return `
+          <tr>
+            <td>
+              <div class="an-agent-name">${escHtml(c.name)}</div>
+              <div class="an-projects" title="${escHtml(c.input)}">${escHtml(c.input.length > 80 ? c.input.slice(0, 80) + '…' : c.input)}</div>
+            </td>
+            <td>${escHtml(c.expected_outcome) || '<span style="color:var(--muted)">any completion</span>'}</td>
+            <td>${escHtml(c.must_run_agents) || '<span style="color:var(--muted)">—</span>'}</td>
+            <td class="num">${c.runs_graded}</td>
+            <td class="num">${rate === null ? '<span class="pill pill-muted">never run</span>' : compliancePill(rate)}</td>
+            <td>${c.last_verdict
+              ? (c.last_verdict === 'pass'
+                  ? '<span class="pill pill-good">pass</span>'
+                  : `<span class="pill pill-bad" title="${escHtml(reasons)}">fail</span>`)
+              : '—'} ${c.last_run_at ? '<span style="font-size:0.74rem;color:var(--muted)">' + timeAgo(c.last_run_at) + '</span>' : ''}</td>
+            <td class="num"><button class="upload-link" style="color:#b91c1c" onclick="deleteEval('${escHtml(c.id)}')">delete</button></td>
+          </tr>`;
+      }).join('');
+    }
+
+    window.deleteEval = async function(id) {
+      await authFetch('/evals/' + encodeURIComponent(id), { method: 'DELETE' });
+      loadEvals();
+    };
+
+    document.getElementById('eval-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const projectId = document.getElementById('filter-project').value;
+      if (!projectId) return;
+      const body = {
+        project_id: projectId,
+        name: document.getElementById('ev-name').value.trim(),
+        input: document.getElementById('ev-input').value.trim(),
+        expected_outcome: document.getElementById('ev-outcome').value.trim(),
+        must_run_agents: document.getElementById('ev-agents').value.trim(),
+      };
+      if (!body.name || !body.input) return;
+      const res = await authFetch('/evals', { method: 'POST', body: JSON.stringify(body) });
+      if (res.ok) {
+        e.target.reset();
+        loadEvals();
+      }
+    });
+
+    // ── Live refresh ─────────────────────────────────────────────────────────
+    // Chart: every 5s at the current timeframe. Tables: every 30s. Both pause
+    // while the tab is hidden and catch up immediately on focus.
+    let chartRange = '1h';
+    let chartBreakdown = '';
+    let lastSeriesJson = '';
+
+    async function loadChart() {
+      const projectId = document.getElementById('filter-project').value;
+      const params = new URLSearchParams({ range: chartRange });
+      if (projectId) params.set('project_id', projectId);
+      if (chartBreakdown) params.set('breakdown', chartBreakdown);
+      try {
+        const res = await authFetch('/analytics/timeseries?' + params.toString());
+        if (!res.ok) return;
+        const data = await res.json();
+        const json = JSON.stringify(data);
+        if (json !== lastSeriesJson) {     // skip the re-render (and tooltip reset) when nothing changed
+          const hadData = lastSeriesJson !== '';
+          lastSeriesJson = json;
+          renderChart(data);
+          if (hadData) refreshTables();    // new activity detected → pull fresh table data too
+        }
+      } catch { /* transient network error — next tick retries */ }
+    }
+
+    window.setRange = function(r) {
+      chartRange = r;
+      lastSeriesJson = '';
+      loadChart();
+    };
+
+    window.setBreakdown = function(bd) {
+      chartBreakdown = bd;
+      lastSeriesJson = '';
+      document.querySelectorAll('.bd-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === bd));
+      loadChart();
+    };
+
+    // Tables refresh on new activity (triggered by the 5s chart poll detecting
+    // a change) with a 20s fallback; throttled so bursts don't hammer the API.
+    let lastTablesAt = 0;
+    function refreshTables(force = false) {
+      const now = Date.now();
+      if (!force && now - lastTablesAt < 4000) return;
+      lastTablesAt = now;
+      load();
+      loadEvals();
+    }
+
+    function reload() { refreshTables(true); loadChart(); }
+    document.getElementById('filter-project').addEventListener('change', () => { lastSeriesJson = ''; reload(); });
+    document.getElementById('filter-period').addEventListener('change', () => refreshTables(true));
+
+    setInterval(() => { if (!document.hidden) loadChart(); }, 5000);
+    setInterval(() => { if (!document.hidden) refreshTables(); }, 20000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastSeriesJson = ''; reload(); } });
+
+    reload();
+  </script>
+</body>
+</html>

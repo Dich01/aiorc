@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Issues</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Sidebar (logged-in) + anon top-nav, same pattern as repository.html */
+    body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo, .sidebar.collapsed .sidebar-section-title, .sidebar.collapsed .sidebar-item-label, .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .team-badge { margin-left:auto; background:#ef4444; color:#fff; font-size:0.66rem; font-weight:700; padding:1px 6px; border-radius:9px; min-width:16px; text-align:center; line-height:1.4; }
+
+    .anon-nav { background:#1a1a2e; color:#e0e0ff; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.3); position:sticky; top:0; z-index:100; }
+    .anon-nav .logo { font-size:1.25rem; font-weight:700; color:inherit; text-decoration:none; }
+    .anon-nav .logo span { color:var(--primary); }
+    .anon-nav-cta { display:flex; gap:10px; align-items:center; }
+    .anon-nav-cta a { color:#e0e0ff; text-decoration:none; font-size:0.88rem; }
+    .anon-nav-cta a.cta { background:var(--primary); color:#fff; padding:7px 16px; border-radius:6px; font-weight:600; }
+
+    .main-area { flex:1; min-width:0; }
+    .main-container { max-width:1100px; margin:0 auto; padding:32px 32px 60px; }
+
+    /* Page header */
+    .issues-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+    .issues-eyebrow { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--primary); margin-bottom:8px; }
+    .issues-title { font-size:1.6rem; font-weight:700; color:var(--text); }
+    .issues-deck { font-size:0.92rem; color:var(--muted); margin-top:6px; max-width:680px; line-height:1.55; }
+
+    /* Filters bar */
+    .filters-bar { display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .filter-tabs { display:flex; gap:4px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:3px; }
+    .filter-tab { background:none; border:none; cursor:pointer; padding:6px 12px; font-size:0.84rem; color:var(--muted); border-radius:5px; font-family:inherit; }
+    .filter-tab.active { background:var(--primary); color:#fff; font-weight:600; }
+    .type-chips { display:flex; gap:6px; }
+    .type-chip { background:var(--card-bg); border:1px solid var(--border); border-radius:18px; padding:5px 12px; font-size:0.8rem; cursor:pointer; font-family:inherit; color:var(--muted); }
+    .type-chip:hover { border-color:var(--primary); }
+    .type-chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .search-input-wrap { position:relative; flex:1; min-width:200px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; }
+    .search-input-wrap:focus-within { border-color:var(--primary); }
+    .search-input-wrap::before { content:'⌕'; position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); }
+    .search-input { width:100%; box-sizing:border-box; background:transparent; border:none; outline:none; padding:9px 12px 9px 36px; font-size:0.88rem; color:var(--text); font-family:inherit; }
+    .sort-select { padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--card-bg); color:var(--text); font-family:inherit; font-size:0.85rem; cursor:pointer; }
+
+    /* List */
+    .issues-list { display:flex; flex-direction:column; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); overflow:hidden; }
+    .issue-row {
+      display:flex; gap:12px; align-items:flex-start;
+      padding:14px 18px; border-bottom:1px solid var(--border);
+      cursor:pointer; transition:background .12s;
+    }
+    .issue-row:last-child { border-bottom:none; }
+    .issue-row:hover { background:#f8f9ff; }
+    .issue-icon {
+      width:24px; height:24px; flex-shrink:0; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:0.75rem; margin-top:2px;
+    }
+    .issue-icon.bug { background:#fee2e2; color:#b91c1c; }
+    .issue-icon.feature { background:#dbeafe; color:#1d4ed8; }
+    .issue-icon.question { background:#fef3c7; color:#92400e; }
+    .issue-icon.closed { background:#f3f4f6; color:#6b7280; }
+    .issue-body-col { flex:1; min-width:0; }
+    .issue-title { font-size:0.95rem; font-weight:600; color:var(--text); }
+    .issue-title.closed { text-decoration:line-through; color:var(--muted); }
+    .issue-meta { font-size:0.78rem; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .issue-meta a { color:var(--primary); text-decoration:none; }
+    .issue-stats { display:flex; gap:14px; font-size:0.82rem; color:var(--muted); flex-shrink:0; align-items:center; }
+    .issue-stats .has-votes { color:#16a34a; font-weight:600; }
+    .issue-status-pill { font-size:0.66rem; font-weight:700; padding:2px 7px; border-radius:9px; text-transform:uppercase; }
+    .issue-status-pill.open { background:#dcfce7; color:#15803d; }
+    .issue-status-pill.closed { background:#f3f4f6; color:#6b7280; }
+
+    .empty-state { padding:48px 20px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:10px; }
+
+    /* Detail view */
+    .detail-header { display:flex; align-items:flex-start; gap:14px; margin-bottom:20px; }
+    .detail-back { font-size:0.85rem; color:var(--primary); text-decoration:none; margin-bottom:14px; display:inline-block; }
+    .detail-back:hover { text-decoration:underline; }
+    .detail-title { font-size:1.5rem; font-weight:700; color:var(--text); line-height:1.3; }
+    .detail-title.closed { text-decoration:line-through; color:var(--muted); }
+    .detail-meta { font-size:0.85rem; color:var(--muted); margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .detail-meta a { color:var(--primary); text-decoration:none; font-weight:500; }
+    .detail-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+    .vote-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 14px; border:1px solid var(--border); border-radius:6px;
+      background:var(--card-bg); color:var(--text);
+      font-family:inherit; font-size:0.85rem; cursor:pointer;
+      transition:background .12s, border-color .12s, color .12s;
+    }
+    .vote-btn:hover { background:#f0fdf4; border-color:#16a34a; color:#15803d; }
+    .vote-btn.is-voted { background:#dcfce7; border-color:#16a34a; color:#15803d; }
+    .detail-body { font-size:0.94rem; line-height:1.7; color:var(--text); white-space:pre-wrap; padding:18px 0; border-bottom:1px solid var(--border); }
+    .detail-body.empty { color:var(--muted); font-style:italic; }
+
+    /* Comments */
+    .comments-section { margin-top:24px; }
+    .comments-title { font-size:0.95rem; font-weight:700; margin-bottom:14px; color:var(--text); }
+    .comment {
+      display:flex; gap:12px; padding:14px 0;
+      border-top:1px solid var(--border);
+    }
+    .comment:first-child { border-top:none; }
+    .comment-avatar {
+      width:34px; height:34px; border-radius:50%;
+      background:linear-gradient(135deg,#4361ee,#7c3aed);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:0.78rem; color:#fff; flex-shrink:0;
+    }
+    .comment-body { flex:1; min-width:0; }
+    .comment-meta { font-size:0.82rem; color:var(--muted); margin-bottom:4px; display:flex; gap:8px; align-items:center; }
+    .comment-author { color:var(--primary); font-weight:600; text-decoration:none; }
+    .comment-author:hover { text-decoration:underline; }
+    .role-admin-badge { background:#7c3aed22; color:#7c3aed; border:1px solid #7c3aed44; font-size:0.65rem; font-weight:700; padding:1px 7px; border-radius:9px; }
+    .comment-text { font-size:0.9rem; line-height:1.6; color:var(--text); white-space:pre-wrap; }
+    .comment-actions { margin-top:6px; display:flex; gap:8px; }
+    .comment-delete-btn { background:none; border:none; cursor:pointer; color:#dc2626; font-size:0.78rem; font-family:inherit; padding:0; }
+    .comment-delete-btn:hover { text-decoration:underline; }
+
+    .new-comment-box { margin-top:24px; border:1px solid var(--border); border-radius:8px; padding:14px; background:#f8f9ff; }
+    .new-comment-box textarea { width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.9rem; resize:vertical; min-height:80px; background:#fff; }
+    .login-cta { padding:14px 18px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; font-size:0.9rem; color:#92400e; margin-top:14px; }
+    .login-cta a { color:#92400e; font-weight:600; text-decoration:underline; }
+
+    /* Modal: report new issue */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; width:100%; max-width:560px; padding:24px 28px; max-height:90vh; overflow-y:auto; }
+    .modal-box h3 { margin:0 0 6px; font-size:1.1rem; font-weight:700; }
+    .modal-box .modal-subtitle { font-size:0.84rem; color:var(--muted); margin-bottom:18px; }
+
+    @media (max-width:768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+      .main-container { padding:24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="shell-mount"></div>
+
+  <main class="main-area">
+    <div class="main-container" id="page-content">
+      <p style="color:var(--muted)">Loading…</p>
+    </div>
+  </main>
+
+  <!-- Modal new issue -->
+  <div class="modal-overlay" id="report-modal" onclick="if(event.target===this)closeReportModal()">
+    <div class="modal-box">
+      <h3>Report issue</h3>
+      <p class="modal-subtitle">Bug, feature suggestion, or question for the maintainers.</p>
+      <div class="form-group">
+        <label for="report-type">Type</label>
+        <div class="type-chips" id="report-type-chips" style="margin-top:4px">
+          <button type="button" class="type-chip active" data-type="bug">🐛 Bug</button>
+          <button type="button" class="type-chip" data-type="feature">✨ Feature</button>
+          <button type="button" class="type-chip" data-type="question">❓ Question</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="report-title">Title *</label>
+        <input type="text" id="report-title" maxlength="200" placeholder="Brief summary of the problem or request"/>
+      </div>
+      <div class="form-group">
+        <label for="report-body">Description</label>
+        <textarea id="report-body" rows="6" placeholder="Steps to reproduce, expected behavior, context…&#10;Plain Markdown (not rendered)."></textarea>
+      </div>
+      <div id="report-error" class="alert alert-error hidden"></div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button class="btn btn-ghost" onclick="closeReportModal()">Cancel</button>
+        <button class="btn btn-primary" id="report-submit-btn" onclick="submitReport()">Report</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="info-modal.js"></script>
+  <script src="ui-dialogs.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token;
+    const myNickname = localStorage.getItem('userNickname') || '';
+    const myEmail = localStorage.getItem('userEmail') || '';
+    const myRole = localStorage.getItem('userRole') || 'user';
+    const isAdmin = myRole === 'admin';
+
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function initials(n) { return String(n||'').split(/[\s_-]+/).filter(Boolean).map(p=>p[0]).join('').toUpperCase().slice(0,2) || '?'; }
+    async function authedFetch(url, opts = {}) {
+      const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      return fetch(url, { ...opts, headers });
+    }
+    function fmtAgo(ts) {
+      const s = Math.floor((Date.now() - ts) / 1000);
+      if (s < 60) return 'seconds ago';
+      if (s < 3600) return `${Math.floor(s/60)}m ago`;
+      if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+      const d = Math.floor(s/86400);
+      if (d < 30) return `${d}d ago`;
+      return new Date(ts).toLocaleDateString('en');
+    }
+    const TYPE_GLYPH = { bug:'🐛', feature:'✨', question:'❓' };
+    const TYPE_LABEL = { bug:'Bug', feature:'Feature', question:'Question' };
+
+    // ── Shell ──
+    const mount = document.getElementById('shell-mount');
+    if (isLoggedIn) {
+      document.body.classList.add('has-sidebar');
+      mount.outerHTML = `
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+            <button class="sidebar-collapse-btn" id="sidebar-toggle" onclick="toggleSidebar()">‹</button>
+          </div>
+          <div class="sidebar-section-title">Workspace</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="dashboard.html?tab=projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>
+            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
+          </nav>
+          <div class="sidebar-section-title">Insights</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="analytics.html"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
+          </nav>
+          <div class="sidebar-section-title">Community</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="repository.html"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>
+            <a class="sidebar-item active" href="issues.html"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
+          </nav>
+          <div class="sidebar-section-title">Help</div>
+          <nav class="sidebar-nav">
+            <button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>
+            <a class="sidebar-item" href="faq.html"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>
+          </nav>
+          <div class="sidebar-footer">
+            <div class="sidebar-user" style="font-weight:600">${myNickname ? '@' + esc(myNickname) : esc(myEmail)}</div>
+            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(myEmail)}</div>
+            <a href="#" class="sidebar-logout" id="logout-btn">Log out</a>
+          </div>
+        </aside>`;
+      const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+      const apply = () => {
+        const c = localStorage.getItem(SIDEBAR_KEY) === '1';
+        document.getElementById('sidebar')?.classList.toggle('collapsed', c);
+        const b = document.getElementById('sidebar-toggle'); if (b) b.textContent = c ? '›' : '‹';
+      };
+      window.toggleSidebar = () => {
+        const c = localStorage.getItem(SIDEBAR_KEY) === '1';
+        localStorage.setItem(SIDEBAR_KEY, c ? '0' : '1'); apply();
+      };
+      apply();
+      document.getElementById('logout-btn').addEventListener('click', e => { e.preventDefault(); localStorage.clear(); window.location.href='index.html'; });
+      // Pending invitations badge
+      (async () => {
+        try {
+          const res = await fetch('/invitations/incoming', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (!res.ok) return;
+          const list = await res.json();
+          const pending = list.filter(i => i.status === 'pending').length;
+          const badge = document.getElementById('team-badge');
+          if (badge && pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+        } catch {}
+      })();
+    } else {
+      mount.outerHTML = `
+        <nav class="anon-nav">
+          <a href="/" class="logo">AI<span>Orc</span></a>
+          <div class="anon-nav-cta">
+            <a href="repository.html">Public repository</a>
+            <a href="faq.html">Documentation</a>
+            <a href="index.html">Log in</a>
+            <a href="index.html" class="cta">Create account</a>
+          </div>
+        </nav>`;
+    }
+
+    // ── Routing: ?id=X switches to detail view ──
+    const params = new URLSearchParams(window.location.search);
+    const issueId = params.get('id');
+    if (issueId) loadDetail(issueId); else loadList();
+
+    // ── List view ──
+    let currentStatus = 'all';
+    let currentType = '';
+    let currentSort = 'recent';
+    let currentSearch = '';
+
+    function listShell() {
+      return `
+        <div class="issues-header">
+          <div>
+            <div class="issues-eyebrow">Issues</div>
+            <h1 class="issues-title">Report bugs, request features</h1>
+            <p class="issues-deck">Shared space for feedback on AIOrc. Any logged-in user can report and comment; maintainers close the ones that get resolved.</p>
+          </div>
+          ${isLoggedIn
+            ? `<button class="btn btn-primary" onclick="openReportModal()">+ Report issue</button>`
+            : `<a class="btn btn-primary" href="index.html">Log in to report</a>`}
+        </div>
+
+        <div class="filters-bar">
+          <div class="filter-tabs">
+            <button class="filter-tab" data-status="open" onclick="setStatus('open')">Open</button>
+            <button class="filter-tab" data-status="closed" onclick="setStatus('closed')">Closed</button>
+            <button class="filter-tab" data-status="all" onclick="setStatus('all')">All</button>
+          </div>
+          <div class="type-chips">
+            <button class="type-chip" data-type="" onclick="setType('')">All types</button>
+            <button class="type-chip" data-type="bug" onclick="setType('bug')">🐛 Bug</button>
+            <button class="type-chip" data-type="feature" onclick="setType('feature')">✨ Feature</button>
+            <button class="type-chip" data-type="question" onclick="setType('question')">❓ Question</button>
+          </div>
+          <div class="search-input-wrap">
+            <input type="text" id="search-input" class="search-input" placeholder="Search issues…" autocomplete="off"/>
+          </div>
+          <select id="sort-select" class="sort-select">
+            <option value="recent">Most recent</option>
+            <option value="votes">Most voted (👍)</option>
+            <option value="comments">Most commented</option>
+          </select>
+        </div>
+
+        <div id="issues-meta" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px"></div>
+        <div id="issues-list-host"></div>
+      `;
+    }
+
+    async function loadList() {
+      document.getElementById('page-content').innerHTML = listShell();
+      // Set active states from saved (or default) filters
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.toggle('active', b.dataset.status === currentStatus));
+      document.querySelectorAll('.type-chip').forEach(b => b.classList.toggle('active', b.dataset.type === currentType));
+      document.getElementById('sort-select').value = currentSort;
+      document.getElementById('search-input').value = currentSearch;
+
+      let timer = null;
+      document.getElementById('search-input').addEventListener('input', e => {
+        clearTimeout(timer);
+        currentSearch = e.target.value.trim();
+        timer = setTimeout(fetchAndRender, 200);
+      });
+      document.getElementById('sort-select').addEventListener('change', e => { currentSort = e.target.value; fetchAndRender(); });
+
+      fetchAndRender();
+    }
+
+    window.setStatus = function(s) { currentStatus = s; document.querySelectorAll('.filter-tab').forEach(b => b.classList.toggle('active', b.dataset.status === s)); fetchAndRender(); };
+    window.setType = function(t) { currentType = t; document.querySelectorAll('.type-chip').forEach(b => b.classList.toggle('active', b.dataset.type === t)); fetchAndRender(); };
+
+    async function fetchAndRender() {
+      const qs = new URLSearchParams();
+      if (currentStatus) qs.set('status', currentStatus);
+      if (currentType) qs.set('type', currentType);
+      if (currentSearch) qs.set('q', currentSearch);
+      if (currentSort) qs.set('sort', currentSort);
+      const res = await authedFetch('/issues?' + qs.toString());
+      if (!res.ok) {
+        document.getElementById('issues-list-host').innerHTML = `<div class="empty-state">Could not load issues.</div>`;
+        return;
+      }
+      const list = await res.json();
+      const meta = document.getElementById('issues-meta');
+      meta.textContent = list.length === 1 ? '1 issue' : `${list.length} issues`;
+      const host = document.getElementById('issues-list-host');
+      if (!list.length) {
+        host.innerHTML = `<div class="empty-state">
+          <h3 style="font-size:1rem;color:var(--text);margin-bottom:8px">No matching issues.</h3>
+          <p style="font-size:0.86rem">Try changing the filters or ${isLoggedIn ? 'report the first one.' : 'log in to report the first one.'}</p>
+        </div>`;
+        return;
+      }
+      host.innerHTML = `<div class="issues-list">${list.map(renderRow).join('')}</div>`;
+    }
+
+    function renderRow(i) {
+      const closed = i.status === 'closed';
+      const iconCls = closed ? 'closed' : i.type;
+      const icon = closed ? '✕' : (TYPE_GLYPH[i.type] || '•');
+      const author = i.author_nickname
+        ? `<a href="user.html?nick=${encodeURIComponent(i.author_nickname)}" onclick="event.stopPropagation()">@${esc(i.author_nickname)}</a>`
+        : esc(i.author_email || '');
+      return `<div class="issue-row" onclick="window.location.href='issues.html?id=${encodeURIComponent(i.id)}'">
+        <div class="issue-icon ${iconCls}">${icon}</div>
+        <div class="issue-body-col">
+          <div class="issue-title ${closed?'closed':''}">${esc(i.title)}</div>
+          <div class="issue-meta">
+            <span class="issue-status-pill ${i.status}">${i.status === 'open' ? 'open' : 'closed'}</span>
+            <span>${TYPE_LABEL[i.type] || i.type}</span>
+            <span>· by ${author}</span>
+            <span>· ${fmtAgo(i.created_at)}</span>
+          </div>
+        </div>
+        <div class="issue-stats">
+          <span class="${(i.votes_count||0) > 0 ? 'has-votes' : ''}" title="Votes">👍 ${i.votes_count || 0}</span>
+          <span title="Comments">💬 ${i.comments_count || 0}</span>
+        </div>
+      </div>`;
+    }
+
+    // ── Detail view ──
+    async function loadDetail(id) {
+      document.getElementById('page-content').innerHTML = `<p style="color:var(--muted)">Loading issue…</p>`;
+      const [iRes, cRes] = await Promise.all([
+        authedFetch(`/issues/${id}`),
+        authedFetch(`/issues/${id}/comments`),
+      ]);
+      if (iRes.status === 404) {
+        document.getElementById('page-content').innerHTML = `
+          <a href="issues.html" class="detail-back">← Back to issues</a>
+          <div class="empty-state"><h3>Issue not found</h3><p>Issue ${esc(id)} does not exist or has been deleted.</p></div>`;
+        return;
+      }
+      if (!iRes.ok) { document.getElementById('page-content').innerHTML = `<p style="color:#dc2626">Error loading.</p>`; return; }
+      const issue = await iRes.json();
+      const comments = cRes.ok ? await cRes.json() : [];
+      renderDetail(issue, comments);
+    }
+
+    function renderDetail(issue, comments) {
+      const closed = issue.status === 'closed';
+      const isAuthor = isLoggedIn && issue.user_id === (localStorage.getItem('userId') || '');
+      // We don't store userId in localStorage today — derive admin/edit ability via role.
+      // The PATCH/DELETE endpoints will reject if not author/admin, so the UI is best-effort.
+      const canEditTitle = isLoggedIn && (isAdmin || issue.author_nickname === myNickname);
+      const author = issue.author_nickname
+        ? `<a href="user.html?nick=${encodeURIComponent(issue.author_nickname)}">@${esc(issue.author_nickname)}</a>`
+        : esc(issue.author_email || '');
+      const closedNote = closed && issue.closer_nickname
+        ? `<div style="font-size:0.82rem;color:var(--muted);margin-top:6px">Closed by <a href="user.html?nick=${encodeURIComponent(issue.closer_nickname)}" style="color:var(--primary)">@${esc(issue.closer_nickname)}</a> · ${fmtAgo(issue.closed_at)}</div>`
+        : '';
+
+      const adminControls = isLoggedIn && isAdmin
+        ? closed
+          ? `<button class="btn btn-sm btn-ghost" onclick="reopenIssue('${esc(issue.id)}')">Reopen issue</button>`
+          : `<button class="btn btn-sm" style="background:#16a34a;color:#fff" onclick="closeIssue('${esc(issue.id)}')">Close issue</button>`
+        : '';
+      const deleteBtn = canEditTitle
+        ? `<button class="btn btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca" onclick="deleteIssue('${esc(issue.id)}')">Delete</button>`
+        : '';
+
+      document.getElementById('page-content').innerHTML = `
+        <a href="issues.html" class="detail-back">← Back to issues</a>
+        <div class="detail-header">
+          <div class="issue-icon ${closed ? 'closed' : issue.type}" style="width:32px;height:32px;font-size:0.9rem">${closed ? '✕' : (TYPE_GLYPH[issue.type] || '•')}</div>
+          <div style="flex:1;min-width:0">
+            <h1 class="detail-title ${closed?'closed':''}">${esc(issue.title)}</h1>
+            <div class="detail-meta">
+              <span class="issue-status-pill ${issue.status}">${closed ? 'closed' : 'open'}</span>
+              <span>${TYPE_LABEL[issue.type] || issue.type}</span>
+              <span>· by ${author}</span>
+              <span>· ${fmtAgo(issue.created_at)}</span>
+            </div>
+            ${closedNote}
+          </div>
+        </div>
+
+        <div class="detail-actions">
+          <button class="vote-btn ${issue.is_voted ? 'is-voted' : ''}" onclick="toggleVote('${esc(issue.id)}', this)" ${isLoggedIn ? '' : 'disabled title="Log in to vote"'}>
+            👍 <span id="vote-count">${issue.votes_count || 0}</span>
+          </button>
+          ${adminControls}
+          ${deleteBtn}
+        </div>
+
+        <div class="detail-body${(issue.body || '').trim() ? '' : ' empty'}">${(issue.body || '').trim() ? esc(issue.body) : 'The author did not add a description.'}</div>
+
+        <div class="comments-section">
+          <div class="comments-title">Comments (${comments.length})</div>
+          <div id="comments-host">${comments.length ? comments.map(renderComment).join('') : '<p style="font-size:0.86rem;color:var(--muted);font-style:italic">No comments yet.</p>'}</div>
+
+          ${isLoggedIn ? `
+            <div class="new-comment-box">
+              <textarea id="new-comment-body" placeholder="Write your comment…"></textarea>
+              <div style="display:flex;justify-content:flex-end;margin-top:10px">
+                <button class="btn btn-primary btn-sm" onclick="postComment('${esc(issue.id)}')">Post comment</button>
+              </div>
+            </div>
+          ` : `
+            <div class="login-cta">
+              To comment or vote, <a href="index.html">log in</a> or create an account.
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderComment(c) {
+      const author = c.author_nickname
+        ? `<a class="comment-author" href="user.html?nick=${encodeURIComponent(c.author_nickname)}">@${esc(c.author_nickname)}</a>`
+        : esc(c.author_email || 'user');
+      const adminBadge = c.author_role === 'admin' ? `<span class="role-admin-badge">admin</span>` : '';
+      const canDelete = isLoggedIn && (isAdmin || c.author_nickname === myNickname);
+      const deleteBtn = canDelete ? `<button class="comment-delete-btn" onclick="deleteComment('${esc(c.issue_id)}','${esc(c.id)}')">Delete</button>` : '';
+      return `<div class="comment" id="comment-${esc(c.id)}">
+        <div class="comment-avatar">${esc(initials(c.author_nickname || c.author_email))}</div>
+        <div class="comment-body">
+          <div class="comment-meta">${author} ${adminBadge} <span>·</span> <span>${fmtAgo(c.created_at)}</span></div>
+          <div class="comment-text">${esc(c.body)}</div>
+          ${deleteBtn ? `<div class="comment-actions">${deleteBtn}</div>` : ''}
+        </div>
+      </div>`;
+    }
+
+    // ── Actions ──
+    window.openReportModal = function() {
+      if (!isLoggedIn) { window.location.href = 'index.html'; return; }
+      document.getElementById('report-modal').classList.add('open');
+      document.getElementById('report-title').value = '';
+      document.getElementById('report-body').value = '';
+      document.getElementById('report-error').classList.add('hidden');
+      // reset type chips
+      document.querySelectorAll('#report-type-chips .type-chip').forEach(b => b.classList.toggle('active', b.dataset.type === 'bug'));
+      setTimeout(() => document.getElementById('report-title').focus(), 50);
+    };
+    window.closeReportModal = function() { document.getElementById('report-modal').classList.remove('open'); };
+    document.getElementById('report-type-chips').addEventListener('click', e => {
+      const btn = e.target.closest('.type-chip'); if (!btn) return;
+      document.querySelectorAll('#report-type-chips .type-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    window.submitReport = async function() {
+      const title = document.getElementById('report-title').value.trim();
+      const body = document.getElementById('report-body').value.trim();
+      const type = document.querySelector('#report-type-chips .type-chip.active')?.dataset.type || 'bug';
+      const err = document.getElementById('report-error');
+      if (!title) { err.textContent = 'Title is required.'; err.classList.remove('hidden'); return; }
+      const btn = document.getElementById('report-submit-btn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const res = await authedFetch('/issues', { method:'POST', body: JSON.stringify({ title, body, type }) });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); err.textContent = d.error || 'Error.'; err.classList.remove('hidden'); return; }
+        const created = await res.json();
+        closeReportModal();
+        window.location.href = `issues.html?id=${encodeURIComponent(created.id)}`;
+      } finally { btn.disabled = false; btn.textContent = 'Report'; }
+    };
+
+    window.toggleVote = async function(id, btnEl) {
+      if (!isLoggedIn) { window.location.href = 'index.html'; return; }
+      btnEl.disabled = true;
+      try {
+        const res = await authedFetch(`/issues/${id}/vote`, { method:'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        btnEl.classList.toggle('is-voted', data.is_voted);
+        const countEl = document.getElementById('vote-count');
+        if (countEl) countEl.textContent = data.votes_count;
+      } finally { btnEl.disabled = false; }
+    };
+    window.closeIssue = async function(id) {
+      if (!await uiConfirm('Close this issue?')) return;
+      const res = await authedFetch(`/issues/${id}/close`, { method:'POST' });
+      if (res.ok) loadDetail(id);
+      else await uiAlert('Could not close.');
+    };
+    window.reopenIssue = async function(id) {
+      const res = await authedFetch(`/issues/${id}/reopen`, { method:'POST' });
+      if (res.ok) loadDetail(id);
+      else await uiAlert('Could not reopen.');
+    };
+    window.deleteIssue = async function(id) {
+      if (!await uiConfirm('Delete this issue? This action cannot be undone.')) return;
+      const res = await authedFetch(`/issues/${id}`, { method:'DELETE' });
+      if (res.ok || res.status === 204) window.location.href = 'issues.html';
+      else await uiAlert('Could not delete.');
+    };
+    window.postComment = async function(issueId) {
+      const body = document.getElementById('new-comment-body').value.trim();
+      if (!body) return;
+      const res = await authedFetch(`/issues/${issueId}/comments`, { method:'POST', body: JSON.stringify({ body }) });
+      if (res.ok) loadDetail(issueId);
+      else await uiAlert('Could not post comment.');
+    };
+    window.deleteComment = async function(issueId, cid) {
+      if (!await uiConfirm('Delete this comment?')) return;
+      const res = await authedFetch(`/issues/${issueId}/comments/${cid}`, { method:'DELETE' });
+      if (res.ok || res.status === 204) loadDetail(issueId);
+      else await uiAlert('Could not delete.');
+    };
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReportModal(); });
+  </script>
+</body>
+</html>

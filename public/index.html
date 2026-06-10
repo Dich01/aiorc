@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Multi-agent workflow compiler over MCP</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ===== Landing base ===== */
+    body { background: #fff; color: #1a1a2e; }
+
+    /* ===== Top nav ===== */
+    .landing-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      z-index: 200;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .landing-nav.scrolled {
+      background: rgba(10, 12, 30, 0.96);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .nav-logo {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #fff;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+    .nav-logo span { color: #4361ee; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-nav-login {
+      background: transparent;
+      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      padding: 7px 18px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-nav-login:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
+    .btn-nav-start {
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-nav-start:hover { background: #3451d1; }
+
+    /* ===== Hero ===== */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0a0c1e 0%, #0f1535 45%, #0c2340 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(ellipse at center, rgba(67,97,238,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #4361ee;
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-size: clamp(1.6rem, 3.2vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.35;
+      color: #fff;
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      letter-spacing: -0.02em;
+    }
+    .hero-title .hero-title-main {
+      font-size: clamp(1.9rem, 3.8vw, 3.2rem);
+      font-weight: 700;
+    }
+    .hero-title em {
+      font-size: clamp(1.3rem, 2.4vw, 2rem);
+      font-style: italic;
+      font-weight: 400;
+      background: linear-gradient(90deg, #FFD700, #FFA500, #FF8C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 600px;
+      margin: 0 auto 44px;
+      line-height: 1.65;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-hero-primary {
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 32px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn-hero-primary:hover { background: #3451d1; }
+    .btn-hero-primary:active { transform: scale(0.98); }
+    .btn-hero-secondary {
+      background: transparent;
+      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 8px;
+      padding: 14px 32px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      text-decoration: none;
+    }
+    .btn-hero-secondary:hover { border-color: rgba(255,255,255,0.55); color: #fff; }
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.25);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .scroll-arrow {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.35), transparent);
+    }
+
+    /* ===== Section base ===== */
+    .section { padding: 96px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #4361ee;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: #1a1a2e;
+      max-width: 680px;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .section-body {
+      font-size: 1.05rem;
+      color: #6b7280;
+      max-width: 600px;
+      line-height: 1.7;
+      margin-bottom: 52px;
+    }
+
+    /* ===== How it works ===== */
+    .how-section { background: #f7f8fc; }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 28px;
+      margin-top: 52px;
+    }
+    .step-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px 28px;
+    }
+    .step-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #4361ee;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .step-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4361ee, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: 18px;
+    }
+    .step-card h3 { font-size: 1.05rem; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+    .step-card p  { font-size: 0.88rem; color: #6b7280; line-height: 1.65; }
+
+    /* ===== Features ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 28px 24px;
+      background: #fff;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: 0 8px 24px rgba(67,97,238,0.1); transform: translateY(-2px); }
+    .feature-glyph { font-size: 1.6rem; margin-bottom: 14px; }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .feature-card p  { font-size: 0.875rem; color: #6b7280; line-height: 1.65; }
+
+    /* ===== Architecture ===== */
+    .arch-section { background: #0a0c1e; }
+    .arch-section .section-title { color: #fff; }
+    .arch-section .section-body  { color: rgba(255,255,255,0.5); }
+    .arch-section .section-eyebrow { color: #4361ee; }
+    .arch-diagram {
+      background: #0f172a;
+      border: 1px solid rgba(67,97,238,0.25);
+      border-radius: 12px;
+      padding: 36px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.82rem; color: #a0b4f0;
+      line-height: 2; white-space: pre; overflow-x: auto;
+    }
+    .arch-diagram .hl  { color: #4361ee; font-weight: 700; }
+    .arch-diagram .dim { color: rgba(160,180,240,0.35); }
+    .arch-diagram .ok  { color: #10b981; }
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1px;
+      background: rgba(67,97,238,0.15);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 40px;
+    }
+    .arch-step { background: #0f1535; padding: 28px 24px; text-align: center; }
+    .arch-step-icon  { font-size: 1.8rem; margin-bottom: 12px; }
+    .arch-step-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .arch-step-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .arch-step-desc  { font-size: 0.8rem; color: rgba(255,255,255,0.45); line-height: 1.6; }
+
+    /* ===== Product screenshots ===== */
+    .screenshots-section { background: #fff; padding: 96px 24px; }
+    .screenshots-section .section-eyebrow { color: #4361ee; }
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .screenshot-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .screenshot-card:hover {
+      box-shadow: 0 12px 48px rgba(67,97,238,0.15);
+      transform: translateY(-3px);
+    }
+    .screenshot-card { cursor: zoom-in; }
+    .lightbox-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.88);
+      align-items: center; justify-content: center;
+      padding: 32px;
+    }
+    .lightbox-overlay.open { display: flex; }
+    .lightbox-overlay img {
+      max-width: 100%; max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .lightbox-close {
+      position: absolute; top: 20px; right: 24px;
+      color: #fff; font-size: 2rem; cursor: pointer;
+      background: none; border: none; line-height: 1; opacity: 0.7;
+    }
+    .lightbox-close:hover { opacity: 1; }
+    .screenshot-card img {
+      width: 100%;
+      display: block;
+    }
+    .screenshot-caption {
+      padding: 18px 22px;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+    .screenshot-caption h3 { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .screenshot-caption p  { font-size: 0.83rem; color: #6b7280; line-height: 1.5; }
+    @media (max-width: 768px) {
+      .screenshots-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== Use cases ===== */
+    .usecases-section { background: #f7f8fc; }
+    .usecase-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px; margin-top: 48px;
+    }
+    .usecase-card {
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 12px; padding: 28px;
+      display: flex; gap: 18px;
+    }
+    .usecase-glyph { font-size: 1.8rem; flex-shrink: 0; margin-top: 2px; }
+    .usecase-card h3 { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+    .usecase-card p  { font-size: 0.85rem; color: #6b7280; line-height: 1.6; }
+
+    /* ===== CTA section ===== */
+    .cta-section {
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f1535 100%);
+      text-align: center; padding: 96px 24px;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 800;
+      color: #fff; letter-spacing: -0.02em; margin-bottom: 16px;
+    }
+    .cta-section p {
+      font-size: 1.05rem; color: rgba(255,255,255,0.5);
+      max-width: 520px; margin: 0 auto 40px; line-height: 1.65;
+    }
+
+    /* ===== Footer ===== */
+    .landing-footer { background: #0a0c1e; padding: 48px 48px 36px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; flex-wrap: wrap; }
+    .footer-brand .nav-logo { font-size: 1.2rem; }
+    .footer-brand p { font-size: 0.82rem; color: rgba(255,255,255,0.3); margin-top: 10px; max-width: 220px; line-height: 1.6; }
+    .footer-links { display: flex; gap: 48px; flex-wrap: wrap; }
+    .footer-col h4 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 14px; }
+    .footer-col a { display: block; font-size: 0.875rem; color: rgba(255,255,255,0.55); text-decoration: none; margin-bottom: 8px; transition: color 0.15s; }
+    .footer-col a:hover { color: #fff; }
+    .footer-bottom { max-width: 1100px; margin: 36px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-bottom span { font-size: 0.78rem; color: rgba(255,255,255,0.25); }
+    .footer-bottom a   { font-size: 0.78rem; color: rgba(255,255,255,0.3); text-decoration: none; }
+    .footer-bottom a:hover { color: rgba(255,255,255,0.7); }
+
+    /* ===== Login Modal ===== */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,12,30,0.8); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: #fff; border-radius: 14px; padding: 44px 40px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+      transform: translateY(16px); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+    .modal-header { text-align: center; margin-bottom: 28px; }
+    .modal-header h2 { font-size: 1.6rem; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }
+    .modal-header h2 span { color: #4361ee; }
+    .modal-header p { font-size: 0.85rem; color: #6b7280; }
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; font-size: 1.3rem;
+      color: #9ca3af; cursor: pointer; line-height: 1;
+    }
+    .modal-close:hover { color: #1a1a2e; }
+    .modal-box-inner { position: relative; }
+
+    /* ===== Story ===== */
+    .story-section { background: #fff; }
+    .story-inner { max-width: 760px; }
+    .story-lead {
+      font-size: 1.2rem;
+      color: #1a1a2e;
+      line-height: 1.6;
+      font-weight: 500;
+      margin-bottom: 36px;
+    }
+    .story-content p {
+      font-size: 1.05rem;
+      color: #4b5563;
+      line-height: 1.78;
+      margin-bottom: 20px;
+    }
+    .story-content h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 40px 0 16px;
+      letter-spacing: -0.01em;
+    }
+    .story-content h3:first-child { margin-top: 0; }
+    .story-cta {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #4361ee;
+      margin-top: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .landing-nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 20px 60px; }
+      .section { padding: 64px 20px; }
+      .landing-footer { padding: 40px 20px 28px; }
+      .footer-inner { flex-direction: column; }
+      .footer-links { gap: 32px; }
+      .story-lead { font-size: 1.05rem; }
+      .story-content p { font-size: 0.98rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== TOP NAV ===== -->
+  <nav class="landing-nav" id="landing-nav">
+    <a href="/" class="nav-logo">AI<span>Orc</span></a>
+    <div class="nav-links">
+      <a href="faq.html">Documentation</a>
+      <a href="repository.html">Public repository</a>
+      <a href="#origen">About</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn-nav-login" onclick="openLoginModal()">Log in</button>
+      <button class="btn-nav-start" onclick="openRegisterModal()">Get started free →</button>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero-eyebrow">AI agent orchestration · MCP · Design-time compilation</div>
+    <h1 class="hero-title">
+      <span class="hero-title-main">AI<span style="color:#4361ee">Orc</span> is a platform for teams &amp; developers to build AI workflows, share them, and reuse across projects.</span><br><em>"One developer builds a flow... everyone uses it."</em>
+
+    </h1>
+    <p class="hero-subtitle">
+      AIOrc converts visual agent flows into deterministic instructions. Define the process once, share it with your team, run it with a single call.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-hero-primary" onclick="openRegisterModal()">Get started free</button>
+      <a class="btn-hero-secondary" href="faq.html">Read the docs →</a>
+    </div>
+    <div class="hero-scroll-hint">
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section class="section how-section">
+    <div class="section-inner">
+      <div class="section-eyebrow">How it works</div>
+      <h2 class="section-title">Design-time compilation, not runtime</h2>
+      <p class="section-body">
+        Unlike traditional agent frameworks that orchestrate in real time, AIOrc compiles the flow before execution. The target model receives exact instructions and follows them sequentially.
+      </p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">Step 01</div>
+          <div class="step-icon">🎨</div>
+          <h3>Design the flow</h3>
+          <p>Connect agents in the visual Flow Builder. Add conditional decisions, quality gates and iteration loops with drag &amp; drop.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">Step 02</div>
+          <div class="step-icon">⚙️</div>
+          <h3>Compile the graph</h3>
+          <p>AIOrc topo-sorts the graph, resolves parallel branches, detects convergences and generates ordered imperative instructions ready to execute.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">Step 03</div>
+          <div class="step-icon">🔌</div>
+          <h3>Configure via MCP</h3>
+          <p>Connect AIOrc to your work environment in minutes. Once integrated, your AI model detects available flows and can invoke them directly, with no manual steps or extra configuration.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">Step 04</div>
+          <div class="step-icon">🚀</div>
+          <h3>Execute</h3>
+          <p>A single MCP call. Claude receives the compiled instructions and executes each agent in exact order, no callbacks, no planning loops.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-eyebrow">Capabilities</div>
+      <h2 class="section-title">Everything you need to orchestrate AI agents</h2>
+      <p class="section-body">
+        From simple linear flows to pipelines with conditional logic and quality validations.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-glyph">⚡</div>
+          <h3>One call per run</h3>
+          <p>The compiler collapses the entire flow into a single MCP response. No back-and-forth, no accumulated latency between agents.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🔀</div>
+          <h3>Decisions and gates</h3>
+          <p>Decision nodes with YES/NO branches and quality gates with score threshold. The flow adapts to each agent's output.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">📋</div>
+          <h3>Agents in markdown</h3>
+          <p>Define each agent as a <code>.md</code> file. The compiler injects its content as instructions when the flow runs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🧩</div>
+          <h3>Reusable skills</h3>
+          <p>Package specific capabilities as skills and share them across projects and teams. Build on what already works.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🛡️</div>
+          <h3>Fail-closed by design</h3>
+          <p>Graph validation before compiling: cycle detection (Kahn's algorithm), broken references and dead-end flows.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🔑</div>
+          <h3>Multi-project with auth</h3>
+          <p>API keys per project, user roles, run history and admin panel. Team-ready.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ARCHITECTURE ===== -->
+  <section class="section arch-section" id="arquitectura">
+    <div class="section-inner">
+      <div class="section-eyebrow">Architecture</div>
+      <h2 class="section-title">The compiler, under the hood</h2>
+      <p class="section-body">
+        <code>compileFlow()</code> traverses the graph recursively, emits instruction blocks per node and concatenates them into an ordered payload. The model receives exact instructions and executes them in sequence, with no room for interpretation.
+      </p>
+      <div class="arch-flow">
+        <div class="arch-step">
+          <div class="arch-step-icon">🖼️</div>
+          <div class="arch-step-label">Canvas</div>
+          <div class="arch-step-title">Flow Builder</div>
+          <div class="arch-step-desc">Agent, decision and gate nodes connected visually</div>
+        </div>
+        <div class="arch-step">
+          <div class="arch-step-icon">🔁</div>
+          <div class="arch-step-label">Compiler</div>
+          <div class="arch-step-title">compileFlow()</div>
+          <div class="arch-step-desc">Topo-sort · recursive walk · convergence · validation</div>
+        </div>
+        <div class="arch-step">
+          <div class="arch-step-icon">📜</div>
+          <div class="arch-step-label">Output</div>
+          <div class="arch-step-title">Instructions</div>
+          <div class="arch-step-desc">STRICT_HEADER + imperative blocks per node + dividers</div>
+        </div>
+        <div class="arch-step">
+          <div class="arch-step-icon">🤖</div>
+          <div class="arch-step-label">Execution</div>
+          <div class="arch-step-title">Target model</div>
+          <div class="arch-step-desc">Claude executes each agent in exact sequence, no additional planning</div>
+        </div>
+      </div>
+      <div class="arch-diagram" style="margin-top:32px;">
+<span class="dim">// Compiled instructions — sample fragment</span>
+
+<span class="hl">YOU MUST</span> execute this workflow exactly as written.
+DO NOT skip, reorder, paraphrase, or merge steps.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="hl">## Agent 1: task-planner</span>
+Analyze the requirement and produce an action plan.
+<span class="ok">**Expected output format:**</span> Structured plan with tasks
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<span class="hl">## DECISION: Requires security review?</span>
+If YES → run Agent 2 (security-qa)
+If NO  → <span class="dim">skip to AFTER DECISION</span>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<span class="hl">## Agent 3: code-reviewer</span>
+Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL', score: N }</span></div>
+    </div>
+  </section>
+
+  <!-- ===== PRODUCT SCREENSHOTS ===== -->
+  <section class="section screenshots-section">
+    <div class="section-inner">
+      <div class="section-eyebrow">The platform</div>
+      <h2 class="section-title">Designed to work, not to configure</h2>
+      <p class="section-body">From the visual canvas to the project panel — all in one interface built for teams building with AI agents.</p>
+      <div class="screenshots-grid">
+        <div class="screenshot-card" onclick="openLightbox('Screen_Icon.png', 'Flow Builder — agent canvas')">
+          <img src="Screen_Icon.png" alt="Flow Builder — agent canvas" />
+          <div class="screenshot-caption">
+            <h3>Flow Builder</h3>
+            <p>Design multi-agent flows visually. Connect nodes, define gates and decisions — the compiler does the rest.</p>
+          </div>
+        </div>
+        <div class="screenshot-card" onclick="openLightbox('Screen_flow.png', 'Project panel')">
+          <img src="Screen_flow.png" alt="Project panel" />
+          <div class="screenshot-caption">
+            <h3>Project panel</h3>
+            <p>Manage all your projects from one place. Agents, skills and flows organized and ready to share with your team.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== USE CASES ===== -->
+  <section class="section usecases-section">
+    <div class="section-inner">
+      <div class="section-eyebrow">Who AIOrc is for</div>
+      <h2 class="section-title">Built for teams working with AI agents</h2>
+      <div class="usecase-list">
+        <div class="usecase-card"><div class="usecase-glyph">👥</div><div><h3>Collaborating teams</h3><p>Share flows and agents with your teammates. Every team member builds on what others have already tested, without starting from scratch on each project.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">🧩</div><div><h3>Skills as team assets</h3><p>Package specific capabilities as reusable skills. A well-defined skill becomes available to all projects and developers on the team.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">🌐</div><div><h3>Flow community</h3><p>Explore flows and skills published by other users in the community repository. Adapt what already works and contribute your own.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">🏢</div><div><h3>Multiple projects, same know-how</h3><p>Keep a library of specialized agents and deploy it across different projects. Team knowledge accumulates, not repeats.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">🏗️</div><div><h3>Development pipelines</h3><p>Planner → Developer → Code Reviewer → Security QA. Deterministic CI flows any team member can run with a single call.</p></div></div>
+        <div class="usecase-card"><div class="usecase-glyph">📝</div><div><h3>Standardized processes</h3><p>Define the process once, execute it consistently. From code review to content generation, with the same agents and the same rules every time.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STORY / ORIGEN ===== -->
+  <section class="section story-section" id="origen">
+    <div class="section-inner story-inner">
+      <div class="section-eyebrow">Origin</div>
+      <h2 class="section-title" style="font-size:1.25rem;font-weight:700;letter-spacing:-0.01em;">Context</h2>
+      <div class="story-content">
+        <p>
+          As a Software Engineer and AI researcher at my company, I was assigned to evaluate the state of the art in LLMs and agentic models. My recommendation was to adopt Claude Code. That's where the real problem started.
+        </p>
+        <h3>Two paths to orchestrate agents</h3>
+        <p>
+          I first tried to orchestrate agents deterministically using only the models. It didn't work: LLMs are probabilistic and often choose the path of least resistance instead of the correct one. The model ended up creating its own agents and skipping the ones I had defined.
+        </p>
+        <p>
+          Then I built a plugin for Claude with a main orchestrator, 21 subagents and 17 skills, using agent teams. It worked better, but the feature is still experimental and the bugs made it too unreliable for team use.
+        </p>
+        <p>
+          That's when I asked myself: what would a layer that runs deterministic prompt flows with agent orchestration, geared toward developers and dev teams, look like today? That's how AIOrc was born.
+        </p>
+
+        <h3>The problem it solves</h3>
+        <p>
+          At my company we have multiple projects with different stacks: a Nest.js backend with TDD, blockchain integration, fund custodians, AWS, MongoDB Atlas. A frontend with design patterns polished over years. If I wanted to use the flows my coworker had built, I had to ask them for agents, skills, context, copy them into my repo and hope Claude would follow the flow.
+        </p>
+        <p>
+          With AIOrc, my Claude connects to an MCP with a token. No cloning, no copying, no drift. When I migrate to Python tomorrow to add data science, I go to the public flow repository, grab what I need and use it.
+        </p>
+
+        <h3>A cross-disciplinary layer</h3>
+        <p>
+          We want AI to be universal. If we give Claude to a graphic designer, or if we give a backend developer who doesn't know styles the frontend flows from the team, the logic is exchanged. A developer shares the flow and the entire company — or the community — can follow their standards.
+        </p>
+
+        <h3>Where it stands today</h3>
+        <p>
+          Everything is oriented toward agents and automation with a clear goal: reduce execution time, gain reliability in the LLM and eliminate slop — that scattered, unreliable output models generate when they don't have a deterministic flow to follow.
+        </p>
+        <p>
+          It's just getting started. Today you can already create projects, orchestrate flows, add agents and skills, share them with your team privately, make public the ones you want and consume others'. The idea is to build a community of experts in web2, web3, blockchain, Python, C# and everything else we can think of, sharing secure databases, cloud connections, interface design and software architecture.
+        </p>
+        <p>
+          AIOrc is still a prototype in its early steps. What it needs now are people who try it, break it and share what happened. Early feedback is what defines where it goes, and the community is what will turn it into something truly useful. If what I'm building resonates with you, join in.
+        </p>
+        <p class="story-cta">Ready to start?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="cta-section">
+    <h2>Start orchestrating today</h2>
+    <p>Create your account, design your first flow and share it with your team in minutes.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-hero-primary" onclick="openRegisterModal()">Create free account</button>
+      <a class="btn-hero-secondary" href="faq.html">Read the docs</a>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="landing-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo">AI<span>Orc</span></a>
+        <p>AI agent orchestration over MCP. Design, compile and share flows with your team.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#" onclick="openLoginModal();return false;">Dashboard</a>
+          <a href="faq.html#stack">Architecture</a>
+          <a href="faq.html#comparativa">Comparison</a>
+          <a href="repository.html">Public repository</a>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <a href="faq.html">Documentation</a>
+          <a href="faq.html#compilador">Compiler</a>
+          <a href="faq.html#referencias">References</a>
+        </div>
+        <div class="footer-col">
+          <h4>Access</h4>
+          <a href="#" onclick="openLoginModal();return false;">Log in</a>
+          <a href="faq.html">FAQ</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 AIOrc. All rights reserved.</span>
+      <a href="faq.html">Documentation</a>
+    </div>
+  </footer>
+
+  <!-- ===== LOGIN / REGISTER MODAL ===== -->
+  <div class="modal-overlay" id="login-modal" onclick="handleOverlayClick(event)">
+    <div class="modal-box">
+      <div class="modal-box-inner">
+        <button class="modal-close" onclick="closeLoginModal()" title="Close">✕</button>
+        <div class="modal-header">
+          <h2>AI<span>Orc</span></h2>
+          <p id="auth-subtitle">Sign in to your account to continue</p>
+        </div>
+
+        <div class="auth-tabs" style="display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid #e5e7eb">
+          <button type="button" class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')"
+                  style="background:none;border:none;cursor:pointer;padding:8px 16px;font-size:0.9rem;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit">
+            Log in
+          </button>
+          <button type="button" class="auth-tab" data-tab="register" onclick="switchAuthTab('register')"
+                  style="background:none;border:none;cursor:pointer;padding:8px 16px;font-size:0.9rem;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit">
+            Create account
+          </button>
+        </div>
+
+        <div id="alert" class="alert alert-error hidden"></div>
+
+        <!-- LOGIN -->
+        <form id="login-form" class="auth-pane">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="admin@aiorc.dev" autocomplete="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary form-full" id="submit-btn">Log in</button>
+        </form>
+
+        <!-- REGISTER -->
+        <form id="register-form" class="auth-pane" style="display:none">
+          <div class="form-group">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" placeholder="you@domain.com" autocomplete="email" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-nickname">Nickname <span style="color:#9ca3af;font-weight:400">(publicly visible)</span></label>
+            <input type="text" id="reg-nickname" placeholder="e.g.: alice-builder" autocomplete="username"
+                   pattern="[a-zA-Z0-9_-]{3,30}" minlength="3" maxlength="30" required />
+            <small style="font-size:0.75rem;color:#6b7280;display:block;margin-top:4px">3–30 characters. Letters, numbers, hyphens and underscores.</small>
+          </div>
+          <div class="form-group">
+            <label for="reg-bio">Bio <span style="color:#9ca3af;font-weight:400">(optional)</span></label>
+            <textarea id="reg-bio" rows="3" maxlength="500" placeholder="One line about you. Max 500 characters."
+                      style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;font-size:0.9rem;resize:vertical"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" placeholder="minimum 6 characters" autocomplete="new-password" minlength="6" required />
+          </div>
+          <button type="submit" class="btn btn-primary form-full" id="register-submit-btn">Create account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('token')) window.location.href = 'dashboard.html';
+
+    const nav = document.getElementById('landing-nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    function openLoginModal() {
+      document.getElementById('login-modal').classList.add('open');
+      setTimeout(() => document.getElementById('email').focus(), 200);
+    }
+    function openRegisterModal() {
+      document.getElementById('login-modal').classList.add('open');
+      switchAuthTab('register');
+    }
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.remove('open');
+    }
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('login-modal')) closeLoginModal();
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLoginModal();
+    });
+
+    const form = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const alertEl = document.getElementById('alert');
+    const submitBtn = document.getElementById('submit-btn');
+    const registerBtn = document.getElementById('register-submit-btn');
+
+    function showError(msg) {
+      alertEl.textContent = msg;
+      alertEl.classList.remove('hidden');
+    }
+
+    function switchAuthTab(name) {
+      alertEl.classList.add('hidden');
+      document.querySelectorAll('.auth-tab').forEach(b => {
+        const active = b.dataset.tab === name;
+        b.classList.toggle('active', active);
+        b.style.color = active ? '#4361ee' : '#6b7280';
+        b.style.borderBottomColor = active ? '#4361ee' : 'transparent';
+        b.style.fontWeight = active ? '600' : 'normal';
+      });
+      document.getElementById('login-form').style.display = name === 'login' ? '' : 'none';
+      document.getElementById('register-form').style.display = name === 'register' ? '' : 'none';
+      document.getElementById('auth-subtitle').textContent = name === 'login'
+        ? 'Sign in to your account to continue'
+        : 'Create your account to start publishing flows';
+      const focusId = name === 'login' ? 'email' : 'reg-email';
+      setTimeout(() => document.getElementById(focusId)?.focus(), 50);
+    }
+    switchAuthTab('login'); // initialize active styles
+
+    function persistAuth(data) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('userNickname', data.user.nickname || '');
+      localStorage.setItem('userBio', data.user.bio || '');
+      localStorage.setItem('userRole', data.user.role || 'user');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertEl.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'Could not sign in');
+          return;
+        }
+        persistAuth(data);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError('Network error. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Log in';
+      }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertEl.classList.add('hidden');
+      registerBtn.disabled = true;
+      registerBtn.innerHTML = '<span class="spinner"></span> Creating account...';
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('reg-email').value.trim(),
+            password: document.getElementById('reg-password').value,
+            nickname: document.getElementById('reg-nickname').value.trim(),
+            bio: document.getElementById('reg-bio').value.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Could not create account.'); return; }
+        persistAuth(data);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError('Network error. Please try again.');
+      } finally {
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = 'Create account';
+      }
+    });
+  </script>
+
+  <!-- Lightbox -->
+  <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
+  </div>
+  <script>
+    function openLightbox(src, alt) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox-img').alt = alt;
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+  </script>
+</body>
+</html>

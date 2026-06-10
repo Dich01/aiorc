@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Sidebar layout ──────────────────────────────────────────────────── */
+    body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
+
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-item-mark { width:4px; height:4px; border-radius:50%; background:currentColor; opacity:0.5; flex-shrink:0; }
+
+    .team-badge {
+      margin-left:auto;
+      background:#ef4444; color:#fff;
+      font-size:0.66rem; font-weight:700;
+      padding:1px 6px; border-radius:9px;
+      min-width:16px; text-align:center; line-height:1.4;
+    }
+    .sidebar.collapsed .team-badge {
+      position:absolute; top:6px; right:6px;
+      padding:0 4px; min-width:14px; font-size:0.6rem;
+    }
+    .sidebar.collapsed #sb-team { position:relative; }
+
+    /* Team tab */
+    .team-section { margin-bottom:32px; }
+    .team-section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:12px; }
+    .team-card { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); margin-bottom:10px; }
+    .team-card.responded { opacity:0.6; }
+    .team-card-icon { width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg,#4361ee,#7c3aed); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.85rem; flex-shrink:0; }
+    .team-card-body { flex:1; min-width:0; }
+    .team-card-title { font-weight:600; font-size:0.95rem; }
+    .team-card-meta { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+    .team-card-desc { font-size:0.83rem; color:var(--text); margin-top:6px; line-height:1.5; }
+    .team-card-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+    .team-status-pill {
+      font-size:0.7rem; padding:2px 8px; border-radius:10px; font-weight:600;
+    }
+    .ts-pending  { background:#fef3c7; color:#92400e; }
+    .ts-accepted { background:#d1fae5; color:#065f46; }
+    .ts-declined { background:#f3f4f6; color:#6b7280; }
+    .ts-revoked  { background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
+
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+
+    /* Collapsed (rail) state */
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo,
+    .sidebar.collapsed .sidebar-section-title,
+    .sidebar.collapsed .sidebar-item-label,
+    .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .sidebar.collapsed .sidebar-footer { padding:12px 8px; align-items:center; }
+    .sidebar.collapsed .sidebar-logout { font-size:0.95rem; }
+
+    .main-area { flex:1; min-width:0; }
+    .main-container { max-width:1100px; margin:0 auto; padding:36px 40px 60px; }
+
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+    .page-header h1 { font-size:1.6rem; font-weight:700; margin:0; color:var(--text); }
+    .page-header .page-subtitle { font-size:0.88rem; color:var(--muted); margin-top:6px; }
+    .page-header-text { display:flex; flex-direction:column; }
+
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* ── Roles ─ */
+    .role-badge { font-size:0.72rem; padding:2px 8px; border-radius:4px; font-weight:600; }
+    .role-admin { background:#7c3aed22; color:#7c3aed; border:1px solid #7c3aed44; }
+    .owner-label { font-size:0.75rem; color:var(--muted); margin-top:4px; }
+
+    /* ── Modals ─ */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; width:100%; max-width:520px; padding:28px 32px; max-height:90vh; overflow-y:auto; }
+    .modal-box h3 { margin:0 0 4px; font-size:1.15rem; font-weight:700; }
+    .modal-box .modal-subtitle { font-size:0.82rem; color:var(--muted); margin-bottom:18px; }
+    .modal-footer { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+    /* ── Info modal ─ */
+    .info-modal-box { max-width:680px; }
+    .info-tabs { display:flex; gap:2px; margin-bottom:20px; border-bottom:1px solid var(--border); overflow-x:auto; }
+    .info-tab-btn { background:none; border:none; cursor:pointer; padding:8px 14px; font-size:0.85rem; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s; font-family:inherit; white-space:nowrap; }
+    .info-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+    .info-tab-panel { display:none; }
+    .info-tab-panel.active { display:block; }
+    .info-steps { list-style:none; padding:0; margin:0; }
+    .info-step { display:flex; gap:12px; margin-bottom:16px; align-items:flex-start; font-size:0.88rem; line-height:1.65; }
+    .info-step-num { background:var(--primary); color:#fff; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; margin-top:1px; }
+    .info-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:14px 16px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.78rem; line-height:1.6; white-space:pre; overflow-x:auto; margin:10px 0; }
+    .info-block { margin-bottom:18px; }
+    .info-block h4 { font-size:0.92rem; font-weight:700; margin-bottom:6px; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .info-block-glyph { display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:6px; font-weight:700; font-size:0.85rem; flex-shrink:0; }
+    .glyph-decision { background:#fef3c7; color:#92400e; }
+    .glyph-gate { background:#fee2e2; color:#b91c1c; }
+    .glyph-loop { background:#d1fae5; color:#065f46; }
+    .info-block p { font-size:0.86rem; line-height:1.65; color:var(--text); margin-bottom:6px; }
+    .info-note { background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px; font-size:0.82rem; color:#1e40af; line-height:1.55; }
+
+    /* ── Cards ─ */
+    .item-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; transition:box-shadow .2s; display:flex; flex-direction:column; }
+    .item-card:hover { box-shadow:var(--shadow-md); }
+    .item-card-name { font-weight:600; font-size:1rem; margin-bottom:4px; }
+    .item-card-desc { font-size:0.82rem; color:var(--muted); margin-bottom:14px; flex:1; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.5; }
+    .item-card-footer { display:flex; gap:8px; margin-top:auto; }
+
+    .upload-link { font-size:0.82rem; color:var(--primary); cursor:pointer; background:none; border:none; padding:0; text-decoration:underline; font-family:inherit; }
+    .upload-link:hover { opacity:0.75; }
+
+    /* ── Project card (dashboard grid) ────────────────────────────────── */
+    .project-card { display:flex; flex-direction:column; gap:10px; }
+    .project-card .pc-desc { font-size:0.83rem; color:var(--muted); line-height:1.5; min-height:38px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .project-card .pc-desc.empty { font-style:italic; opacity:0.6; }
+    .pc-visibility { display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:10px; font-weight:600; }
+    .pc-visibility.public { background:#d1fae5; color:#065f46; }
+    .pc-visibility.private { background:#f3f4f6; color:#4b5563; }
+    .pc-section { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:5px; }
+    .pc-badges { display:flex; flex-wrap:wrap; gap:5px; }
+    .pc-badge { font-size:0.72rem; padding:3px 9px; border-radius:12px; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+    .pc-badge.skill { background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+    .pc-badge.more { background:#f3f4f6; color:#6b7280; border-color:var(--border); }
+    .pc-empty-row { font-size:0.74rem; color:var(--muted); font-style:italic; }
+    .pc-flow-preview { background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:8px; height:78px; position:relative; overflow:hidden; }
+    .pc-flow-preview svg { width:100%; height:100%; display:block; }
+    .pc-flow-empty { display:flex; align-items:center; justify-content:center; height:100%; font-size:0.74rem; color:#475569; }
+    .pc-flow-node { fill:#3730a3; stroke:#6366f1; stroke-width:1; }
+    .pc-flow-node.decision { fill:#92400e; stroke:#f59e0b; }
+    .pc-flow-node.gate { fill:#991b1b; stroke:#ef4444; }
+    .pc-flow-node.loop { fill:#065f46; stroke:#10b981; }
+    .pc-flow-edge { stroke:#475569; stroke-width:1; fill:none; }
+
+    /* ── Project picker (chip-style, used in agent & skill modals) ─────── */
+    .project-picker {
+      display:flex; flex-wrap:wrap; gap:6px;
+      border:1px solid var(--border); border-radius:8px;
+      padding:10px; background:var(--bg); min-height:42px; align-items:center;
+    }
+    .project-chip {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:5px 12px; border-radius:18px;
+      border:1px solid var(--border); background:#fff;
+      font-size:0.82rem; font-family:inherit; cursor:pointer; user-select:none;
+      transition:background .15s, border-color .15s, color .15s;
+    }
+    .project-chip:hover { border-color:var(--primary); }
+    .project-chip.is-selected { background:var(--primary); border-color:var(--primary); color:#fff; }
+    .project-chip-check { font-size:0.72rem; font-weight:700; }
+    .project-picker-empty { font-size:0.78rem; color:var(--muted); padding:4px 8px; font-style:italic; }
+
+    /* Skill chip variant (purple, with order badge) */
+    .project-chip.skill-chip-pill { background:#fff; border-color:#e9d5ff; color:#6b21a8; }
+    .project-chip.skill-chip-pill:hover { border-color:#7c3aed; background:#faf5ff; }
+    .project-chip.skill-chip-pill.is-selected { background:#7c3aed; border-color:#7c3aed; color:#fff; }
+    .skill-chip-order {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:18px; height:18px; padding:0 5px;
+      background:rgba(255,255,255,0.28); color:#fff;
+      border-radius:9px; font-size:0.68rem; font-weight:700;
+    }
+    .skill-chip-search {
+      width:100%; box-sizing:border-box;
+      padding:7px 12px; margin-bottom:8px;
+      border:1px solid var(--border); border-radius:8px;
+      font-size:0.85rem; font-family:inherit; background:#fff;
+    }
+
+    /* ── Mobile ─ */
+    @media (max-width: 768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+      .sidebar.collapsed { width:100% !important; }
+      .sidebar.collapsed .sidebar-logo,
+      .sidebar.collapsed .sidebar-section-title,
+      .sidebar.collapsed .sidebar-item-label,
+      .sidebar.collapsed .sidebar-user { display:initial; }
+      .main-container { padding:24px 20px; }
+      .sidebar-footer { flex-direction:row; justify-content:space-between; align-items:center; }
+    }
+  </style>
+</head>
+<body class="has-sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+      <button class="sidebar-collapse-btn" id="sidebar-toggle" title="Collapse/expand menu" onclick="toggleSidebar()">‹</button>
+    </div>
+
+    <div class="sidebar-section-title">Workspace</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item active" id="sb-projects" onclick="switchTab('projects')" title="Projects">
+        <span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span>
+      </button>
+      <button class="sidebar-item" id="sb-agents" onclick="switchTab('agents')" title="Agents">
+        <span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span>
+      </button>
+      <button class="sidebar-item" id="sb-skills" onclick="switchTab('skills')" title="Skills">
+        <span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span>
+      </button>
+      <button class="sidebar-item" id="sb-contexts" onclick="switchTab('contexts')" title="Contexts">
+        <span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span>
+      </button>
+      <button class="sidebar-item" id="sb-team" onclick="switchTab('team')" title="Team">
+        <span class="sidebar-item-glyph">E</span>
+        <span class="sidebar-item-label">Team</span>
+        <span id="team-badge" class="team-badge" style="display:none">0</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-section-title">Insights</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="analytics.html" title="Usage analytics">
+        <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
+      </a>
+      <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
+        <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Community</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="repository.html" title="Public repository">
+        <span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span>
+      </a>
+      <a class="sidebar-item" href="issues.html" title="Issues">
+        <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Help</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
+        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+      </button>
+      <a class="sidebar-item" href="faq.html" title="Documentation">
+        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-user" id="user-nickname" style="font-weight:600;text-decoration:none;color:inherit">...</a>
+      <div class="sidebar-user" id="user-email" style="font-size:0.74rem;opacity:0.6">...</div>
+      <a href="#" class="sidebar-logout" id="logout-btn" title="Log out">Log out</a>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <div class="main-container">
+      <div id="error-msg" class="alert alert-error hidden"></div>
+
+      <!-- ── Projects ─────────────────────────────────────────────────────── -->
+      <div id="tab-projects" class="tab-panel active">
+        <div class="page-header">
+          <div class="page-header-text">
+            <h1>Projects</h1>
+            <span class="page-subtitle">Each project exposes its flow via MCP to a Claude client.</span>
+          </div>
+          <button class="btn btn-primary" onclick="openNewProjectModal()">+ New project</button>
+        </div>
+        <div id="projects-grid" class="card-grid"></div>
+      </div>
+
+      <!-- ── Agents ───────────────────────────────────────────────────────── -->
+      <div id="tab-agents" class="tab-panel">
+        <div class="page-header">
+          <div class="page-header-text">
+            <h1>Agents</h1>
+            <span class="page-subtitle">Markdown prompts the model executes as steps of the flow.</span>
+          </div>
+          <button class="btn btn-primary" onclick="openAgentModal(null)">+ New agent</button>
+        </div>
+        <div id="agents-error" class="alert alert-error hidden"></div>
+        <div id="agents-grid" class="card-grid"></div>
+      </div>
+
+      <!-- ── Skills ───────────────────────────────────────────────────────── -->
+      <div id="tab-skills" class="tab-panel">
+        <div class="page-header">
+          <div class="page-header-text">
+            <h1>Skills</h1>
+            <span class="page-subtitle">Auxiliary documents that agents reference (TDD, security, standards).</span>
+          </div>
+          <button class="btn btn-primary" onclick="openSkillModal(null)">+ New skill</button>
+        </div>
+        <div id="skills-error" class="alert alert-error hidden"></div>
+        <div id="skills-grid" class="card-grid"></div>
+      </div>
+
+      <!-- ── Contexts ─────────────────────────────────────────────────────── -->
+      <div id="tab-contexts" class="tab-panel">
+        <div class="page-header">
+          <div class="page-header-text">
+            <h1>Contexts</h1>
+            <span class="page-subtitle">Documentation and business know-how that applies to the whole flow. When attaching to a project, you decide whether it travels with future forks.</span>
+          </div>
+          <button class="btn btn-primary" onclick="openContextModal(null)">+ New context</button>
+        </div>
+        <div id="contexts-error" class="alert alert-error hidden"></div>
+        <div id="contexts-grid" class="card-grid"></div>
+      </div>
+
+      <!-- ── Team ─────────────────────────────────────────────────────────── -->
+      <div id="tab-team" class="tab-panel">
+        <div class="page-header">
+          <div class="page-header-text">
+            <h1>Team</h1>
+            <span class="page-subtitle">Invitations to fork projects, and a summary of what you've shared with others.</span>
+          </div>
+        </div>
+
+        <div class="team-section">
+          <div class="team-section-title">Shared with me</div>
+          <div id="team-incoming">
+            <p style="color:var(--muted);font-style:italic">Loading…</p>
+          </div>
+        </div>
+
+        <div class="team-section">
+          <div class="team-section-title">Shared by me</div>
+          <div id="team-outgoing">
+            <p style="color:var(--muted);font-style:italic">Loading…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Modal: new project ────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="new-project-modal" onclick="if(event.target===this)closeNewProjectModal()">
+    <div class="modal-box" style="max-width:420px">
+      <h3>New project</h3>
+      <p class="modal-subtitle">An MCP key will be generated to connect the target project via MCP.</p>
+      <div class="form-group">
+        <label for="new-project-name">Title</label>
+        <input type="text" id="new-project-name" placeholder="My project" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="new-project-description">Description</label>
+        <textarea id="new-project-description" rows="3"
+                  placeholder="What does this project do? It appears in the public repository if you mark it as public."
+                  style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="new-project-tags">Tags <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="new-project-tags" placeholder="comma-separated, e.g. code-review, backend, internal" autocomplete="off" />
+        <p style="font-size:0.78rem;color:var(--muted);margin:4px 0 0">Short labels to identify and group projects. Shown on the card and in the public repository.</p>
+      </div>
+      <div id="new-project-error" class="alert alert-error hidden" style="margin-top:10px"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeNewProjectModal()">Cancel</button>
+        <button class="btn btn-primary" id="create-project-btn" onclick="createProject()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: agent ──────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="agent-modal" onclick="if(event.target===this)closeAgentModal()">
+    <div class="modal-box">
+      <h3 id="agent-modal-title">New agent</h3>
+      <p class="modal-subtitle">The content is injected verbatim into the compiled prompt as a step of the flow.</p>
+      <div class="form-group">
+        <label for="agent-name">Name *</label>
+        <input type="text" id="agent-name" placeholder="code-reviewer" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="agent-desc">Description *</label>
+        <input type="text" id="agent-desc" placeholder="Reviews code for quality and security" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="agent-output-format">Expected output format <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="agent-output-format" placeholder='e.g.: JSON { "verdict": "PASS|FAIL" }' autocomplete="off" />
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Useful for gates: the next node reads this output literally.</p>
+      </div>
+      <div class="form-group">
+        <label>Files</label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">AGENT.md holds the agent's instructions and is always loaded (injected verbatim into the compiled prompt). Add more files to attach resources the agent can use (e.g. checklist.md, deploy.sh, schema.json) — non-markdown files are passed to the agent inside a code block.</p>
+        <div id="agent-files-list" class="skill-files-list"></div>
+        <div id="agent-files-drop" class="files-dropzone">
+          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+        </div>
+        <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.agent.addFile()">+ Write new file</button>
+      </div>
+      <div class="form-group">
+        <label>Projects <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 6px">If you don't select any, the agent is available in all your projects. Select to restrict.</p>
+        <div class="project-picker" id="agent-project-picker"></div>
+      </div>
+      <div class="form-group">
+        <label>Skills <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 6px">Tap a skill to associate it. They are injected into the prompt in the order you selected them — the numbers show the position.</p>
+        <input type="text" id="skill-picker-search" class="skill-chip-search" placeholder="Search skill..." autocomplete="off" oninput="renderSkillChips()" />
+        <div class="project-picker" id="skill-chip-picker"></div>
+      </div>
+      <!-- Only visible when editing an existing agent -->
+      <div class="form-group share-block" id="agent-share-block" style="display:none;border-top:1px solid var(--border);padding-top:18px;margin-top:18px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="agent-public-toggle" style="width:18px;height:18px;cursor:pointer"/>
+          Make this agent public
+        </label>
+        <p id="agent-visibility-status" style="font-size:0.8rem;margin:6px 0 0"></p>
+
+        <label style="margin-top:14px">Share with (email)</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <input type="email" id="agent-invite-email" placeholder="email@example.com"
+                 style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"/>
+          <button class="btn btn-sm btn-primary" onclick="sendAgentInvitation()">Invite</button>
+        </div>
+        <div id="agent-invite-status" style="font-size:0.78rem;margin-top:6px"></div>
+        <div id="agent-invitations-list" style="margin-top:10px"></div>
+      </div>
+      <div id="agent-modal-error" class="alert alert-error hidden"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeAgentModal()">Cancel</button>
+        <button class="btn btn-primary" id="agent-save-btn" onclick="saveAgent()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: skill ──────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="skill-modal" onclick="if(event.target===this)closeSkillModal()">
+    <div class="modal-box">
+      <h3 id="skill-modal-title">New skill</h3>
+      <p class="modal-subtitle">Skills appear as references next to the flow builder. Agents can cite them.</p>
+      <div class="form-group">
+        <label for="skill-name">Name *</label>
+        <input type="text" id="skill-name" placeholder="tdd-governance" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="skill-desc">Description *</label>
+        <input type="text" id="skill-desc" placeholder="Strict TDD execution guide" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Files</label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They're hoisted together when any agent in the flow uses this skill; non-markdown files are passed to the agent verbatim inside a code block.</p>
+        <div id="skill-files-list" class="skill-files-list"></div>
+        <div id="skill-files-drop" class="files-dropzone">
+          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+        </div>
+        <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.skill.addFile()">+ Write new file</button>
+      </div>
+      <div class="form-group">
+        <label>Projects <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 6px">If you don't select any, the skill is available in all your projects.</p>
+        <div class="project-picker" id="skill-project-picker"></div>
+      </div>
+      <!-- Only visible when editing an existing skill -->
+      <div class="form-group share-block" id="skill-share-block" style="display:none;border-top:1px solid var(--border);padding-top:18px;margin-top:18px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="skill-public-toggle" style="width:18px;height:18px;cursor:pointer"/>
+          Make this skill public
+        </label>
+        <p id="skill-visibility-status" style="font-size:0.8rem;margin:6px 0 0"></p>
+
+        <label style="margin-top:14px">Share with (email)</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <input type="email" id="skill-invite-email" placeholder="email@example.com"
+                 style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"/>
+          <button class="btn btn-sm btn-primary" onclick="sendSkillInvitation()">Invite</button>
+        </div>
+        <div id="skill-invite-status" style="font-size:0.78rem;margin-top:6px"></div>
+        <div id="skill-invitations-list" style="margin-top:10px"></div>
+      </div>
+      <div id="skill-modal-error" class="alert alert-error hidden"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeSkillModal()">Cancel</button>
+        <button class="btn btn-primary" id="skill-save-btn" onclick="saveSkill()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: context ────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="context-modal" onclick="if(event.target===this)closeContextModal()">
+    <div class="modal-box">
+      <h3 id="context-modal-title">New context</h3>
+      <p class="modal-subtitle">Business documentation the model reads before acting (know-how, processes, glossary, domain).</p>
+      <div class="form-group">
+        <label for="context-name">Name *</label>
+        <input type="text" id="context-name" placeholder="onboarding-process" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="context-desc">Description *</label>
+        <input type="text" id="context-desc" placeholder="New customer onboarding process" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Files</label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up or attach resources (e.g. glossary.md, data.json) — non-markdown files are passed to the model inside a code block.</p>
+        <div id="context-files-list" class="skill-files-list"></div>
+        <div id="context-files-drop" class="files-dropzone">
+          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+        </div>
+        <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.context.addFile()">+ Write new file</button>
+      </div>
+      <div class="form-group">
+        <label>Projects <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 6px">Select where to attach this context. For each project you can decide if it travels with future forks.</p>
+        <div class="project-picker" id="context-project-picker"></div>
+        <div id="context-attachment-flags" style="margin-top:10px"></div>
+      </div>
+      <!-- Only visible when editing an existing context -->
+      <div class="form-group share-block" id="context-share-block" style="display:none;border-top:1px solid var(--border);padding-top:18px;margin-top:18px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="context-public-toggle" style="width:18px;height:18px;cursor:pointer"/>
+          Make this context public
+        </label>
+        <p id="context-visibility-status" style="font-size:0.8rem;margin:6px 0 0"></p>
+
+        <label style="margin-top:14px">Share with (email)</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <input type="email" id="context-invite-email" placeholder="email@example.com"
+                 style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"/>
+          <button class="btn btn-sm btn-primary" onclick="sendContextInvitation()">Invite</button>
+        </div>
+        <div id="context-invite-status" style="font-size:0.78rem;margin-top:6px"></div>
+        <div id="context-invitations-list" style="margin-top:10px"></div>
+      </div>
+      <div id="context-modal-error" class="alert alert-error hidden"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeContextModal()">Cancel</button>
+        <button class="btn btn-primary" id="context-save-btn" onclick="saveContext()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Info / How to use ──────────────────────────────────────────── -->
+  <div class="modal-overlay" id="info-modal" onclick="if(event.target===this)closeInfoModal()">
+    <div class="modal-box info-modal-box">
+      <h3>How to use AIOrc</h3>
+      <p class="modal-subtitle">Multi-agent workflow compiler over MCP — getting started guide.</p>
+
+      <div class="info-tabs">
+        <button class="info-tab-btn active" onclick="switchInfoTab('how')">Get started</button>
+        <button class="info-tab-btn" onclick="switchInfoTab('config')">Configure target</button>
+        <button class="info-tab-btn" onclick="switchInfoTab('blocks')">Control blocks</button>
+      </div>
+
+      <!-- Tab 1: How to get started -->
+      <div id="info-tab-how" class="info-tab-panel active">
+        <ol class="info-steps">
+          <li class="info-step">
+            <div class="info-step-num">1</div>
+            <span><strong>Define the agents</strong> — In the <em>Agents</em> tab, create one for each logical step. Each agent is a Markdown prompt that the target model will execute verbatim as a section of the compiled flow.</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">2</div>
+            <span><strong>Define skills (optional)</strong> — Skills are auxiliary documents (TDD, standards, security patterns) that appear in the flow builder panel and that agents can reference by name.</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">3</div>
+            <span><strong>Create a project</strong> — In <em>Projects</em>. An MCP key is generated (format <code>key-XXXX...</code>) that you'll use in the target configuration.</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">4</div>
+            <span><strong>Build the flow</strong> — Open the project → <em>Flow Builder</em>. Drag agents from the left panel and connect them. For branching use <em>Decision</em>; for verdicts <em>Gate</em>; for iteration <em>Loop</em> (see the <em>Control blocks</em> tab).</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">5</div>
+            <span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors (decision without conditions, loop without a pair, unmarked cycles), they show inline and saving is blocked.</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">6</div>
+            <span><strong>Configure the target project</strong> — Add <code>.mcp.json</code> + a rule in <code>CLAUDE.md</code> (see next tab).</span>
+          </li>
+          <li class="info-step">
+            <div class="info-step-num">7</div>
+            <span><strong>Done</strong> — When Claude receives a task in the target, it will call <code>workflow(request)</code>, AIOrc compiles the flow and returns a mega-prompt with step-by-step imperative instructions.</span>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Tab 2: Configure target -->
+      <div id="info-tab-config" class="info-tab-panel">
+        <div class="info-block">
+          <h4>1. <code style="font-size:0.85em">.mcp.json</code> file in the root of the target project</h4>
+          <p>Tells Claude (Claude Code, Cursor, or any MCP client) how to connect to the AIOrc server.</p>
+          <div class="info-code" id="mcp-config-snippet">{
+  "mcpServers": {
+    "aiorc": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
+      "env": {
+        "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
+        "AIORC_URL": "http://localhost:3000/mcp"
+      }
+    }
+  }
+}</div>
+          <button class="btn btn-sm btn-ghost" onclick="copyInfoConfig()">Copy .mcp.json</button>
+        </div>
+
+        <div class="info-block">
+          <h4>2. Rule in the target project's <code style="font-size:0.85em">CLAUDE.md</code></h4>
+          <p>Tells the model to <em>always</em> call the <code>workflow</code> tool before responding. Without this rule, Claude may ignore AIOrc.</p>
+          <div class="info-code">## Mandatory rule
+
+For any technical task (planning, implementation, code review,
+security, quality, bugs), always call AIOrc's `workflow` tool
+before responding. Never respond with a direct technical solution.
+
+```
+workflow({
+  request: "<task description>",
+  context: "<optional context>"
+})
+```</div>
+        </div>
+
+        <div class="info-note">
+          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path (e.g.: <code>/Users/me/dev/AIOrc/mcp-bridge.js</code>) and <code>key-XX...</code> with the project's MCP key in AIOrc.
+        </div>
+      </div>
+
+      <!-- Tab 3: Control blocks -->
+      <div id="info-tab-blocks" class="info-tab-panel">
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:18px">Three control-flow primitives beyond linear agents. They're dragged from the top bar of the Flow Builder.</p>
+
+        <div class="info-block">
+          <h4><span class="info-block-glyph glyph-decision">◇</span> Decision — content-based branching</h4>
+          <p>Reads the output of the previous step and picks <strong>a single</strong> branch based on natural-language conditions. Branches are evaluated in priority order; the first match wins.</p>
+          <p style="font-size:0.82rem;color:var(--muted)">Example: <em>"intent == 'bug'"</em>, <em>"the agent determines it needs more context"</em>, <em>"there are modified files in /src/security"</em>.</p>
+          <p style="font-size:0.82rem"><strong>When to use:</strong> branch between agents (bug-resolver vs. new-fix), skip optional steps, choose a tool based on task type.</p>
+        </div>
+
+        <div class="info-block">
+          <h4><span class="info-block-glyph glyph-gate">⛔</span> Gate — mandatory verdict</h4>
+          <p>The previous agent must emit a literal verdict (e.g.: PASS / FAIL / BLOCKED). The gate branches on that token. <code>BLOCKED</code> ends the flow with a report; the other verdicts continue along the corresponding branch.</p>
+          <p style="font-size:0.82rem;color:var(--muted)">Gate conditions are defined on the outgoing edges (literal verdict text).</p>
+          <p style="font-size:0.82rem"><strong>When to use:</strong> after code-reviewer, security-qa, quality-gate, or any agent that returns a structured verdict.</p>
+        </div>
+
+        <div class="info-block">
+          <h4><span class="info-block-glyph glyph-loop">↻</span> Loop — iteration with cap</h4>
+          <p>Repeats the body steps up to N iterations (configurable, max 20) or until the exit condition is met. The back-edge is created automatically when you drop the block.</p>
+          <p style="font-size:0.82rem;color:var(--muted)">The count is tracked by the target model with explicit markers: <em>"Iteration 1 of 3"</em>, <em>"Iteration 2 of 3"</em>...</p>
+          <p style="font-size:0.82rem"><strong>When to use:</strong> review→fix→review until it passes, iterative refactor, retry tests with backoff, generate variants until a valid one is found.</p>
+        </div>
+
+        <div class="info-note">
+          The three blocks can be nested freely (loops inside decisions, gates inside loops). The compiler handles convergence and back-edges automatically.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <a href="faq.html" class="btn btn-ghost btn-sm">Full documentation →</a>
+        <button class="btn btn-primary" onclick="closeInfoModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- File inputs -->
+  <!-- Skill/agent/context file uploads are handled by per-editor hidden inputs
+       created dynamically in createFileEditor(). -->
+
+  <script src="ui-dialogs.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'index.html';
+
+    const userEmail = localStorage.getItem('userEmail') || '';
+    const userNickname = localStorage.getItem('userNickname') || '';
+    const userRole  = localStorage.getItem('userRole')  || 'user';
+    document.getElementById('user-email').textContent = userEmail;
+    const nickEl = document.getElementById('user-nickname');
+    nickEl.textContent = userNickname ? '@' + userNickname : userEmail;
+    if (userNickname) nickEl.href = `user.html?nick=${encodeURIComponent(userNickname)}`;
+    if (userRole === 'admin') document.getElementById('sb-admin').style.display = '';
+
+    document.getElementById('logout-btn').addEventListener('click', e => {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+
+    // ── Sidebar collapse ─────────────────────────────────────────────────────
+    const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+    function applySidebarState() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      const sb = document.getElementById('sidebar');
+      const btn = document.getElementById('sidebar-toggle');
+      if (sb) sb.classList.toggle('collapsed', collapsed);
+      if (btn) btn.textContent = collapsed ? '›' : '‹';
+    }
+    function toggleSidebar() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
+      applySidebarState();
+    }
+    applySidebarState();
+
+    async function authFetch(url, opts = {}) {
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+          ...(opts.headers || {})
+        }
+      });
+      if (res.status === 401) { localStorage.clear(); window.location.href = 'index.html'; }
+      return res;
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function copyText(text, msg = 'Copied') {
+      navigator.clipboard.writeText(text).then(() => {
+        document.querySelectorAll('.copy-toast').forEach(t => t.remove());
+        const toast = document.createElement('div');
+        toast.className = 'copy-toast';
+        toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1a2e;color:#fff;padding:8px 16px;border-radius:6px;font-size:0.85rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+      });
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    const TABS = ['projects', 'agents', 'skills', 'contexts', 'team'];
+    function switchTab(name) {
+      if (!TABS.includes(name)) return;
+      TABS.forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('active', t === name);
+        document.getElementById('sb-' + t).classList.toggle('active', t === name);
+      });
+      if (name === 'team') loadTeam();
+      if (name === 'contexts') loadContexts();
+    }
+    // Honor ?tab= query so links from other pages can deep-link to a tab
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    if (initialTab) switchTab(initialTab);
+
+    // ── Projects ──────────────────────────────────────────────────────────────
+    function renderFlowPreview(flow) {
+      const nodes = (flow && Array.isArray(flow.nodes)) ? flow.nodes : [];
+      const edges = (flow && Array.isArray(flow.edges)) ? flow.edges : [];
+      if (!nodes.length) return `<div class="pc-flow-empty">No flow configured</div>`;
+      // Compute bounding box of node positions and project into the preview canvas
+      const W = 280, H = 62, PAD = 8, NW = 14, NH = 9;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      nodes.forEach(n => {
+        if (typeof n.x === 'number') { minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x); }
+        if (typeof n.y === 'number') { minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y); }
+      });
+      if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+      const dx = Math.max(1, maxX - minX), dy = Math.max(1, maxY - minY);
+      const sx = (W - 2*PAD - NW) / dx;
+      const sy = (H - 2*PAD - NH) / dy;
+      const project = (n) => ({
+        x: PAD + ((n.x ?? 0) - minX) * sx,
+        y: PAD + ((n.y ?? 0) - minY) * sy
+      });
+      const byId = {};
+      const placed = nodes.map(n => { const p = project(n); byId[n.id] = p; return { n, p }; });
+      const edgesSvg = edges.map(e => {
+        const a = byId[e.from], b = byId[e.to];
+        if (!a || !b) return '';
+        return `<line class="pc-flow-edge" x1="${a.x + NW/2}" y1="${a.y + NH/2}" x2="${b.x + NW/2}" y2="${b.y + NH/2}"/>`;
+      }).join('');
+      const nodesSvg = placed.map(({ n, p }) => {
+        const t = n.node_type ?? 'agent';
+        const cls = t === 'decision' ? 'decision' : t === 'gate' ? 'gate' : (t === 'loop_start' || t === 'loop_end') ? 'loop' : '';
+        return `<rect class="pc-flow-node ${cls}" x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="2"/>`;
+      }).join('');
+      return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${edgesSvg}${nodesSvg}</svg>`;
+    }
+
+    function renderProjectCard(p) {
+      const desc = (p.description || '').trim();
+      const agents = p.agents || [];
+      const skills = p.skills || [];
+      const aMore = Math.max(0, (p.agents_count || 0) - agents.length);
+      const sMore = Math.max(0, (p.skills_count || 0) - skills.length);
+      const visBadge = p.is_public
+        ? '<span class="pc-visibility public">● Public</span>'
+        : '<span class="pc-visibility private">● Private</span>';
+      const adminBadge = userRole === 'admin' ? '<span class="role-badge role-admin">admin</span>' : '';
+      const ownerLine = (userRole === 'admin' && p.owner_email)
+        ? `<div class="owner-label">${p.owner_nickname
+            ? `<a href="user.html?nick=${encodeURIComponent(p.owner_nickname)}" style="color:var(--primary);text-decoration:none">@${escHtml(p.owner_nickname)}</a>`
+            : escHtml(p.owner_email)}</div>` : '';
+      const agentsBlock = agents.length
+        ? `<div class="pc-badges">${agents.map(a => `<span class="pc-badge">${escHtml(a.name)}</span>`).join('')}${aMore ? `<span class="pc-badge more">+${aMore}</span>` : ''}</div>`
+        : '<div class="pc-empty-row">No agents associated</div>';
+      const skillsBlock = skills.length
+        ? `<div class="pc-badges">${skills.map(s => `<span class="pc-badge skill">${escHtml(s.name)}</span>`).join('')}${sMore ? `<span class="pc-badge more">+${sMore}</span>` : ''}</div>`
+        : '<div class="pc-empty-row">No skills associated</div>';
+      const apiKeyEsc = escHtml(p.api_key).replace(/'/g, "\\'");
+      const nameEsc = escHtml(p.name).replace(/'/g, "\\'");
+      const tagList = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      const tagsBlock = tagList.length
+        ? `<div class="tag-chips" style="margin-top:8px">${tagList.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>`
+        : '';
+      return `
+        <div class="card project-card">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="min-width:0;flex:1">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="word-break:break-word">${escHtml(p.name)}</span>
+                ${visBadge}
+              </div>
+              ${ownerLine}
+            </div>
+            ${adminBadge}
+          </div>
+          <div class="pc-desc${desc ? '' : ' empty'}">${desc ? escHtml(desc) : 'No description.'}</div>
+          ${tagsBlock}
+          <div>
+            <div class="pc-section">Agents (${p.agents_count ?? 0})</div>
+            ${agentsBlock}
+          </div>
+          <div>
+            <div class="pc-section">Skills (${p.skills_count ?? 0})</div>
+            ${skillsBlock}
+          </div>
+          <div>
+            <div class="pc-section">Flow (${(p.flow?.nodes || []).length} nodes)</div>
+            <div class="pc-flow-preview">${renderFlowPreview(p.flow)}</div>
+          </div>
+          <div class="api-key-row" style="margin-top:4px">
+            <span class="api-key-value" style="font-size:0.76rem">${escHtml(p.api_key)}</span>
+            <button class="btn btn-sm btn-ghost" onclick="copyText('${apiKeyEsc}','MCP key copied')">Copy</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <span style="font-size:0.74rem;color:var(--muted)">${new Date(p.created_at).toLocaleDateString()}</span>
+            <div style="display:flex;gap:6px">
+              <a href="project.html?id=${encodeURIComponent(p.id)}" class="btn btn-primary btn-sm">Open →</a>
+              <button class="btn btn-sm btn-ghost" onclick="deleteProject('${p.id}','${nameEsc}')">Delete</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function loadProjects() {
+      try {
+        const res = await authFetch('/projects');
+        const projects = await res.json();
+        const grid = document.getElementById('projects-grid');
+        if (!projects.length) {
+          grid.innerHTML = '<p style="color:var(--muted)">No projects yet. Create one to get started.</p>';
+          return;
+        }
+        grid.innerHTML = projects.map(p => renderProjectCard(p)).join('');
+      } catch {
+        const el = document.getElementById('error-msg');
+        el.textContent = 'Could not load projects.';
+        el.classList.remove('hidden');
+      }
+    }
+
+    async function deleteProject(id, name) {
+      if (!await uiConfirm(`Delete the project "${name}"? This action cannot be undone.`)) return;
+      const res = await authFetch(`/projects/${id}`, { method: 'DELETE' });
+      if (res.ok || res.status === 204) {
+        availableProjects = []; // invalidate cache
+        loadProjects();
+      } else await uiAlert('Could not delete the project.');
+    }
+
+    function openNewProjectModal() {
+      document.getElementById('new-project-name').value = '';
+      document.getElementById('new-project-description').value = '';
+      document.getElementById('new-project-tags').value = '';
+      document.getElementById('new-project-error').classList.add('hidden');
+      document.getElementById('new-project-modal').classList.add('open');
+      setTimeout(() => document.getElementById('new-project-name').focus(), 50);
+    }
+    function closeNewProjectModal() { document.getElementById('new-project-modal').classList.remove('open'); }
+    document.getElementById('new-project-name').addEventListener('keydown', e => { if (e.key === 'Enter') createProject(); });
+    async function createProject() {
+      const name = document.getElementById('new-project-name').value.trim();
+      const description = document.getElementById('new-project-description').value.trim();
+      const tags = document.getElementById('new-project-tags').value.trim();
+      const errEl = document.getElementById('new-project-error');
+      const btn = document.getElementById('create-project-btn');
+      if (!name) { errEl.textContent = 'Title is required.'; errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Creating...';
+      try {
+        const res = await authFetch('/projects', { method: 'POST', body: JSON.stringify({ name, description, tags }) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Could not create.'; errEl.classList.remove('hidden'); return; }
+        availableProjects = []; // invalidate cache so the new project appears in modals
+        closeNewProjectModal();
+        loadProjects();
+      } catch { errEl.textContent = 'Network error.'; errEl.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Create'; }
+    }
+
+    // ── Agents ────────────────────────────────────────────────────────────────
+    let currentAgentId = null;
+    async function loadAgents() {
+      try {
+        const res = await authFetch('/agents');
+        const agents = await res.json();
+        const grid = document.getElementById('agents-grid');
+        if (!agents.length) {
+          grid.innerHTML = '<p style="color:var(--muted)">No agents yet. Create one or upload a .md file.</p>';
+          return;
+        }
+        grid.innerHTML = agents.map(a => {
+          const skills = a.skills || [];
+          const skillBadge = skills.length
+            ? `<div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">
+                ${skills.slice(0,4).map(s => `<span style="background:#eef0ff;color:#3730a3;padding:2px 7px;border-radius:10px">${escHtml(s.name)}</span>`).join('')}
+                ${skills.length > 4 ? `<span style="background:#f3f4f6;color:#6b7280;padding:2px 7px;border-radius:10px">+${skills.length - 4}</span>` : ''}
+              </div>`
+            : '';
+          return `<div class="item-card">
+            <div class="item-card-name">${escHtml(a.name)}</div>
+            <div class="item-card-desc">${escHtml(a.description)}</div>
+            ${skillBadge}
+            <div class="item-card-footer">
+              <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}','${escHtml(a.name).replace(/'/g,"\\'")}')">Delete</button>
+            </div>
+          </div>`;
+        }).join('');
+      } catch {
+        const el = document.getElementById('agents-error');
+        el.textContent = 'Could not load agents.';
+        el.classList.remove('hidden');
+      }
+    }
+    // ── Project picker state (shared by agent & skill modals) ─────────────────
+    let availableProjects = [];           // [{id, name}]
+    let selectedAgentProjectIds = [];     // for agent modal
+    let selectedSkillProjectIds = [];     // for skill modal
+
+    async function ensureProjectsLoaded() {
+      if (availableProjects.length) return;
+      try {
+        const res = await authFetch('/projects');
+        availableProjects = res.ok ? (await res.json()) : [];
+      } catch { availableProjects = []; }
+    }
+
+    function renderProjectChips(hostId, selectedIds, toggleFn) {
+      const host = document.getElementById(hostId);
+      if (!availableProjects.length) {
+        host.innerHTML = '<div class="project-picker-empty">You have no projects created.</div>';
+        return;
+      }
+      const sel = new Set(selectedIds);
+      host.innerHTML = availableProjects.map(p => {
+        const isSel = sel.has(p.id) ? 'is-selected' : '';
+        const check = sel.has(p.id) ? '<span class="project-chip-check">✓</span>' : '';
+        return `<button type="button" class="project-chip ${isSel}" onclick="${toggleFn}('${p.id}')">${check}${escHtml(p.name)}</button>`;
+      }).join('');
+    }
+
+    function toggleAgentProject(id) {
+      const idx = selectedAgentProjectIds.indexOf(id);
+      if (idx === -1) selectedAgentProjectIds.push(id);
+      else selectedAgentProjectIds.splice(idx, 1);
+      renderProjectChips('agent-project-picker', selectedAgentProjectIds, 'toggleAgentProject');
+    }
+
+    function toggleSkillProject(id) {
+      const idx = selectedSkillProjectIds.indexOf(id);
+      if (idx === -1) selectedSkillProjectIds.push(id);
+      else selectedSkillProjectIds.splice(idx, 1);
+      renderProjectChips('skill-project-picker', selectedSkillProjectIds, 'toggleSkillProject');
+    }
+
+    // ── Skill picker state (used inside agent modal) ──────────────────────────
+    let availableSkills = [];        // [{id, name, description}]
+    let selectedSkillIds = [];       // ordered array of skill ids
+
+    async function loadAvailableSkillsForPicker() {
+      try {
+        const res = await authFetch('/skills');
+        availableSkills = res.ok ? (await res.json()) : [];
+      } catch { availableSkills = []; }
+    }
+
+    function renderSkillChips() {
+      const host = document.getElementById('skill-chip-picker');
+      if (!availableSkills.length) {
+        host.innerHTML = '<div class="project-picker-empty">You have no skills created. Create them in the Skills tab.</div>';
+        return;
+      }
+      const q = (document.getElementById('skill-picker-search').value || '').trim().toLowerCase();
+      const selectedOrder = new Map(selectedSkillIds.map((id, i) => [id, i + 1]));
+      // Selected first (in order), then unselected (filtered) so users see what they picked
+      const selectedById = new Map(availableSkills.map(s => [s.id, s]));
+      const orderedSelected = selectedSkillIds.map(id => selectedById.get(id)).filter(Boolean);
+      const unselected = availableSkills.filter(s => !selectedOrder.has(s.id) && (!q || s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q)));
+      const list = [...orderedSelected, ...unselected];
+      if (!list.length) {
+        host.innerHTML = '<div class="project-picker-empty">No matches.</div>';
+        return;
+      }
+      host.innerHTML = list.map(s => {
+        const order = selectedOrder.get(s.id);
+        const sel = order ? 'is-selected' : '';
+        const orderBadge = order ? `<span class="skill-chip-order">${order}</span>` : '';
+        return `<button type="button" class="project-chip skill-chip-pill ${sel}" onclick="toggleSkill('${s.id}')" title="${escHtml(s.description || s.name)}">${orderBadge}${escHtml(s.name)}</button>`;
+      }).join('');
+    }
+
+    function toggleSkill(id) {
+      const idx = selectedSkillIds.indexOf(id);
+      if (idx === -1) selectedSkillIds.push(id);
+      else selectedSkillIds.splice(idx, 1);
+      renderSkillChips();
+    }
+
+    async function openAgentModal(id) {
+      currentAgentId = id || null;
+      document.getElementById('agent-modal-title').textContent = id ? 'Edit agent' : 'New agent';
+      ['agent-name','agent-desc','agent-output-format'].forEach(k => document.getElementById(k).value = '');
+      document.getElementById('agent-modal-error').classList.add('hidden');
+      document.getElementById('skill-picker-search').value = '';
+      selectedSkillIds = [];
+      selectedAgentProjectIds = [];
+      let agentFiles = null, agentContent = '';
+
+      // Load skills + projects always — needed even for "new agent"
+      await Promise.all([loadAvailableSkillsForPicker(), ensureProjectsLoaded()]);
+
+      // Hide share block by default; show only when editing
+      document.getElementById('agent-share-block').style.display = id ? '' : 'none';
+      document.getElementById('agent-invite-status').textContent = '';
+      if (id) {
+        const res = await authFetch('/agents/' + id);
+        if (res.ok) {
+          const a = await res.json();
+          document.getElementById('agent-name').value = a.name || '';
+          document.getElementById('agent-desc').value = a.description || '';
+          document.getElementById('agent-output-format').value = a.expected_output_format || '';
+          agentFiles = Array.isArray(a.files) ? a.files : null;
+          agentContent = a.content || '';
+          selectedSkillIds = (a.skills || []).map(s => s.id);
+          selectedAgentProjectIds = a.project_ids || [];
+          // Visibility toggle reflects current state
+          document.getElementById('agent-public-toggle').checked = !!a.is_public;
+          renderAgentVisibilityStatus(!!a.is_public);
+        }
+        // Load sent invitations
+        loadAgentInvitations(id);
+      }
+      FILE_EDITORS.agent.init(agentFiles, agentContent);
+      document.getElementById('skill-picker-search').value = '';
+      renderSkillChips();
+      renderProjectChips('agent-project-picker', selectedAgentProjectIds, 'toggleAgentProject');
+      document.getElementById('agent-modal').classList.add('open');
+      setTimeout(() => document.getElementById('agent-name').focus(), 50);
+    }
+    function closeAgentModal() { document.getElementById('agent-modal').classList.remove('open'); }
+
+    function renderAgentVisibilityStatus(isPublic) {
+      const el = document.getElementById('agent-visibility-status');
+      el.innerHTML = isPublic
+        ? '<span style="color:#22c55e">● Public</span> — appears in the community repository.'
+        : '<span style="color:#f59e0b">● Private</span> — only you can see it.';
+    }
+    document.getElementById('agent-public-toggle').addEventListener('change', async e => {
+      if (!currentAgentId) return;
+      const wantPublic = e.target.checked;
+      // Confirm before going public (matches projects flow).
+      if (wantPublic && !await uiConfirm('Make this agent public?\n\nAnyone will be able to view, fork and use it. You can revert at any time.')) {
+        e.target.checked = false;
+        return;
+      }
+      const res = await authFetch(`/agents/${currentAgentId}/visibility`, {
+        method:'PATCH', body: JSON.stringify({ is_public: wantPublic })
+      });
+      if (!res.ok) { await uiAlert('Could not change visibility.'); e.target.checked = !wantPublic; return; }
+      renderAgentVisibilityStatus(wantPublic);
+    });
+    async function loadAgentInvitations(id) {
+      const host = document.getElementById('agent-invitations-list');
+      const res = await authFetch(`/agents/${id}/invitations`);
+      if (!res.ok) return;
+      const list = await res.json();
+      if (!list.length) { host.innerHTML = '<p style="font-size:0.78rem;color:var(--muted);font-style:italic">No invitations yet.</p>'; return; }
+      const STATUS = { pending:'pending', accepted:'accepted', declined:'declined', revoked:'revoked' };
+      const COLOR = { pending:'#f59e0b', accepted:'#22c55e', declined:'#9ca3af', revoked:'#9ca3af' };
+      host.innerHTML = list.map(i => {
+        const who = i.invitee_nickname ? `@${escHtml(i.invitee_nickname)}` : escHtml(i.invitee_email);
+        const revokeBtn = i.status === 'pending'
+          ? `<button class="btn btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;margin-left:auto" onclick="revokeAgentInvitation('${escHtml(i.id)}')">Revoke</button>` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:0.82rem">
+          <span style="font-weight:500">${who}</span>
+          <span style="color:${COLOR[i.status]||'var(--muted)'};font-weight:600">${STATUS[i.status]||i.status}</span>
+          ${revokeBtn}
+        </div>`;
+      }).join('');
+    }
+    window.sendAgentInvitation = async function() {
+      if (!currentAgentId) return;
+      const email = document.getElementById('agent-invite-email').value.trim();
+      const status = document.getElementById('agent-invite-status');
+      if (!email) { status.style.color='#dc2626'; status.textContent='Enter an email.'; return; }
+      const res = await authFetch(`/agents/${currentAgentId}/invitations`, {
+        method:'POST', body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) { status.style.color='#dc2626'; status.textContent = data.error || 'Error.'; return; }
+      status.style.color='#22c55e';
+      status.textContent = data.invitee_user_id ? 'Invitation sent.' : 'Invitation sent. They will see it when they sign up.';
+      document.getElementById('agent-invite-email').value = '';
+      loadAgentInvitations(currentAgentId);
+    };
+    window.revokeAgentInvitation = async function(id) {
+      if (!await uiConfirm('Revoke this invitation?')) return;
+      const res = await authFetch(`/invitations/agents/${id}`, { method:'DELETE' });
+      if (res.ok) loadAgentInvitations(currentAgentId);
+      else await uiAlert('Could not revoke.');
+    };
+    async function saveAgent() {
+      const name = document.getElementById('agent-name').value.trim();
+      const description = document.getElementById('agent-desc').value.trim();
+      const expected_output_format = document.getElementById('agent-output-format').value.trim();
+      const errEl = document.getElementById('agent-modal-error');
+      const btn = document.getElementById('agent-save-btn');
+      if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
+      if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
+      const agentFiles = FILE_EDITORS.agent.getFiles();
+      const empty = agentFiles.find(f => !f.is_entry && !f.content.trim());
+      if (empty) { errEl.textContent = `File "${empty.name}" is empty. Add content or remove it.`; errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const url = currentAgentId ? '/agents/' + currentAgentId : '/agents';
+        const method = currentAgentId ? 'PUT' : 'POST';
+        const res = await authFetch(url, {
+          method,
+          body: JSON.stringify({ name, description, files: agentFiles, expected_output_format, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }
+        closeAgentModal();
+        loadAgents();
+      } catch { errEl.textContent = 'Network error.'; errEl.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+    async function deleteAgent(id, name) {
+      if (!await uiConfirm(`Delete the agent "${name}"? This action cannot be undone.`)) return;
+      const res = await authFetch('/agents/' + id, { method: 'DELETE' });
+      if (res.ok || res.status === 204) loadAgents();
+      else await uiAlert('Could not delete the agent.');
+    }
+
+    // ── Skills ────────────────────────────────────────────────────────────────
+    let currentSkillId = null;
+    async function loadSkills() {
+      try {
+        const res = await authFetch('/skills');
+        const skills = await res.json();
+        const grid = document.getElementById('skills-grid');
+        if (!skills.length) {
+          grid.innerHTML = '<p style="color:var(--muted)">No skills yet. Create one or upload a .md file.</p>';
+          return;
+        }
+        grid.innerHTML = skills.map(s => {
+          const fc = s.files_count || 0;
+          // Only show the multi-file badge when the author actually split the skill.
+          // Single-file skills (the default) get no badge to avoid noise.
+          const filesBadge = fc > 1
+            ? `<span style="font-size:0.72rem;color:var(--muted);margin-top:4px;display:inline-flex;align-items:center;gap:4px">📄 ${fc} files</span>`
+            : '';
+          return `
+          <div class="item-card">
+            <div class="item-card-name">${escHtml(s.name)}</div>
+            <div class="item-card-desc">${escHtml(s.description)}</div>
+            ${filesBadge}
+            <div class="item-card-footer">
+              <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}','${escHtml(s.name).replace(/'/g,"\\'")}')">Delete</button>
+            </div>
+          </div>
+        `;
+        }).join('');
+      } catch {
+        const el = document.getElementById('skills-error');
+        el.textContent = 'Could not load skills.';
+        el.classList.remove('hidden');
+      }
+    }
+    // ── Generic multi-file editor (shared by skills, agents, contexts) ──────────
+    // Names may be any text resource (.md, .sh, .json…). Only the entry file is
+    // forced to a fixed name (SKILL.md / AGENT.md / CONTEXT.md). No spaces/slashes.
+    const ENTITY_FILE_RE = /^[A-Za-z0-9_.-]+\.[A-Za-z0-9]+$/;
+    const FILE_EDITORS = {};
+
+    function createFileEditor(key, opts) {
+      // opts: { listId, dropId, entryName }
+      const entryName = opts.entryName;
+      let files = [];
+      let openIdx = 0;
+
+      // Hidden multi-file input for the dropzone's click-to-upload.
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.multiple = true;
+      fileInput.style.display = 'none';
+      document.body.appendChild(fileInput);
+      fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
+
+      function readText(file) {
+        return new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsText(file); });
+      }
+
+      function init(initialFiles, legacyContent) {
+        if (Array.isArray(initialFiles) && initialFiles.length > 0) {
+          files = initialFiles.slice()
+            .sort((a, b) => (b.is_entry ? 1 : 0) - (a.is_entry ? 1 : 0) || (a.ordinal ?? 0) - (b.ordinal ?? 0))
+            .map(f => ({ name: f.name, description: f.description || '', content: f.content || '', is_entry: f.is_entry ? 1 : 0 }));
+          if (!files.some(f => f.is_entry)) files.unshift({ name: entryName, description: '', content: '', is_entry: 1 });
+        } else {
+          files = [{ name: entryName, description: '', content: legacyContent || '', is_entry: 1 }];
+        }
+        openIdx = 0;
+        render();
+        wireDrop();
+      }
+
+      function getFiles() { return files; }
+
+      function render() {
+        const host = document.getElementById(opts.listId);
+        if (!host) return;
+        host.innerHTML = files.map((f, idx) => {
+          const isEntry = !!f.is_entry;
+          const isOpen  = idx === openIdx;
+          const tag = isEntry ? '<span class="skill-file-tag">entry · always loaded</span>' : '';
+          const removeBtn = isEntry ? '' : `<button type="button" class="skill-file-remove" title="Remove file" onclick="event.stopPropagation();FILE_EDITORS['${key}'].removeFile(${idx})">×</button>`;
+          const descPreview = !isOpen && f.description ? `<span class="skill-file-desc-preview">${escHtml(f.description)}</span>` : '';
+          return `
+            <div class="skill-file-row ${isEntry ? 'entry' : ''} ${isOpen ? 'open' : ''}" data-idx="${idx}">
+              <div class="skill-file-head" onclick="FILE_EDITORS['${key}'].toggle(${idx})">
+                <span class="skill-file-caret">▼</span>
+                <span class="skill-file-name-label">${escHtml(f.name)}</span>
+                ${tag}
+                ${descPreview}
+                ${removeBtn}
+              </div>
+              <div class="skill-file-body">
+                <div>
+                  <span class="field-label">Name</span>
+                  <input type="text" class="skill-file-name-input" value="${escHtml(f.name)}"
+                         ${isEntry ? 'readonly' : ''}
+                         oninput="FILE_EDITORS['${key}'].updateField(${idx}, 'name', this.value)" />
+                </div>
+                <div>
+                  <span class="field-label">Description <span style="font-weight:400;text-transform:none;color:var(--muted)">(optional, shown next to the file when the LLM hoists it)</span></span>
+                  <input type="text" class="skill-file-desc-input" value="${escHtml(f.description)}"
+                         placeholder="One-line description of what this file covers"
+                         oninput="FILE_EDITORS['${key}'].updateField(${idx}, 'description', this.value)" />
+                </div>
+                <div>
+                  <span class="field-label">Content ${isEntry ? '(Markdown)' : '<span style="font-weight:400;text-transform:none;color:var(--muted)">(Markdown, script, config… any text)</span>'}</span>
+                  <textarea class="skill-file-content-input" rows="9"
+                            placeholder="${isEntry ? 'Main body — injected verbatim into the compiled prompt.' : 'Supporting content: docs, a shell script, a JSON/YAML config...'}"
+                            oninput="FILE_EDITORS['${key}'].updateField(${idx}, 'content', this.value)">${escHtml(f.content)}</textarea>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function toggle(idx) { openIdx = (openIdx === idx) ? -1 : idx; render(); }
+      function updateField(idx, field, value) { if (files[idx]) files[idx][field] = value; }
+
+      async function addFile() {
+        const nameInput = await uiPrompt('File name with extension (e.g. notes.md, deploy.sh, config.json — no spaces):', 'notes.md');
+        if (!nameInput) return;
+        const name = nameInput.trim();
+        if (name.toLowerCase() === entryName.toLowerCase()) { await uiAlert(`${entryName} already exists as the entry file.`); return; }
+        if (!ENTITY_FILE_RE.test(name)) { await uiAlert('Invalid name. Use letters, digits, ".", "_", "-" and a file extension (e.g. .md, .sh, .json).'); return; }
+        if (files.some(f => f.name.toLowerCase() === name.toLowerCase())) { await uiAlert(`A file named "${name}" already exists.`); return; }
+        files.push({ name, description: '', content: '', is_entry: 0 });
+        openIdx = files.length - 1;
+        render();
+      }
+
+      async function removeFile(idx) {
+        const f = files[idx];
+        if (!f || f.is_entry) return;
+        if (!await uiConfirm(`Remove file "${f.name}"? Its content will be lost on save.`)) return;
+        files.splice(idx, 1);
+        if (openIdx >= files.length) openIdx = 0;
+        render();
+      }
+
+      // Read uploaded/dropped files into the editor. A file named like the entry
+      // replaces the entry content; anything else is added (or overwrites a
+      // same-named supporting file).
+      async function handleFiles(fileList) {
+        const arr = Array.from(fileList || []);
+        for (const file of arr) {
+          const name = file.name.trim().replace(/\s+/g, '_');
+          const content = await readText(file);
+          if (name.toLowerCase() === entryName.toLowerCase()) {
+            const e = files.find(f => f.is_entry);
+            if (e) { e.content = content; openIdx = files.indexOf(e); }
+            continue;
+          }
+          if (!ENTITY_FILE_RE.test(name)) { await uiAlert(`"${file.name}" has an unsupported name. Use letters, digits, ".", "_", "-" and a file extension.`); continue; }
+          const ex = files.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
+          if (ex >= 0) { files[ex].content = content; openIdx = ex; }
+          else { files.push({ name, description: '', content, is_entry: 0 }); openIdx = files.length - 1; }
+        }
+        render();
+      }
+
+      function wireDrop() {
+        const dz = document.getElementById(opts.dropId);
+        if (!dz || dz._wired) return;
+        dz._wired = true;
+        dz.addEventListener('click', () => fileInput.click());
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+      }
+
+      const api = { init, getFiles, render, toggle, updateField, addFile, removeFile };
+      FILE_EDITORS[key] = api;
+      return api;
+    }
+
+    createFileEditor('skill',   { listId: 'skill-files-list',   dropId: 'skill-files-drop',   entryName: 'SKILL.md' });
+    createFileEditor('agent',   { listId: 'agent-files-list',   dropId: 'agent-files-drop',   entryName: 'AGENT.md' });
+    createFileEditor('context', { listId: 'context-files-list', dropId: 'context-files-drop', entryName: 'CONTEXT.md' });
+
+    async function openSkillModal(id) {
+      currentSkillId = id || null;
+      document.getElementById('skill-modal-title').textContent = id ? 'Edit skill' : 'New skill';
+      ['skill-name','skill-desc'].forEach(k => document.getElementById(k).value = '');
+      document.getElementById('skill-modal-error').classList.add('hidden');
+      selectedSkillProjectIds = [];
+      let skillFiles = null, skillContent = '';
+
+      await ensureProjectsLoaded();
+
+      // Hide share block by default; show only when editing
+      document.getElementById('skill-share-block').style.display = id ? '' : 'none';
+      document.getElementById('skill-invite-status').textContent = '';
+      if (id) {
+        const res = await authFetch('/skills/' + id);
+        if (res.ok) {
+          const s = await res.json();
+          document.getElementById('skill-name').value = s.name || '';
+          document.getElementById('skill-desc').value = s.description || '';
+          skillFiles = Array.isArray(s.files) ? s.files : null;
+          skillContent = s.content || '';
+          selectedSkillProjectIds = s.project_ids || [];
+          document.getElementById('skill-public-toggle').checked = !!s.is_public;
+          renderSkillVisibilityStatus(!!s.is_public);
+        }
+        loadSkillInvitations(id);
+      }
+      FILE_EDITORS.skill.init(skillFiles, skillContent);
+      renderProjectChips('skill-project-picker', selectedSkillProjectIds, 'toggleSkillProject');
+      document.getElementById('skill-modal').classList.add('open');
+      setTimeout(() => document.getElementById('skill-name').focus(), 50);
+    }
+    function closeSkillModal() { document.getElementById('skill-modal').classList.remove('open'); }
+
+    function renderSkillVisibilityStatus(isPublic) {
+      const el = document.getElementById('skill-visibility-status');
+      el.innerHTML = isPublic
+        ? '<span style="color:#22c55e">● Public</span> — appears in the community repository.'
+        : '<span style="color:#f59e0b">● Private</span> — only you can see it.';
+    }
+    document.getElementById('skill-public-toggle').addEventListener('change', async e => {
+      if (!currentSkillId) return;
+      const wantPublic = e.target.checked;
+      if (wantPublic && !await uiConfirm('Make this skill public?\n\nAnyone will be able to view and fork it. You can revert at any time.')) {
+        e.target.checked = false;
+        return;
+      }
+      const res = await authFetch(`/skills/${currentSkillId}/visibility`, {
+        method:'PATCH', body: JSON.stringify({ is_public: wantPublic })
+      });
+      if (!res.ok) { await uiAlert('Could not change visibility.'); e.target.checked = !wantPublic; return; }
+      renderSkillVisibilityStatus(wantPublic);
+    });
+    async function loadSkillInvitations(id) {
+      const host = document.getElementById('skill-invitations-list');
+      const res = await authFetch(`/skills/${id}/invitations`);
+      if (!res.ok) return;
+      const list = await res.json();
+      if (!list.length) { host.innerHTML = '<p style="font-size:0.78rem;color:var(--muted);font-style:italic">No invitations yet.</p>'; return; }
+      const STATUS = { pending:'pending', accepted:'accepted', declined:'declined', revoked:'revoked' };
+      const COLOR = { pending:'#f59e0b', accepted:'#22c55e', declined:'#9ca3af', revoked:'#9ca3af' };
+      host.innerHTML = list.map(i => {
+        const who = i.invitee_nickname ? `@${escHtml(i.invitee_nickname)}` : escHtml(i.invitee_email);
+        const revokeBtn = i.status === 'pending'
+          ? `<button class="btn btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;margin-left:auto" onclick="revokeSkillInvitation('${escHtml(i.id)}')">Revoke</button>` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:0.82rem">
+          <span style="font-weight:500">${who}</span>
+          <span style="color:${COLOR[i.status]||'var(--muted)'};font-weight:600">${STATUS[i.status]||i.status}</span>
+          ${revokeBtn}
+        </div>`;
+      }).join('');
+    }
+    window.sendSkillInvitation = async function() {
+      if (!currentSkillId) return;
+      const email = document.getElementById('skill-invite-email').value.trim();
+      const status = document.getElementById('skill-invite-status');
+      if (!email) { status.style.color='#dc2626'; status.textContent='Enter an email.'; return; }
+      const res = await authFetch(`/skills/${currentSkillId}/invitations`, {
+        method:'POST', body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) { status.style.color='#dc2626'; status.textContent = data.error || 'Error.'; return; }
+      status.style.color='#22c55e';
+      status.textContent = data.invitee_user_id ? 'Invitation sent.' : 'Invitation sent. They will see it when they sign up.';
+      document.getElementById('skill-invite-email').value = '';
+      loadSkillInvitations(currentSkillId);
+    };
+    window.revokeSkillInvitation = async function(id) {
+      if (!await uiConfirm('Revoke this invitation?')) return;
+      const res = await authFetch(`/invitations/skills/${id}`, { method:'DELETE' });
+      if (res.ok) loadSkillInvitations(currentSkillId);
+      else await uiAlert('Could not revoke.');
+    };
+    async function saveSkill() {
+      const name = document.getElementById('skill-name').value.trim();
+      const description = document.getElementById('skill-desc').value.trim();
+      const errEl = document.getElementById('skill-modal-error');
+      const btn = document.getElementById('skill-save-btn');
+      if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
+      if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
+      const skillFiles = FILE_EDITORS.skill.getFiles();
+      const entry = skillFiles.find(f => f.is_entry);
+      if (!entry || !entry.content.trim()) {
+        errEl.textContent = 'SKILL.md content is required.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const empty = skillFiles.find(f => !f.content.trim());
+      if (empty) {
+        errEl.textContent = `File "${empty.name}" is empty. Add content or remove it.`;
+        errEl.classList.remove('hidden');
+        return;
+      }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const url = currentSkillId ? '/skills/' + currentSkillId : '/skills';
+        const method = currentSkillId ? 'PUT' : 'POST';
+        const res = await authFetch(url, {
+          method,
+          body: JSON.stringify({
+            name, description,
+            files: skillFiles,
+            project_ids: selectedSkillProjectIds
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }
+        closeSkillModal();
+        loadSkills();
+      } catch { errEl.textContent = 'Network error.'; errEl.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+    async function deleteSkill(id, name) {
+      if (!await uiConfirm(`Delete the skill "${name}"? This action cannot be undone.`)) return;
+      const res = await authFetch('/skills/' + id, { method: 'DELETE' });
+      if (res.ok || res.status === 204) loadSkills();
+      else await uiAlert('Could not delete the skill.');
+    }
+
+    // ── Contexts ──────────────────────────────────────────────────────────────
+    let currentContextId = null;
+    let selectedContextAttachments = []; // [{project_id, share_on_fork}]
+
+    async function loadContexts() {
+      try {
+        const res = await authFetch('/contexts');
+        const items = await res.json();
+        const grid = document.getElementById('contexts-grid');
+        if (!items.length) {
+          grid.innerHTML = '<p style="color:var(--muted)">No contexts yet. Create one with the project documentation or know-how.</p>';
+          return;
+        }
+        grid.innerHTML = items.map(c => {
+          const atts = c.project_attachments || [];
+          const shareCount = atts.filter(a => a.share_on_fork).length;
+          const summary = atts.length
+            ? `${atts.length} project${atts.length === 1 ? '' : 's'} · ${shareCount} travel${shareCount === 1 ? 's' : ''} on fork`
+            : 'Not attached';
+          return `
+            <div class="item-card">
+              <div class="item-card-name">${escHtml(c.name)}</div>
+              <div class="item-card-desc">${escHtml(c.description)}</div>
+              <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
+              <div class="item-card-footer">
+                <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
+                <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}','${escHtml(c.name).replace(/'/g,"\\'")}')">Delete</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch {
+        const el = document.getElementById('contexts-error');
+        el.textContent = 'Could not load contexts.';
+        el.classList.remove('hidden');
+      }
+    }
+
+    function renderContextProjectChips() {
+      const host = document.getElementById('context-project-picker');
+      if (!availableProjects.length) {
+        host.innerHTML = '<div class="project-picker-empty">You have no projects created.</div>';
+        return;
+      }
+      const sel = new Set(selectedContextAttachments.map(a => a.project_id));
+      host.innerHTML = availableProjects.map(p => {
+        const isSel = sel.has(p.id) ? 'is-selected' : '';
+        const check = sel.has(p.id) ? '<span class="project-chip-check">✓</span>' : '';
+        return `<button type="button" class="project-chip ${isSel}" onclick="toggleContextProject('${p.id}')">${check}${escHtml(p.name)}</button>`;
+      }).join('');
+      renderContextAttachmentFlags();
+    }
+
+    function renderContextAttachmentFlags() {
+      const host = document.getElementById('context-attachment-flags');
+      if (!selectedContextAttachments.length) {
+        host.innerHTML = '';
+        return;
+      }
+      const byId = new Map(availableProjects.map(p => [p.id, p]));
+      host.innerHTML = '<div style="font-size:0.74rem;color:var(--muted);margin-bottom:6px">For each project, mark whether the context travels with future forks:</div>' +
+        selectedContextAttachments.map(a => {
+          const p = byId.get(a.project_id);
+          const label = p ? p.name : a.project_id;
+          return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:0.82rem;cursor:pointer">
+            <input type="checkbox" ${a.share_on_fork ? 'checked' : ''} onchange="setContextShareOnFork('${a.project_id}', this.checked)" style="width:14px;height:14px;cursor:pointer" />
+            <span style="font-weight:500">${escHtml(label)}</span>
+            <span style="color:var(--muted);margin-left:auto;font-size:0.74rem">${a.share_on_fork ? '✓ travels on fork' : 'private to this project'}</span>
+          </label>`;
+        }).join('');
+    }
+
+    function toggleContextProject(id) {
+      const idx = selectedContextAttachments.findIndex(a => a.project_id === id);
+      if (idx === -1) selectedContextAttachments.push({ project_id: id, share_on_fork: false });
+      else selectedContextAttachments.splice(idx, 1);
+      renderContextProjectChips();
+    }
+
+    function setContextShareOnFork(projectId, value) {
+      const a = selectedContextAttachments.find(x => x.project_id === projectId);
+      if (a) { a.share_on_fork = !!value; renderContextAttachmentFlags(); }
+    }
+
+    async function openContextModal(id) {
+      currentContextId = id || null;
+      document.getElementById('context-modal-title').textContent = id ? 'Edit context' : 'New context';
+      ['context-name','context-desc'].forEach(k => document.getElementById(k).value = '');
+      document.getElementById('context-modal-error').classList.add('hidden');
+      selectedContextAttachments = [];
+      let ctxFiles = null, ctxContent = '';
+
+      await ensureProjectsLoaded();
+
+      document.getElementById('context-share-block').style.display = id ? '' : 'none';
+      document.getElementById('context-invite-status').textContent = '';
+      if (id) {
+        const res = await authFetch('/contexts/' + id);
+        if (res.ok) {
+          const c = await res.json();
+          document.getElementById('context-name').value = c.name || '';
+          document.getElementById('context-desc').value = c.description || '';
+          ctxFiles = Array.isArray(c.files) ? c.files : null;
+          ctxContent = c.content || '';
+          selectedContextAttachments = (c.project_attachments || []).map(a => ({ project_id: a.project_id, share_on_fork: !!a.share_on_fork }));
+          document.getElementById('context-public-toggle').checked = !!c.is_public;
+          renderContextVisibilityStatus(!!c.is_public);
+        }
+        loadContextInvitations(id);
+      }
+      FILE_EDITORS.context.init(ctxFiles, ctxContent);
+      renderContextProjectChips();
+      document.getElementById('context-modal').classList.add('open');
+      setTimeout(() => document.getElementById('context-name').focus(), 50);
+    }
+    function closeContextModal() { document.getElementById('context-modal').classList.remove('open'); }
+
+    function renderContextVisibilityStatus(isPublic) {
+      const el = document.getElementById('context-visibility-status');
+      el.innerHTML = isPublic
+        ? '<span style="color:#22c55e">● Public</span> — appears in the community repository.'
+        : '<span style="color:#f59e0b">● Private</span> — only you can see it.';
+    }
+    document.getElementById('context-public-toggle').addEventListener('change', async e => {
+      if (!currentContextId) return;
+      const wantPublic = e.target.checked;
+      if (wantPublic && !await uiConfirm('Make this context public?\n\nAnyone will be able to view and fork it. You can revert at any time.')) {
+        e.target.checked = false;
+        return;
+      }
+      const res = await authFetch(`/contexts/${currentContextId}/visibility`, {
+        method:'PATCH', body: JSON.stringify({ is_public: wantPublic })
+      });
+      if (!res.ok) { await uiAlert('Could not change visibility.'); e.target.checked = !wantPublic; return; }
+      renderContextVisibilityStatus(wantPublic);
+    });
+    async function loadContextInvitations(id) {
+      const host = document.getElementById('context-invitations-list');
+      const res = await authFetch(`/contexts/${id}/invitations`);
+      if (!res.ok) return;
+      const list = await res.json();
+      if (!list.length) { host.innerHTML = '<p style="font-size:0.78rem;color:var(--muted);font-style:italic">No invitations yet.</p>'; return; }
+      const STATUS = { pending:'pending', accepted:'accepted', declined:'declined', revoked:'revoked' };
+      const COLOR = { pending:'#f59e0b', accepted:'#22c55e', declined:'#9ca3af', revoked:'#9ca3af' };
+      host.innerHTML = list.map(i => {
+        const who = i.invitee_nickname ? `@${escHtml(i.invitee_nickname)}` : escHtml(i.invitee_email);
+        const revokeBtn = i.status === 'pending'
+          ? `<button class="btn btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;margin-left:auto" onclick="revokeContextInvitation('${escHtml(i.id)}')">Revoke</button>` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:0.82rem">
+          <span style="font-weight:500">${who}</span>
+          <span style="color:${COLOR[i.status]||'var(--muted)'};font-weight:600">${STATUS[i.status]||i.status}</span>
+          ${revokeBtn}
+        </div>`;
+      }).join('');
+    }
+    window.sendContextInvitation = async function() {
+      if (!currentContextId) return;
+      const email = document.getElementById('context-invite-email').value.trim();
+      const status = document.getElementById('context-invite-status');
+      if (!email) { status.style.color='#dc2626'; status.textContent='Enter an email.'; return; }
+      const res = await authFetch(`/contexts/${currentContextId}/invitations`, {
+        method:'POST', body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) { status.style.color='#dc2626'; status.textContent = data.error || 'Error.'; return; }
+      status.style.color='#22c55e';
+      status.textContent = data.invitee_user_id ? 'Invitation sent.' : 'Invitation sent. They will see it when they sign up.';
+      document.getElementById('context-invite-email').value = '';
+      loadContextInvitations(currentContextId);
+    };
+    window.revokeContextInvitation = async function(id) {
+      if (!await uiConfirm('Revoke this invitation?')) return;
+      const res = await authFetch(`/invitations/contexts/${id}`, { method:'DELETE' });
+      if (res.ok) loadContextInvitations(currentContextId);
+      else await uiAlert('Could not revoke.');
+    };
+    async function saveContext() {
+      const name = document.getElementById('context-name').value.trim();
+      const description = document.getElementById('context-desc').value.trim();
+      const errEl = document.getElementById('context-modal-error');
+      const btn = document.getElementById('context-save-btn');
+      if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
+      if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
+      const ctxFiles = FILE_EDITORS.context.getFiles();
+      const entry = ctxFiles.find(f => f.is_entry);
+      if (!entry || !entry.content.trim()) { errEl.textContent = 'CONTEXT.md content is required.'; errEl.classList.remove('hidden'); return; }
+      const empty = ctxFiles.find(f => !f.content.trim());
+      if (empty) { errEl.textContent = `File "${empty.name}" is empty. Add content or remove it.`; errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const url = currentContextId ? '/contexts/' + currentContextId : '/contexts';
+        const method = currentContextId ? 'PUT' : 'POST';
+        const res = await authFetch(url, {
+          method,
+          body: JSON.stringify({ name, description, files: ctxFiles, project_attachments: selectedContextAttachments })
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }
+        closeContextModal();
+        loadContexts();
+      } catch { errEl.textContent = 'Network error.'; errEl.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+    async function deleteContext(id, name) {
+      if (!await uiConfirm(`Delete the context "${name}"? This action cannot be undone.`)) return;
+      const res = await authFetch('/contexts/' + id, { method: 'DELETE' });
+      if (res.ok || res.status === 204) loadContexts();
+      else await uiAlert('Could not delete the context.');
+    }
+
+    // ── Modal Info ────────────────────────────────────────────────────────────
+    function openInfoModal() {
+      switchInfoTab('how');
+      document.getElementById('info-modal').classList.add('open');
+    }
+    function closeInfoModal() { document.getElementById('info-modal').classList.remove('open'); }
+    function switchInfoTab(name) {
+      const tabs = ['how', 'config', 'blocks'];
+      tabs.forEach((t, i) => {
+        document.getElementById('info-tab-' + t).classList.toggle('active', t === name);
+        document.querySelectorAll('.info-tab-btn')[i].classList.toggle('active', t === name);
+      });
+    }
+    function copyInfoConfig() {
+      copyText(document.getElementById('mcp-config-snippet').textContent, '.mcp.json copiado');
+    }
+
+    // ── Escape ────────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      closeNewProjectModal();
+      closeAgentModal();
+      closeSkillModal();
+      closeContextModal();
+      closeInfoModal();
+    });
+
+    // ── Team / Invitations ────────────────────────────────────────────────────
+    const TEAM_STATUS_LABEL = { pending:'pending', accepted:'forked', declined:'ignored', revoked:'revoked' };
+    function teamFmtAgo(ts) {
+      const s = Math.floor((Date.now() - ts) / 1000);
+      if (s < 60) return 'seconds ago';
+      if (s < 3600) return `${Math.floor(s/60)}m ago`;
+      if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+      return new Date(ts).toLocaleDateString();
+    }
+    function teamInitials(s) {
+      return String(s||'').split(/[\s_-]+/).filter(Boolean).map(p=>p[0]).join('').toUpperCase().slice(0,2) || '?';
+    }
+
+    async function refreshTeamBadge() {
+      try {
+        const res = await authFetch('/invitations/incoming');
+        if (!res.ok) return;
+        const list = await res.json();
+        const pending = list.filter(i => i.status === 'pending').length;
+        const badge = document.getElementById('team-badge');
+        if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+        else badge.style.display = 'none';
+      } catch {}
+    }
+
+    const TYPE_LABEL_SINGULAR = { project:'Project', agent:'Agent', skill:'Skill' };
+    const TYPE_LABEL_PLURAL   = { project:'Projects', agent:'Agents', skill:'Skills' };
+    const TYPE_BASE = { project:'/projects', agent:'/agents', skill:'/skills' };
+    const TYPE_AFTER = {
+      project: id => `project.html?id=${encodeURIComponent(id)}`,
+      agent:   () => `dashboard.html?tab=agents`,
+      skill:   () => `dashboard.html?tab=skills`,
+    };
+
+    async function loadTeam() {
+      const incomingHost = document.getElementById('team-incoming');
+      const outgoingHost = document.getElementById('team-outgoing');
+
+      try {
+        const inRes = await authFetch('/invitations/incoming');
+        const incoming = inRes.ok ? await inRes.json() : [];
+        renderIncoming(incoming, incomingHost);
+      } catch {
+        incomingHost.innerHTML = '<p style="color:#dc2626">Error loading received invitations.</p>';
+      }
+
+      // Outgoing: invitations I sent across all three types.
+      try {
+        const grouped = { project: [], agent: [], skill: [] };
+        // Projects (owned by me)
+        const projRes = await authFetch('/projects');
+        const projects = projRes.ok ? await projRes.json() : [];
+        const myProjects = projects.filter(p => !p.owner_email || p.owner_email === userEmail);
+        for (const p of myProjects) {
+          const r = await authFetch(`/projects/${p.id}/invitations`);
+          if (!r.ok) continue;
+          const list = await r.json();
+          if (list.length) grouped.project.push({ entity: p, invitations: list });
+        }
+        // Agents
+        const agentsRes = await authFetch('/agents');
+        const agents = agentsRes.ok ? await agentsRes.json() : [];
+        const myAgents = agents.filter(a => a.user_id === undefined || a.user_id === null || a.user_id === '' || a.user_id);
+        // Filter agents to ones where I'm owner (user_id === me). The /agents endpoint already does this for non-admin,
+        // but admin sees all — narrow to mine for clarity.
+        const myUserIdRes = await authFetch('/users/me');
+        const myUserId = myUserIdRes.ok ? (await myUserIdRes.json()).id : null;
+        const ownedAgents = myUserId ? agents.filter(a => a.user_id === myUserId) : myAgents;
+        for (const a of ownedAgents) {
+          const r = await authFetch(`/agents/${a.id}/invitations`);
+          if (!r.ok) continue;
+          const list = await r.json();
+          if (list.length) grouped.agent.push({ entity: a, invitations: list });
+        }
+        // Skills
+        const skillsRes = await authFetch('/skills');
+        const skills = skillsRes.ok ? await skillsRes.json() : [];
+        const ownedSkills = myUserId ? skills.filter(s => s.user_id === myUserId) : skills;
+        for (const s of ownedSkills) {
+          const r = await authFetch(`/skills/${s.id}/invitations`);
+          if (!r.ok) continue;
+          const list = await r.json();
+          if (list.length) grouped.skill.push({ entity: s, invitations: list });
+        }
+        renderOutgoing(grouped, outgoingHost);
+      } catch {
+        outgoingHost.innerHTML = '<p style="color:#dc2626">Error loading sent invitations.</p>';
+      }
+
+      refreshTeamBadge();
+    }
+
+    function renderIncoming(list, host) {
+      if (!list.length) {
+        host.innerHTML = '<p style="color:var(--muted);font-style:italic">No invitations yet.</p>';
+        return;
+      }
+      const renderCard = (i) => {
+        const responded = i.status !== 'pending';
+        const desc = i.target_description ? escHtml(i.target_description) : '<span style="font-style:italic;opacity:0.6">No description.</span>';
+        const inviter = i.inviter_nickname ? `@${escHtml(i.inviter_nickname)}` : escHtml(i.inviter_email);
+        const typeLabel = TYPE_LABEL_SINGULAR[i.type] || i.type;
+        const actions = i.status === 'pending'
+          ? `<button class="btn btn-sm btn-primary" onclick="forkFromInvitation('${escHtml(i.type)}','${escHtml(i.id)}')">Fork</button>
+             <button class="btn btn-sm btn-ghost" onclick="declineInvitation('${escHtml(i.type)}','${escHtml(i.id)}')">Ignore</button>`
+          : i.fork_target_id
+            ? `<a class="btn btn-sm btn-ghost" href="${TYPE_AFTER[i.type](i.fork_target_id)}">Go to fork →</a>`
+            : '';
+        const statusPill = `<span class="team-status-pill ts-${i.status}">${TEAM_STATUS_LABEL[i.status]||i.status}</span>`;
+        return `<div class="team-card${responded?' responded':''}">
+          <div class="team-card-icon">${escHtml(teamInitials(i.target_name))}</div>
+          <div class="team-card-body">
+            <div class="team-card-title">${escHtml(i.target_name)} ${statusPill}
+              <span style="font-size:0.7rem;font-weight:500;color:var(--muted);margin-left:6px;text-transform:uppercase;letter-spacing:0.04em">${typeLabel}</span>
+            </div>
+            <div class="team-card-meta">${inviter} shared it with you · ${teamFmtAgo(i.created_at)}</div>
+            <div class="team-card-desc">${desc}</div>
+          </div>
+          <div class="team-card-actions">${actions}</div>
+        </div>`;
+      };
+
+      // Group by status: pending first, then responded
+      const byType = { project: [], agent: [], skill: [] };
+      list.forEach(i => { (byType[i.type] || (byType[i.type] = [])).push(i); });
+
+      const sections = ['project','agent','skill'].map(t => {
+        const items = byType[t] || [];
+        if (!items.length) return '';
+        const pending = items.filter(i => i.status === 'pending');
+        const others = items.filter(i => i.status !== 'pending');
+        return `<div style="margin-bottom:22px">
+          <div class="team-section-title" style="font-size:0.7rem">${TYPE_LABEL_PLURAL[t]} (${items.length})</div>
+          ${pending.map(renderCard).join('')}
+          ${others.length ? others.map(renderCard).join('') : ''}
+        </div>`;
+      }).join('');
+
+      host.innerHTML = sections || '<p style="color:var(--muted);font-style:italic">No invitations yet.</p>';
+    }
+
+    function renderOutgoing(grouped, host) {
+      const empty = !grouped.project.length && !grouped.agent.length && !grouped.skill.length;
+      if (empty) {
+        host.innerHTML = '<p style="color:var(--muted);font-style:italic">You haven\'t shared any project, agent or skill yet.</p>';
+        return;
+      }
+
+      const renderGroup = (type, groups) => {
+        if (!groups.length) return '';
+        return `<div style="margin-bottom:22px">
+          <div class="team-section-title" style="font-size:0.7rem">${TYPE_LABEL_PLURAL[type]} (${groups.length})</div>
+          ${groups.map(({ entity, invitations }) => `
+            <div style="margin-bottom:14px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div class="team-card-icon" style="width:30px;height:30px;font-size:0.78rem">${escHtml(teamInitials(entity.name))}</div>
+                <span style="font-weight:600;color:var(--text)">${escHtml(entity.name)}</span>
+                <span style="font-size:0.78rem;color:var(--muted)">${invitations.length} invitation${invitations.length===1?'':'s'}</span>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:8px;background:var(--card-bg);overflow:hidden">
+                ${invitations.map((i, idx) => {
+                  const who = i.invitee_nickname ? `@${escHtml(i.invitee_nickname)}` : escHtml(i.invitee_email);
+                  const isLast = idx === invitations.length - 1;
+                  const revoke = i.status === 'pending'
+                    ? `<button class="btn btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;margin-left:auto" onclick="revokeOutgoing('${escHtml(type)}','${escHtml(i.id)}')">Revoke</button>` : '';
+                  return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;${isLast?'':'border-bottom:1px solid var(--border)'};font-size:0.85rem">
+                    <span style="font-weight:500">${who}</span>
+                    <span class="team-status-pill ts-${i.status}">${TEAM_STATUS_LABEL[i.status]||i.status}</span>
+                    <span style="font-size:0.75rem;color:var(--muted);margin-left:6px">${teamFmtAgo(i.created_at)}</span>
+                    ${revoke}
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+      };
+
+      host.innerHTML = renderGroup('project', grouped.project) + renderGroup('agent', grouped.agent) + renderGroup('skill', grouped.skill);
+    }
+
+    window.forkFromInvitation = async function(type, invId) {
+      // Resolve target id from the invitation list (fetch fresh to get the right entity id).
+      // The /invitations/incoming response carries project_id/agent_id/skill_id depending on type.
+      const inRes = await authFetch('/invitations/incoming');
+      const list = inRes.ok ? await inRes.json() : [];
+      const inv = list.find(i => i.id === invId && i.type === type);
+      if (!inv) { await uiAlert('Invitation not found.'); return; }
+      const targetId = inv.project_id || inv.agent_id || inv.skill_id;
+      const res = await authFetch(`${TYPE_BASE[type]}/${targetId}/fork`, { method:'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        await uiAlert(err.error || 'Could not fork.');
+        return;
+      }
+      const fork = await res.json();
+      window.location.href = TYPE_AFTER[type](fork.id);
+    };
+    window.declineInvitation = async function(type, invId) {
+      if (!await uiConfirm('Ignore this invitation?')) return;
+      const res = await authFetch(`/invitations/${type}s/${invId}/decline`, { method:'POST' });
+      if (res.ok) { loadTeam(); refreshTeamBadge(); }
+      else await uiAlert('Could not ignore.');
+    };
+    window.revokeOutgoing = async function(type, invId) {
+      if (!await uiConfirm('Revoke this invitation?')) return;
+      const res = await authFetch(`/invitations/${type}s/${invId}`, { method:'DELETE' });
+      if (res.ok) loadTeam();
+      else await uiAlert('Could not revoke.');
+    };
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadProjects();
+    loadAgents();
+    loadSkills();
+    refreshTeamBadge();
+  </script>
+</body>
+</html>

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Documentación</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Layout estilo artículo Anthropic ─────────────────────────────────── */
+    body { background:#fafafa; }
+    header { background:#1a1a2e; color:#e0e0ff; padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.2); position:sticky; top:0; z-index:100; }
+    header .logo { font-size:1.15rem; font-weight:700; color:inherit; text-decoration:none; }
+    header .logo span { color:var(--primary); }
+    header nav { display:flex; gap:18px; align-items:center; }
+    header nav a { color:#e0e0ff; opacity:0.85; font-size:0.88rem; text-decoration:none; }
+    header nav a:hover { opacity:1; }
+    header nav a.active { opacity:1; font-weight:600; }
+    .user-badge-mini { font-size:0.78rem; color:#a0a8d0; background:rgba(255,255,255,0.08); padding:3px 9px; border-radius:20px; }
+
+    .article { max-width:740px; margin:0 auto; padding:56px 32px 100px; color:#1a1a2e; }
+
+    .article-eyebrow { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--primary); margin-bottom:14px; }
+    .article-title { font-size:2.2rem; font-weight:700; line-height:1.2; margin-bottom:14px; letter-spacing:-0.02em; color:#0a0a1f; }
+    .article-deck { font-size:1.05rem; color:#4b5563; line-height:1.6; margin-bottom:32px; padding-bottom:32px; border-bottom:1px solid #e5e7eb; }
+
+    .article h2 { font-size:1.5rem; font-weight:700; margin:48px 0 18px; line-height:1.3; letter-spacing:-0.01em; color:#0a0a1f; }
+    .article h3 { font-size:1.1rem; font-weight:700; margin:28px 0 12px; color:#0a0a1f; }
+    .article h4 { font-size:0.95rem; font-weight:700; margin:20px 0 8px; color:#1f2937; }
+
+    .article p { font-size:1rem; line-height:1.75; color:#1f2937; margin-bottom:18px; }
+    .article p strong { color:#0a0a1f; font-weight:600; }
+    .article ul, .article ol { padding-left:24px; margin-bottom:18px; }
+    .article li { font-size:1rem; line-height:1.75; margin-bottom:8px; color:#1f2937; }
+
+    .article code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.86em; color:#1e40af; }
+    .article a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
+    .article a:hover { opacity:0.78; }
+
+    .pre-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:18px 22px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.82rem; line-height:1.7; white-space:pre; overflow-x:auto; margin:16px 0 24px; }
+    .pre-code .kw { color:#fbbf24; }
+    .pre-code .com { color:#94a3b8; font-style:italic; }
+
+    .pull-quote { border-left:3px solid var(--primary); padding:10px 0 10px 20px; margin:24px 0; font-size:1.05rem; line-height:1.7; color:#374151; font-style:italic; }
+
+    .callout { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:18px 22px; margin:24px 0; }
+    .callout-title { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#1e40af; margin-bottom:8px; }
+    .callout p { font-size:0.95rem; color:#1e3a8a; margin-bottom:0; line-height:1.65; }
+
+    .callout-warn { background:#fffbeb; border-color:#fde68a; }
+    .callout-warn .callout-title { color:#92400e; }
+    .callout-warn p { color:#78350f; }
+
+    .figure { margin:24px 0; }
+    .figure-caption { font-size:0.82rem; color:#6b7280; margin-top:8px; text-align:center; font-style:italic; }
+
+    .compare-table { width:100%; border-collapse:collapse; margin:20px 0 28px; font-size:0.88rem; }
+    .compare-table th, .compare-table td { padding:11px 12px; text-align:left; border-bottom:1px solid #e5e7eb; vertical-align:top; }
+    .compare-table th { background:#f9fafb; font-weight:700; color:#111827; font-size:0.85rem; }
+    .compare-table tr:hover td { background:#fafafa; }
+    .compare-table td:first-child { font-weight:600; color:#1f2937; }
+
+    .ref-list { display:flex; flex-direction:column; gap:14px; margin-top:16px; }
+    .ref-item { padding:14px 0; border-bottom:1px solid #e5e7eb; }
+    .ref-item:last-child { border-bottom:none; }
+    .ref-num { font-size:0.78rem; color:#6b7280; font-weight:600; margin-right:8px; }
+    .ref-title { font-weight:600; font-size:0.95rem; color:#0a0a1f; margin-bottom:3px; }
+    .ref-meta { font-size:0.82rem; color:#6b7280; line-height:1.6; }
+
+    .toc { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:18px 22px; margin:0 0 32px; }
+    .toc-title { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:10px; }
+    .toc ol { margin:0; padding-left:22px; }
+    .toc li { font-size:0.92rem; line-height:1.7; margin-bottom:2px; }
+    .toc a { color:#1f2937; text-decoration:none; }
+    .toc a:hover { color:var(--primary); text-decoration:underline; }
+
+    .footer-meta { margin-top:64px; padding-top:24px; border-top:1px solid #e5e7eb; font-size:0.82rem; color:#6b7280; }
+
+    @media (max-width:640px) {
+      .article { padding:32px 20px 60px; }
+      .article-title { font-size:1.6rem; }
+      .article h2 { font-size:1.25rem; }
+    }
+
+    /* ── Sidebar (logged-in) ── clonado de dashboard/repository ── */
+    body.has-sidebar { display:flex; min-height:100vh; background:#fafafa; }
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo, .sidebar.collapsed .sidebar-section-title, .sidebar.collapsed .sidebar-item-label, .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .team-badge { margin-left:auto; background:#ef4444; color:#fff; font-size:0.66rem; font-weight:700; padding:1px 6px; border-radius:9px; min-width:16px; text-align:center; line-height:1.4; }
+
+    /* Anonymous top nav (matches repository.html / user.html) */
+    .anon-nav { background:#1a1a2e; color:#e0e0ff; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.3); position:sticky; top:0; z-index:100; }
+    .anon-nav .logo { font-size:1.25rem; font-weight:700; color:inherit; text-decoration:none; }
+    .anon-nav .logo span { color:var(--primary); }
+    .anon-nav-cta { display:flex; gap:10px; align-items:center; }
+    .anon-nav-cta a { color:#e0e0ff; text-decoration:none; font-size:0.88rem; }
+    .anon-nav-cta a.cta { background:var(--primary); color:#fff; padding:7px 16px; border-radius:6px; font-weight:600; }
+
+    .main-area { flex:1; min-width:0; }
+
+    @media (max-width:768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="shell-mount"></div>
+
+  <main class="main-area">
+  <article class="article">
+    <div class="article-eyebrow">Documentación técnica</div>
+    <h1 class="article-title">AIOrc: compilador de workflows multi-agente sobre MCP</h1>
+    <p class="article-deck">AIOrc compila grafos de workflow visuales en un único prompt determinista que el modelo destino ejecuta secuencialmente vía Model Context Protocol. A diferencia de orquestadores con runtime activo (LangGraph, CrewAI, AutoGen, Claude Agent SDK), AIOrc emite el flujo completo en una sola llamada MCP — eliminando la latencia inter-agente y manteniendo la coherencia de contexto en una sola sesión LLM.</p>
+
+    <div class="toc">
+      <div class="toc-title">Contenidos</div>
+      <ol>
+        <li><a href="#resumen">Resumen y posicionamiento</a></li>
+        <li><a href="#stack">Stack técnico de AIOrc</a></li>
+        <li><a href="#por-que-compilar">Por qué compilar en lugar de orquestar</a></li>
+        <li><a href="#compilador">Cómo funciona el compilador</a></li>
+        <li><a href="#mega-prompt">Estructura del mega-prompt</a></li>
+        <li><a href="#determinismo">Determinismo blando: por qué funciona</a></li>
+        <li><a href="#comparativa">Comparativa con frameworks 2026</a></li>
+        <li><a href="#caso">Caso de estudio: bug vs feature</a></li>
+        <li><a href="#limitaciones">Limitaciones técnicas</a></li>
+        <li><a href="#cuando">Cuándo usar AIOrc (y cuándo no)</a></li>
+        <li><a href="#referencias">Referencias</a></li>
+      </ol>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="resumen">Resumen y posicionamiento</h2>
+    <p>Los frameworks de orquestación multi-agente (LangGraph, CrewAI, AutoGen, Semantic Kernel) abordan el problema "cómo coordinar varios LLMs en una tarea" desde el lado del runtime: mantienen un loop de control activo, llaman al LLM por cada agente, persisten estado compartido, y deciden el próximo paso después de cada respuesta. Es flexible, pero tiene tres costos: latencia acumulada por cada round-trip, fragmentación del contexto entre agentes, y un runtime de orquestación que vive en el destino.</p>
+    <p>AIOrc plantea una alternativa: si el grafo del flujo es <em>conocido a priori</em> — con sus bifurcaciones, ciclos y forks paralelos — entonces se puede <strong>compilar</strong> antes de ejecutar. El producto de la compilación es un único documento markdown que describe agentes, skills, topología y reglas de recorrido. El LLM destino lo carga una vez y recorre el grafo en su propio razonamiento, en una sola sesión. No hay runtime activo. No hay round-trips. No hay estado compartido fuera del propio contexto del LLM.</p>
+
+    <div class="callout">
+      <div class="callout-title">Hallazgo clave</div>
+      <p>Un flujo de 5 agentes que en un orquestador tradicional implica 5 llamadas LLM secuenciales (con sus respectivas latencias de red, validación de schema, y serialización), en AIOrc implica una sola llamada MCP que retorna el workflow compilado — y el modelo destino recorre la topología dentro de su propia sesión, donde la "latencia" inter-paso es velocidad de generación de tokens. Cuando hay nodos <code>parallel</code>, el LLM puede además disparar varias ramas en una misma respuesta vía Agent tool calls concurrentes.</p>
+    </div>
+
+    <p>El trade-off es conocido y explícito: AIOrc no soporta intervención mid-run, no permite streaming intermedio entre agentes, y depende del LLM destino para interpretar las condiciones en lenguaje natural y respetar los caps por agente. A esto lo llamamos <em>determinismo blando</em> — el flujo es determinista en estructura (siempre el mismo prompt para el mismo grafo + input) pero su recorrido depende de la fidelidad del LLM al prompt.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="stack">Stack técnico de AIOrc</h2>
+    <p>AIOrc es deliberadamente minimalista. La idea de fondo (compilar antes de orquestar) no necesita un stack complejo:</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Componente</th><th>Tecnología</th><th>Rol</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Servidor HTTP</td><td>Express 4 + TypeScript</td><td>API REST multi-tenant + endpoint MCP en <code>/mcp</code></td></tr>
+        <tr><td>Base de datos</td><td>SQLite vía better-sqlite3</td><td>Síncrona, single-process. ~18 tablas: users, projects, agents, skills, project_flows, runs, plus tablas de relación (agent_skills, project_agents, project_skills), stars (project/agent/skill), invitations (project/agent/skill) y módulo de issues</td></tr>
+        <tr><td>Auth</td><td>bcrypt + JWT</td><td>Sesiones de usuario; las API keys de proyecto autentican llamadas MCP vía <code>x-project-key</code> o <code>x-project-id</code> (este último para proyectos públicos)</td></tr>
+        <tr><td>Validación</td><td>Ajv (JSON Schema)</td><td>Schemas de input por agente; whitelist de campos en routes</td></tr>
+        <tr><td>MCP transport</td><td>stdio (Node.js bridge)</td><td><code>mcp-bridge.js</code> — script que el cliente Claude lanza como subproceso, traduciendo stdio ↔ HTTP</td></tr>
+        <tr><td>Flow editor</td><td>React 18 + @xyflow/react + Vite</td><td>Canvas drag-and-drop en <code>src-frontend/flow-editor/</code>, bundle servido desde <code>public/flow-editor.js</code></td></tr>
+        <tr><td>Páginas restantes</td><td>HTML/CSS/JS vanilla</td><td>dashboard, project, repository, user, issues, faq, index — sin framework</td></tr>
+        <tr><td>Orquestador</td><td>~430 líneas TypeScript</td><td><code>src/orchestrator/index.ts</code> — validador estructural + compilador a markdown</td></tr>
+      </tbody>
+    </table>
+
+    <p>El core del sistema cabe en pocos archivos:</p>
+    <ul>
+      <li><code>src/orchestrator/index.ts</code> — Validación estructural (Start único, Ends sin salida, agentes existentes, aristas válidas, forks correctos), normalizador, compilador a markdown vía BFS desde Start.</li>
+      <li><code>src/mcp/server.ts</code> — Endpoint JSON-RPC 2.0 que expone <code>workflow</code> y <code>workflow.report</code>; gateado por <code>requireProjectKey</code> (key o project_id público).</li>
+      <li><code>src/db/schema.ts</code> — Tipos TypeScript y DDL completo: <code>FlowNodeType = 'start' | 'agent' | 'parallel' | 'end'</code>, FlowEdge con <code>condition</code> y <code>priority</code> opcionales.</li>
+      <li><code>src/routes/flows.ts</code> — PUT/GET de flujos por proyecto, con whitelist y persistencia en <code>project_flows.flow_json</code>.</li>
+      <li><code>src/routes/{projects,agents,skills,users,issues,invitations,runs,auth}.ts</code> — CRUD multi-tenant: fork, stars, visibilidad pública, invitaciones, módulo de issues comunitario.</li>
+      <li><code>src-frontend/flow-editor/</code> — Flow builder en React: nodos <code>StartNode</code>, <code>AgentNode</code>, <code>ParallelNode</code>, <code>EndNode</code>; edges con popover de condición; panel de paleta y de skills.</li>
+    </ul>
+
+    <p>Sin Redis, sin colas, sin workers, sin contenedores. Single binary node + single SQLite file + un bundle Vite estático para el flow editor. El argumento es: <strong>si el flujo se compila en pocos milisegundos y la ejecución la hace el LLM destino, no necesitamos infrastructure de orquestación.</strong></p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="por-que-compilar">Por qué compilar en lugar de orquestar</h2>
+
+    <h3>Latencia inter-agente</h3>
+    <p>En un orquestador tradicional, la latencia total de un flujo de N agentes es aproximadamente:</p>
+    <div class="pre-code">latencia_total ≈ Σᵢ (red_call_i + tokens_in_i / throughput + serialización_i + decisión_i)</div>
+    <p>Donde cada término del sumando incluye el round-trip de red al proveedor LLM, la generación de tokens, y la decisión del orquestador sobre qué hacer después. Para 5 agentes con respuestas medianas, esto suele ser 8-30 segundos solo en orquestación.</p>
+    <p>En AIOrc, la latencia es:</p>
+    <div class="pre-code">latencia_total ≈ red_compilación + tokens_in_total / throughput</div>
+    <p>Una sola llamada MCP local (~1-5ms) y la generación tokenizada del flujo entero. Sin pausas entre pasos.</p>
+
+    <h3>Coherencia de contexto</h3>
+    <p>Los frameworks multi-agente típicamente <em>aíslan</em> el contexto de cada agente, pasando solo subsets relevantes via tool calls o shared state. Esto es deliberado — busca evitar context bloat y delegar limpiamente — pero introduce un costo: el modelo nunca tiene visión total. Un agente downstream no sabe qué razonó el upstream, solo el output literal.</p>
+    <p>AIOrc inyecta el flujo entero como un único documento markdown en el contexto del modelo destino. Cada paso ve los pasos previos y los pasos siguientes. Esto permite consistencia interna, referencias cruzadas (<em>"como dijo task-planner"</em>), y razonamiento transversal sobre el flujo completo.</p>
+
+    <h3>Sin runtime de agentes en el destino</h3>
+    <p>El proyecto destino no necesita instalar LangChain, CrewAI ni ningún SDK de orquestación. Solo necesita:</p>
+    <ol>
+      <li>Un cliente MCP — Claude Code, Cursor, Continue, o cualquier IDE compatible con MCP ya tiene esto.</li>
+      <li>El bridge stdio de AIOrc (<code>mcp-bridge.js</code>, ~50 líneas).</li>
+      <li>Una regla en <code>CLAUDE.md</code> que indique al modelo llamar a <code>workflow()</code> antes de responder.</li>
+    </ol>
+    <p>Esto reduce el blast radius: el destino sigue siendo un proyecto de código común, no un proyecto con runtime de orquestación entrelazado.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="compilador">Cómo funciona el compilador</h2>
+    <p>El núcleo del sistema es <code>compileFlow(projectId, input)</code> en <code>src/orchestrator/index.ts</code>. A diferencia de orquestadores con runtime activo, AIOrc <em>no</em> ejecuta el flujo — lo transcribe a un documento markdown que describe topología, agentes y reglas para que el LLM destino lo ejecute en su propio razonamiento. El grafo tiene cuatro tipos de nodo y aristas con condiciones en lenguaje natural:</p>
+    <div class="pre-code"><span class="com">// src/db/schema.ts</span>
+export type FlowNodeType = <span class="kw">'start' | 'agent' | 'parallel' | 'end'</span>;
+
+interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  agent_id?: string;          <span class="com">// solo para type='agent'</span>
+  agent_name?: string;        <span class="com">// denormalizado para display</span>
+  max_invocations?: number;   <span class="com">// solo para 'agent', default 10, cap 50</span>
+  outcome?: string;           <span class="com">// solo para 'end', etiqueta libre</span>
+  label?: string;             <span class="com">// usado típicamente por 'parallel'</span>
+  x: number; y: number;
+}
+
+interface FlowEdge {
+  id: string;
+  from: string; to: string;
+  condition?: string;         <span class="com">// lenguaje natural; absent = fallback</span>
+  priority?: number;          <span class="com">// menor evalúa primero; default 1000</span>
+}</div>
+
+    <p>No hay primitivas separadas para "decisión", "gate" o "loop". Esa expresividad emerge de la combinación de aristas con condiciones, prioridades y back-edges:</p>
+    <ul>
+      <li><strong>Bifurcación</strong>: varias aristas saliendo de un mismo agente, cada una con su <code>condition</code> en lenguaje natural. El LLM evalúa el output del agente y elige <em>una sola</em> transición.</li>
+      <li><strong>Gate</strong>: un agente que emite un verdict en su output (PASS/FAIL/score≥X/etc.) seguido de aristas con condiciones que matchean ese verdict. La estructura es la misma que una bifurcación.</li>
+      <li><strong>Loop</strong>: una arista que apunta hacia atrás (back-edge). Los ciclos están permitidos por construcción; el cap es per-agent (<code>max_invocations</code>, default 10, máximo 50) y lo enforca el LLM contando sus propias invocaciones.</li>
+      <li><strong>Fork/Join</strong>: el nodo <code>parallel</code>. Tiene ≥1 incoming y ≥2 outgoing edges, todas tomadas concurrentemente. El LLM dispara las ramas en paralelo (idealmente una <code>Agent</code> tool call por rama en una misma respuesta) y espera a que todas terminen.</li>
+    </ul>
+
+    <h3>Algoritmo de compilación</h3>
+    <ol>
+      <li><strong>Carga del flujo</strong>. Lee <code>project_flows.flow_json</code> y los agentes referenciados. Si no hay flow o está vacío, retorna error <code>no_flow</code>/<code>empty_flow</code>.</li>
+      <li><strong>Normalización</strong> (<code>normalizeFlow</code>). Aplica defaults: <code>priority=1000</code>, <code>max_invocations</code> clampeado a [1, 50], <code>condition</code> normalizado a string non-empty o undefined.</li>
+      <li><strong>Validación fail-closed</strong> (<code>validateFlow</code>). Cinco reglas estructurales: exactamente 1 Start (con 0 incoming, 1 outgoing), Ends sin outgoing, Agents con <code>agent_id</code> que existe en el proyecto, aristas con extremos válidos, Parallels con ≥1 incoming y ≥2 outgoing. Si hay errores, se retorna <code>invalid_flow</code> con los mensajes concatenados — el cliente MCP los recibe en el JSON-RPC error.</li>
+      <li><strong>Hoist de skills</strong>. Recolecta las skills únicas referenciadas por todos los agentes y las emite <em>una sola vez</em> arriba del prompt. Cada agente las referencia por nombre, evitando duplicación de tokens.</li>
+      <li><strong>Emisión de sub-agentes</strong>. Para cada nodo agente, emite un bloque con nombre, max_invocations, descripción, expected_output_format, skills aplicadas (referencia a la sección hoisted) y contenido del agente.</li>
+      <li><strong>Emisión de topología</strong>. BFS desde Start construyendo la lista ordenada de nodos. Para cada nodo no-end emite sus aristas salientes ordenadas por <code>priority</code> ascendente, mostrando label de destino y condición (o "sin condición — fallback").</li>
+      <li><strong>Reglas de ejecución</strong>. Once reglas literales que le explican al LLM cómo recorrer el grafo: cómo elegir transición, qué hacer en parallel, cuándo terminar, cómo contar invocaciones por agente, qué hacer ante ambigüedad.</li>
+      <li><strong>Persistencia del run</strong>. Inserta una fila en <code>runs</code> con el <code>workflow_snapshot</code> completo. Esto da auditoría reproducible: el mismo flujo + mismo input genera el mismo prompt.</li>
+    </ol>
+
+    <h3>Ciclos como back-edges, no como primitiva</h3>
+    <p>Los ciclos están permitidos por construcción — no hay una validación que los rechace y no hay <code>is_loop_back</code> en el modelo. El compilador no expande ni desenrolla nada: si la topología tiene un ciclo <code>code-reviewer → bug-resolver → code-reviewer</code>, eso se emite como dos aristas y listo. El LLM destino las ve, evalúa las condiciones cada iteración, y mantiene el conteo por agente.</p>
+    <p>El cap viene del agente, no del loop: cada <code>FlowNode</code> de tipo <code>agent</code> tiene un <code>max_invocations</code> (default 10, clampeado a 50). Cuando el LLM llega al máximo y la topología querría volver a invocarlo, la regla 7 del prompt le instruye <em>cortar el flujo y reportar al usuario</em>. Es soft-determinism: el enforcement vive en el prompt y depende de que el modelo cuente honestamente sus invocaciones.</p>
+
+    <h3>Convergencia: emergente, no detectada</h3>
+    <p>Cuando dos ramas de un fork (o una bifurcación condicional) vuelven a un nodo común, el compilador <em>no</em> calcula puntos de convergencia ni emite el subgrafo común "una sola vez". Simplemente lista cada arista en la sección de topología. El LLM ve que dos transiciones llegan al mismo nodo y lo invoca una vez después de consolidar las ramas. Esto evita un análisis costoso de reachable sets a cambio de delegar la coordinación al modelo destino, que ya tiene el grafo entero en su contexto.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="mega-prompt">Estructura del mega-prompt</h2>
+    <p>El output del compilador es un documento markdown con cinco secciones, ordenadas para que el LLM destino tenga toda la información antes de empezar a recorrer la topología. No usamos numeración de "STEPs" ni verdicts literales — el LLM es el que <em>decide</em> qué transición tomar según las condiciones en lenguaje natural de cada arista. Este es el esqueleto real generado por <code>src/orchestrator/index.ts</code>:</p>
+    <div class="pre-code"><span class="kw"># AIOrc — Workflow Multi-Agente</span>
+
+Sos el orquestador. Tenés disponibles los siguientes sub-agentes y una
+topología recomendada para invocarlos. Seguí la topología como guía;
+las condiciones en las aristas son hints en lenguaje natural —
+interpretalas con criterio.
+
+<span class="com">## Input del usuario (si vino algún payload en la llamada MCP)</span>
+```json
+{ "request": "...", "context": "..." }
+```
+
+<span class="kw">## Skills (reglas obligatorias)</span>
+
+<span class="com">// Hoisted: cada skill referenciada por algún agente, una sola vez.</span>
+### Skill: tdd-governance
+*description...*
+[contenido completo de la skill]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="kw">## Sub-agentes disponibles</span>
+
+### Agente: task-planner
+**Máximo de invocaciones:** 10
+**Descripción:** Analiza el requerimiento del usuario...
+**Formato de output esperado:** JSON con field 'intent'
+**Skills aplicadas:** (referencias por nombre a la sección "Skills" de arriba)
+- *tdd-governance*: ...
+**Instrucciones del agente:** [contenido del agente]
+**Verificación obligatoria:** releé tu output y confirmá que cumple
+cada skill aplicada antes de pasar al siguiente paso.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<span class="kw">## Topología del flujo</span>
+
+**Punto de entrada (Start):** comenzá invocando al sub-agente *task-planner*.
+
+**Aristas (transiciones permitidas):**
+
+- Desde *task-planner*:
+    → *bug-resolver* *cuando:* el output indica que es un bug
+    → *new-feature* *cuando:* el output indica que es una feature
+- Desde *bug-resolver*:
+    → *code-reviewer* *(sin condición — fallback)*
+- Desde *code-reviewer*:
+    → *bug-resolver* *cuando:* verdict == FAIL y queremos otra iteración
+    → 🏁 End: "merged" *cuando:* verdict == PASS
+
+<span class="kw">## Reglas de ejecución</span>
+
+1. Empezá por el punto de entrada (Start)...
+2. Después de cada agente, evaluá las condiciones de sus aristas
+   salientes y elegí UNA sola transición.
+3. Las condiciones son lenguaje natural — interpretalas según el
+   output del agente anterior.
+4. Si una arista no tiene condición, es el fallback default.
+5. Si TODAS tienen condición y NINGUNA coincide, terminá exitosamente.
+6. Las aristas hacia un agente anterior son legítimas — implementan
+   loops/reintentos.
+7. **Cap por agente:** llevá la cuenta. Si llegás al máximo y la
+   topología te quiere mandar de nuevo a él, cortá y reportá al usuario.
+8. **Nodos Parallel (⫲):** disparás TODAS las ramas concurrentemente
+   (idealmente una Agent tool call por rama en una misma respuesta).
+   Esperá a que todas terminen y consolidá antes de avanzar.
+9. Si llegás a un nodo End, terminá y reportá su outcome.
+10. Si llegás a un agente sin aristas salientes, terminá.
+11. Si no podés decidir entre varias transiciones, parar y consultar al usuario.
+
+<span class="kw">## Outcomes posibles del workflow</span>
+- merged
+- abandoned
+
+<span class="kw">## Reporte opcional</span>
+
+Cuando termines, OPCIONALMENTE llamá `workflow.report` con:
+```json
+{ "runId": "...", "report": { "path": [...], "invocations_per_agent": {...},
+  "ended_at": "...", "final_summary": "..." } }
+```</div>
+
+    <p>Hay decisiones de diseño deliberadas detrás de cada elemento:</p>
+    <ul>
+      <li><strong>Skills hoisted</strong>: las skills se emiten una sola vez al inicio, y cada agente las referencia por nombre. Una skill compartida por 5 agentes consume tokens ×1, no ×5.</li>
+      <li><strong>Condiciones en lenguaje natural</strong>: en lugar de exigir verdicts literales (PASS/FAIL/BLOCKED) como machine-readable, las condiciones son texto libre que el LLM evalúa contra el output del agente. Es menos rígido pero más expresivo y reduce el costo de diseño del flow.</li>
+      <li><strong>Topología como lista de aristas, no como árbol numerado</strong>: el LLM ve el grafo entero, no una secuencia pre-linealizada. Esto permite ciclos sin necesidad de primitivas LOOP, y bifurcaciones sin necesidad de primitivas DECISION.</li>
+      <li><strong>Cap por agente, no por loop</strong>: <code>max_invocations</code> es per-agent y se enforca en la regla 7. El LLM lleva el conteo explícito en su propio razonamiento.</li>
+      <li><strong>Fallback explícito</strong>: una arista sin condición es la transición por defecto cuando ninguna otra matchea. Si todas tienen condición y ninguna matchea, el workflow termina exitosamente (regla 5).</li>
+      <li><strong>Verificación post-output</strong>: cada bloque de agente con skills incluye una "verificación obligatoria" que le pide al LLM releer su output y validarlo contra las skills antes de continuar.</li>
+    </ul>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="determinismo">Determinismo blando: por qué funciona</h2>
+    <p>AIOrc no tiene un mecanismo de enforcement programático — no hay un agente coordinador que valide cada paso del modelo destino. La fidelidad del flujo depende enteramente de que el LLM respete las instrucciones del prompt compilado. A esto lo llamamos <strong>determinismo blando</strong>.</p>
+    <p>Esto suena frágil, pero en la práctica funciona bien por varias razones:</p>
+    <ul>
+      <li><strong>Los LLMs siguen instrucciones bien estructuradas mejor que código frágil</strong>. Un orquestador con código que valida outputs y reintenta es más predecible en teoría, pero en la práctica frecuentemente falla por edge cases del schema. Un prompt imperativo claro no tiene esos edge cases.</li>
+      <li><strong>El modelo destino mantiene el contexto entero</strong>. Mientras ejecuta el paso 4, sigue viendo los pasos 1-3 y sabe qué viene en 5-7. Esto le da consistencia interna que un orquestador con contexto fragmentado no tiene.</li>
+      <li><strong>Patrones empíricamente robustos</strong>. <em>"elegí UNA sola transición"</em>, <em>"llevá la cuenta de cuántas veces invocaste cada agente"</em>, <em>"esperá a que TODAS las ramas terminen"</em>, <em>"si no podés decidir, parar y consultar al usuario"</em> — instrucciones declarativas que los LLMs modernos respetan con alta fidelidad cuando están en el contexto activo.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="callout-title">Validación empírica</div>
+      <p>En tests del usuario sobre flujos con bifurcaciones (varias aristas con condiciones desde un mismo agente) y ciclos (back-edges con cap por <code>max_invocations</code>), Claude Sonnet 4.5+ interpretó correctamente las condiciones en lenguaje natural y respetó los caps en los casos probados, incluyendo escenarios donde el prompt era ambiguo y requería decidir intent sin pistas explícitas.</p>
+    </div>
+
+    <p>Donde el determinismo blando puede fallar (y cómo mitigarlo):</p>
+    <ul>
+      <li><strong>Modelo más viejo o más débil interpreta mal una condición en lenguaje natural</strong> — Mitigación: probar el flujo con el modelo destino antes de productizarlo. Si Sonnet 4.5 lo respeta y Sonnet 3.5 no, exigir versión mínima.</li>
+      <li><strong>El modelo toma dos ramas a la vez en lugar de elegir una</strong> — Mitigación: la regla 2 del prompt (<em>"elegí UNA sola transición"</em>) más prioridades distintas (<code>priority</code> en cada arista) hacen que la primera condición que matchea gane.</li>
+      <li><strong>El modelo excede el cap de un agente</strong> — Mitigación: la regla 7 instruye explícitamente cortar + reportar al usuario. En tests reales, los modelos modernos cuentan honestamente sus invocaciones porque deben escribirlas en el output.</li>
+      <li><strong>El modelo malinterpreta un parallel y serializa</strong> — Mitigación: la regla 8 le explica que debe disparar todas las ramas en una misma respuesta (vía Agent tool calls paralelas). Si no es viable técnicamente, las ejecuta secuencialmente sin elegir.</li>
+    </ul>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="comparativa">Comparativa con frameworks 2026</h2>
+    <p>El espacio de orquestación multi-agente cambió mucho entre 2024 y 2026. Aparecieron Claude Agent SDK (Anthropic, fines 2025) y OpenAI Agents SDK (2025) como ofertas oficiales de los proveedores de modelos. LangGraph maduró hacia stateful workflows, CrewAI se enfocó en colaboración rol-based, y AutoGen (ahora bajo el AG2 fork comunitario más Microsoft Agent Framework oficial) se mantiene en el nicho conversacional.</p>
+    <p>AIOrc no compite directamente con ninguno — ocupa el nicho <em>compile-time, single-call, MCP-native</em> que ningún framework grande cubre actualmente:</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>AIOrc</th>
+          <th>LangGraph</th>
+          <th>Claude Agent SDK</th>
+          <th>OpenAI Agents SDK</th>
+          <th>CrewAI</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Modelo de ejecución</td>
+          <td><strong>Compile-time, 1 LLM call</strong></td>
+          <td>Runtime, N calls</td>
+          <td>Runtime, N calls</td>
+          <td>Runtime, N calls</td>
+          <td>Runtime, N calls</td>
+        </tr>
+        <tr>
+          <td>Control flow</td>
+          <td>Grafo visual (start / agent / parallel / end) + aristas con condiciones en lenguaje natural + cap por agente</td>
+          <td>Conditional edges + state machine (StateGraph)</td>
+          <td>Subagents + tools + hooks programáticos</td>
+          <td>Handoffs entre agents; guardrails por tool</td>
+          <td>Tasks asignadas por rol; manager agent opcional</td>
+        </tr>
+        <tr>
+          <td>Estado</td>
+          <td>Inline en el prompt (modelo lo ve todo)</td>
+          <td>Shared state (TypedDict) con reducers</td>
+          <td>Filesystem persistente + context management</td>
+          <td>Conversation thread + tool results</td>
+          <td>Memoria por crew + outputs de tasks</td>
+        </tr>
+        <tr>
+          <td>Definición del flujo</td>
+          <td>Visual drag-and-drop, persistido como JSON</td>
+          <td>Código Python (nodes + edges)</td>
+          <td>Código (subagent definitions + permissions)</td>
+          <td>Código Python con decoradores</td>
+          <td>Código Python (Crew + Agents + Tasks)</td>
+        </tr>
+        <tr>
+          <td>Mid-run intervention</td>
+          <td>No</td>
+          <td>Sí (interrupts + checkpoints)</td>
+          <td>Sí (hooks: PreToolUse, PostToolUse, etc.)</td>
+          <td>Limitado (callbacks)</td>
+          <td>Limitado</td>
+        </tr>
+        <tr>
+          <td>Streaming intermedio</td>
+          <td>No</td>
+          <td>Sí (events stream)</td>
+          <td>Sí (stream API)</td>
+          <td>Sí (streamed responses)</td>
+          <td>Limitado</td>
+        </tr>
+        <tr>
+          <td>Runtime requerido en destino</td>
+          <td><strong>Solo cliente MCP</strong> (Claude Code, Cursor, etc.)</td>
+          <td>LangChain + LangGraph</td>
+          <td>Claude Agent SDK + tools</td>
+          <td>OpenAI Agents SDK</td>
+          <td>CrewAI runtime</td>
+        </tr>
+        <tr>
+          <td>Modelo objetivo</td>
+          <td>Cualquier MCP-compatible (optimizado para Claude)</td>
+          <td>Cualquier (LangChain abstraction)</td>
+          <td>Solo Claude</td>
+          <td>Solo OpenAI</td>
+          <td>Cualquier (LiteLLM)</td>
+        </tr>
+        <tr>
+          <td>Auditoría</td>
+          <td><code>workflow_snapshot</code> y <code>execution_report</code> en SQLite</td>
+          <td>Checkpoints + LangSmith opcional</td>
+          <td>Logs estructurados</td>
+          <td>Traces vía OpenAI dashboard</td>
+          <td>Traces básicos</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="pull-quote">
+      "AIOrc trabaja bien donde el grafo es estable. Si tu workflow se ramifica dinámicamente según outputs intermedios que no podés predecir, necesitás un orquestador con runtime (LangGraph, Claude Agent SDK). Si está bien definido y solo varía en parámetros, compilarlo es más rápido y más auditable — y no requiere instalar nada en el proyecto destino más que el cliente MCP que ya tenés."
+    </p>
+
+    <h3>Diferencias clave por framework</h3>
+    <p><strong>vs. Claude Agent SDK:</strong> Claude Agent SDK es la oferta oficial de Anthropic para construir agentes basados en Claude (lo que el equipo de Claude Code usa internamente). Ofrece subagents, tools customizables, hooks programáticos y context management. Es <em>runtime-based</em> y vive en el código del proyecto. AIOrc, en cambio, define el flujo afuera del proyecto destino — el destino solo necesita MCP. Si tenés autoridad sobre el código del destino y querés control fino programático, Claude Agent SDK es más poderoso. Si querés definir flujos centralizadamente y reutilizarlos en N proyectos sin tocarlos, AIOrc es más práctico.</p>
+    <p><strong>vs. LangGraph:</strong> LangGraph asume que vas a escribir Python para definir el grafo, y que querés state management con checkpoints, time travel, y human-in-the-loop. AIOrc descarta todo eso a cambio de un grafo visual, persistido como JSON, ejecutable en un solo round-trip.</p>
+    <p><strong>vs. OpenAI Agents SDK:</strong> Más simple que LangGraph, basado en handoffs entre agents. Solo OpenAI. AIOrc es model-agnostic en principio (cualquier MCP client) pero está optimizado para Claude.</p>
+    <p><strong>vs. CrewAI:</strong> CrewAI brilla cuando los agentes deben colaborar de forma rol-based (researcher → writer → editor) con manager opcional. AIOrc no piensa en términos de roles sino de pasos de un grafo.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="caso">Caso de estudio: bug vs feature con QA paralelo</h2>
+    <p>Un flujo realista que ejercita los cuatro tipos de nodo: <code>start</code>, varios <code>agent</code>, un <code>parallel</code> de QA, un ciclo de review→fix, y dos <code>end</code> con outcomes distintos. Toda la lógica condicional vive en las aristas, no en primitivas separadas:</p>
+
+    <div class="figure">
+      <div class="pre-code">🟢 Start
+   │
+   ▼
+[task-planner]   (max_invocations: 5)
+   │
+   ├──► cuando: el output indica que es un bug
+   │    [bug-resolver]   (max_invocations: 8)
+   │           │
+   │           └────┐
+   │                ▼
+   ├──► cuando: el output indica que es una feature
+   │    [new-feature]    (max_invocations: 8)
+   │           │
+   │           └────┐
+   │                ▼
+   │           [backend-dev]   (max_invocations: 10)
+   │                │
+   │                ▼
+   │           ⫲ Parallel: QA gates
+   │            ├──► [code-reviewer]
+   │            └──► [security-qa]
+   │                       │
+   │                       ▼
+   │           ┌─ cuando: ambos verdicts indican PASS
+   │           │   🏁 End: "merged"
+   │           │
+   │           └─ cuando: alguno indica FAIL
+   │                ▼
+   │           (back-edge) → [backend-dev]   <span class="com">// cycle, capped por max_invocations</span></div>
+      <p class="figure-caption">Flujo bug-vs-feature: bifurcación por condición en aristas, fork paralelo de QA, ciclo de fix vía back-edge, dos outcomes terminales.</p>
+    </div>
+
+    <h3>Cómo se traduce a primitivas reales</h3>
+    <ul>
+      <li><strong>Bifurcación bug vs feature</strong>: dos aristas saliendo de <code>task-planner</code>, cada una con su <code>condition</code> en lenguaje natural. No hay nodo "decision" — el LLM evalúa el output del planner y elige una.</li>
+      <li><strong>QA paralelo</strong>: un nodo <code>parallel</code> con dos aristas salientes a <code>code-reviewer</code> y <code>security-qa</code>. La regla 8 le instruye al LLM disparar ambas en una misma respuesta (vía Agent tool calls concurrentes) y esperar el join.</li>
+      <li><strong>Ciclo de fix</strong>: una arista <code>QA → backend-dev</code> que apunta hacia atrás. El LLM la sigue cuando la condición matchea, y respeta <code>max_invocations</code> sobre <code>backend-dev</code> contando sus propias llamadas.</li>
+      <li><strong>Outcomes</strong>: dos nodos End con <code>outcome</code> distinto ("merged", "abandoned"). El LLM reporta el outcome alcanzado al terminar.</li>
+    </ul>
+
+    <h3>Resultados empíricos</h3>
+    <p>Probado con prompts ambiguos donde el intent no se declara explícitamente:</p>
+    <ul>
+      <li><em>"el endpoint /api/users devuelve 500 cuando el body está vacío"</em> → planner clasifica como bug → arista a <code>bug-resolver</code>. ✓</li>
+      <li><em>"agregar paginación a /api/products"</em> → feature → <code>new-feature</code>. ✓</li>
+      <li><em>"crea un endpoint que devuelva hola mundo"</em> → feature → <code>new-feature</code>. ✓</li>
+    </ul>
+    <p>El ciclo review-fix-review se ejecutó 1-3 veces dependiendo del verdict del code-reviewer, sin exceder el cap (<code>max_invocations: 10</code> en <code>backend-dev</code>) en ninguno de los tests. El parallel disparó ambos QA agents concurrentemente en la respuesta del LLM, y el join consolidó los verdicts antes de avanzar.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="limitaciones">Limitaciones técnicas</h2>
+
+    <h3>1. Context size escala linealmente con el flujo</h3>
+    <p>Cada agente embebe su contenido <em>completo</em> en el prompt compilado. Un flujo de 12 agentes con 2KB de contenido cada uno produce un prompt de ~24KB sólo de instrucciones (sin contar el request del usuario ni el output que el modelo va generando). Para Claude Sonnet con context de 200K, esto sigue siendo marginal — pero flujos de 30+ agentes con prompts extensos pueden acercarse al límite efectivo (donde la performance del modelo decae por <em>context rot</em>).</p>
+    <p><strong>Mitigación:</strong> escribir agentes concisos, apoyarse en skills externas (que se referencian por nombre en lugar de embeberse), y dividir flujos grandes en sub-flujos jerárquicos. La división jerárquica no está implementada aún en AIOrc.</p>
+
+    <h3>2. No hay streaming intermedio</h3>
+    <p>El usuario final no ve resultados parciales hasta que el flujo termina. Si un agente intermedio falla, el output completo se pierde. Para tareas largas (más de 60 segundos de generación) esto es notable.</p>
+    <p><strong>Mitigación:</strong> diseñar flujos cortos donde el costo de re-run es bajo, y confiar en <code>workflow.report</code> opcional para auditoría post-hoc.</p>
+
+    <h3>3. No hay interrupción mid-run</h3>
+    <p>Una vez que el modelo empieza a ejecutar el flujo compilado, no se puede inyectar feedback. Si el usuario detecta un error temprano, debe esperar al final.</p>
+
+    <h3>4. Paralelismo delegado al LLM</h3>
+    <p>El nodo <code>parallel</code> existe en el modelo y el compilador lo emite con la instrucción de dispararse vía Agent tool calls concurrentes, pero el paralelismo real depende de que el cliente MCP soporte tool calls múltiples por respuesta. Si el cliente no lo hace, el LLM serializa las ramas — sigue siendo correcto, pero pierde la ganancia de wall-clock. LangGraph y CrewAI manejan el paralelismo en código del orquestador, no en el cliente.</p>
+
+    <h3>5. El cap por agente depende del LLM</h3>
+    <p>El <code>max_invocations</code> de cada agente lo enforca el prompt (regla 7) y depende de que el LLM cuente honestamente sus propias invocaciones. En la práctica, los LLMs modernos respetan el cap con alta fidelidad porque deben escribir el conteo en su propio output, pero no hay enforcement programático: si el modelo "miente" sobre cuántas veces invocó algo, no hay un orquestador externo que lo corte.</p>
+
+    <div class="callout callout-warn">
+      <div class="callout-title">Soft determinism</div>
+      <p>Los puntos 1-5 son consecuencias del approach <em>compile-time</em>. Son trade-offs deliberados, no bugs. Si necesitás cualquiera de esas capacidades como requisito duro, un orquestador con runtime es la elección correcta.</p>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="cuando">Cuándo usar AIOrc (y cuándo no)</h2>
+
+    <h3>Usá AIOrc cuando</h3>
+    <ul>
+      <li>Tenés flujos <strong>bounded y predecibles</strong> — 3 a 12 agentes, con bifurcaciones, ciclos y forks paralelos conocidos a priori.</li>
+      <li>Querés <strong>latencia mínima por run</strong> — single MCP call beats N runtime calls.</li>
+      <li>El destino ya es Claude (Claude Code, Cursor, o cliente MCP-compatible).</li>
+      <li>Necesitás <strong>auditoría reproducible</strong> — <code>workflow_snapshot</code> + <code>execution_report</code> dan trazabilidad completa.</li>
+      <li>Querés evitar instalar runtime de orquestación en el proyecto destino.</li>
+    </ul>
+    <p>Casos de uso ideales: code review pipelines, on-call playbooks, ETL determinístico, QA gates con criterios fijos, generación de documentación a partir de specs, refactor pipelines.</p>
+
+    <h3>NO uses AIOrc cuando</h3>
+    <ul>
+      <li>Necesitás <strong>conversación multi-turn con el usuario</strong> en medio del flujo.</li>
+      <li>Necesitás <strong>streaming intermedio</strong> con UI mostrando progreso paso a paso.</li>
+      <li>Tenés agentes que <strong>llaman herramientas externas en paralelo</strong> y los resultados deben unirse dinámicamente.</li>
+      <li>El flujo es <strong>exploratorio</strong> y se ramifica dinámicamente según resultados que no podés modelar a priori.</li>
+      <li>Necesitás <strong>human-in-the-loop</strong> con interrupciones reales.</li>
+    </ul>
+    <p>Para esos casos: LangGraph (state-based con interrupts), CrewAI (rol-based), AutoGen (conversacional).</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="referencias">Referencias</h2>
+    <div class="ref-list">
+      <div class="ref-item">
+        <span class="ref-num">[1]</span>
+        <span class="ref-title">Anthropic — Model Context Protocol (MCP)</span>
+        <div class="ref-meta">Especificación del protocolo que AIOrc implementa. Define cómo Claude se conecta a tools externas vía stdio o HTTP. AIOrc expone <code>workflow</code> y <code>workflow.report</code> como tools MCP. <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">modelcontextprotocol.io</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[2]</span>
+        <span class="ref-title">Anthropic — Claude Agent SDK</span>
+        <div class="ref-meta">Oferta oficial de Anthropic para construir agentes Claude programáticos (subagents, hooks, context management). El "competidor" runtime más directo cuando se quiere control fino sobre cada paso del agente. <a href="https://docs.anthropic.com/en/api/agent-sdk/overview" target="_blank" rel="noopener">docs.anthropic.com/agent-sdk</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[3]</span>
+        <span class="ref-title">OpenAI — Agents SDK</span>
+        <div class="ref-meta">SDK lanzado por OpenAI en 2025 para orquestación multi-agente con handoffs y guardrails. Específico al ecosistema OpenAI. <a href="https://openai.github.io/openai-agents-python/" target="_blank" rel="noopener">openai.github.io/openai-agents-python</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[4]</span>
+        <span class="ref-title">LangGraph — stateful multi-agent orchestration</span>
+        <div class="ref-meta">Loop de orquestación con shared state, checkpoints, streaming y human-in-the-loop. El competidor más maduro cuando se necesita runtime activo y persistencia de estado. <a href="https://langchain-ai.github.io/langgraph/" target="_blank" rel="noopener">langchain-ai.github.io/langgraph</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[5]</span>
+        <span class="ref-title">CrewAI — role-based multi-agent collaboration</span>
+        <div class="ref-meta">Framework para agentes con roles asignados colaborando en una meta compartida. Comunicación inter-agente vía crew memory. <a href="https://crewai.com/" target="_blank" rel="noopener">crewai.com</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[6]</span>
+        <span class="ref-title">Microsoft Agent Framework / AutoGen</span>
+        <div class="ref-meta">Agentes conversacionales que dialogan entre sí. La línea AutoGen original se reorganizó en 2025: el fork comunitario AG2 mantiene el legado, y Microsoft lanzó Agent Framework como su oferta oficial (unificando AutoGen + Semantic Kernel). <a href="https://github.com/microsoft/agent-framework" target="_blank" rel="noopener">github.com/microsoft/agent-framework</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[7]</span>
+        <span class="ref-title">Pydantic AI — typed agents</span>
+        <div class="ref-meta">Framework Python que expone agentes con validación Pydantic, focalizado en type-safety y composición. Alternativa lightweight a LangGraph para casos simples. <a href="https://ai.pydantic.dev/" target="_blank" rel="noopener">ai.pydantic.dev</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[8]</span>
+        <span class="ref-title">Anthropic Claude Code — IDE agentic con MCP nativo</span>
+        <div class="ref-meta">Cliente MCP de referencia con el que se probó AIOrc. La integración se hace vía <code>.mcp.json</code> en el directorio del proyecto. AIOrc fue diseñado para integrar con clientes MCP como este. <a href="https://claude.ai/code" target="_blank" rel="noopener">claude.ai/code</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[9]</span>
+        <span class="ref-title">arXiv 2604.05150 — Static Analysis of LLM-Orchestrated Programs (Apr 2026)</span>
+        <div class="ref-meta">Investigación reciente sobre análisis estático de workflows AI compilados en build time. Comparte la filosofía compile-time desde un ángulo distinto (verificación formal de propiedades del flujo). <a href="https://arxiv.org/abs/2604.05150" target="_blank" rel="noopener">arxiv.org/abs/2604.05150</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[10]</span>
+        <span class="ref-title">Liu et al. — Lost in the Middle: How Language Models Use Long Contexts (2023)</span>
+        <div class="ref-meta">Trabajo seminal sobre <em>context rot</em>. Relevante para AIOrc porque embebe el flujo entero en el contexto del modelo destino: justifica empíricamente por qué los flujos cortos (3-12 agentes) performan mejor que flujos masivos. <a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">arxiv.org/abs/2307.03172</a></div>
+      </div>
+      <div class="ref-item">
+        <span class="ref-num">[11]</span>
+        <span class="ref-title">Yao et al. — ReAct: Synergizing Reasoning and Acting in Language Models (2022)</span>
+        <div class="ref-meta">El paper que estableció el patrón Thought→Action→Observation que la mayoría de frameworks multi-agente implementan. AIOrc lo evita: en lugar de loops Thought-Action en runtime, compila la estructura de razonamiento upfront. <a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener">arxiv.org/abs/2210.03629</a></div>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      AIOrc · Documentación técnica · Versión 1.0
+    </div>
+  </article>
+  </main>
+
+  <script src="info-modal.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token;
+    const userNickname = localStorage.getItem('userNickname') || '';
+    const userEmail = localStorage.getItem('userEmail') || '';
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    const mount = document.getElementById('shell-mount');
+    if (isLoggedIn) {
+      document.body.classList.add('has-sidebar');
+      mount.outerHTML = `
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+            <button class="sidebar-collapse-btn" id="sidebar-toggle" onclick="toggleSidebar()">‹</button>
+          </div>
+          <div class="sidebar-section-title">Workspace</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="dashboard.html?tab=projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Proyectos</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agentes</span></a>
+            <a class="sidebar-item" href="dashboard.html?tab=skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
+            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Equipo</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
+          </nav>
+          <div class="sidebar-section-title">Comunidad</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-item" href="repository.html"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Repositorio público</span></a>
+            <a class="sidebar-item" href="issues.html"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
+          </nav>
+          <div class="sidebar-section-title">Ayuda</div>
+          <nav class="sidebar-nav">
+            <button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">Cómo usar AIOrc</span></button>
+            <a class="sidebar-item active" href="faq.html"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentación</span></a>
+          </nav>
+          <div class="sidebar-footer">
+            <div class="sidebar-user" style="font-weight:600">${userNickname ? '@' + esc(userNickname) : esc(userEmail)}</div>
+            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(userEmail)}</div>
+            <a href="#" class="sidebar-logout" id="logout-btn">Cerrar sesión</a>
+          </div>
+        </aside>`;
+
+      const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+      const apply = () => {
+        const c = localStorage.getItem(SIDEBAR_KEY) === '1';
+        document.getElementById('sidebar')?.classList.toggle('collapsed', c);
+        const b = document.getElementById('sidebar-toggle'); if (b) b.textContent = c ? '›' : '‹';
+      };
+      window.toggleSidebar = () => {
+        const c = localStorage.getItem(SIDEBAR_KEY) === '1';
+        localStorage.setItem(SIDEBAR_KEY, c ? '0' : '1'); apply();
+      };
+      apply();
+      document.getElementById('logout-btn').addEventListener('click', e => { e.preventDefault(); localStorage.clear(); window.location.href='index.html'; });
+
+      // Pending-invitations badge
+      (async () => {
+        try {
+          const res = await fetch('/invitations/incoming', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (!res.ok) return;
+          const list = await res.json();
+          const pending = list.filter(i => i.status === 'pending').length;
+          const badge = document.getElementById('team-badge');
+          if (badge && pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+        } catch {}
+      })();
+    } else {
+      mount.outerHTML = `
+        <nav class="anon-nav">
+          <a href="index.html" class="logo">AI<span>Orc</span></a>
+          <div style="display:flex;gap:32px;align-items:center">
+            <a href="faq.html" style="color:#fff;text-decoration:none;font-size:0.9rem;font-weight:600">Documentación</a>
+            <a href="repository.html" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">Repositorio público</a>
+            <a href="index.html#origen" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">About</a>
+          </div>
+          <div class="anon-nav-cta">
+            <a href="index.html">Iniciar sesión</a>
+            <a href="index.html" class="cta">Crear cuenta</a>
+          </div>
+        </nav>`;
+    }
+  </script>
+</body>
+</html>
