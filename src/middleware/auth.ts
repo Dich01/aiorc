@@ -1,10 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'aiorc-dev-secret-2024';
-if (!process.env.JWT_SECRET) {
-  console.warn('[AIOrc] JWT_SECRET not set — using the development fallback. Set JWT_SECRET in production.');
+// Secret resolution: env var → .jwt-secret file (auto-created on first run) →
+// never the old hardcoded dev string. The file makes the secret survive however
+// the server gets started (npm run dev, online.sh, launchd...).
+import fs from 'fs';
+import path from 'path';
+
+function resolveJwtSecret(): string {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  const file = path.join(process.cwd(), '.jwt-secret');
+  try {
+    const secret = fs.readFileSync(file, 'utf8').trim();
+    if (secret) return secret;
+  } catch { /* no file yet */ }
+  const generated = require('crypto').randomBytes(32).toString('hex');
+  try {
+    fs.writeFileSync(file, generated + '\n', { mode: 0o600 });
+    console.warn('[AIOrc] Generated a new JWT secret at .jwt-secret');
+  } catch {
+    console.warn('[AIOrc] Could not persist .jwt-secret — sessions will reset on restart.');
+  }
+  return generated;
 }
+
+export const JWT_SECRET = resolveJwtSecret();
 
 export interface AuthRequest extends Request {
   userId?: string;

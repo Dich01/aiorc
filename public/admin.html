@@ -141,6 +141,9 @@
       <a class="sidebar-item" href="analytics.html" title="Usage analytics">
         <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
       </a>
+      <a class="sidebar-item" href="audit.html" title="Audit">
+        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+      </a>
       <a class="sidebar-item active" href="admin.html" title="Admin panel">
         <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
       </a>
@@ -153,6 +156,16 @@
       </a>
       <a class="sidebar-item" href="issues.html" title="Issues">
         <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Help</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
+        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+      </button>
+      <a class="sidebar-item" href="faq.html" title="Documentation">
+        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
       </a>
     </nav>
 
@@ -264,6 +277,7 @@
                 <th class="num">Audited</th>
                 <th class="num">Verified</th>
                 <th>Last run</th>
+                <th>Kill switch</th>
               </tr>
             </thead>
             <tbody id="projects-tbody"></tbody>
@@ -286,6 +300,8 @@
     </div>
   </main>
 
+  <script src="ui-dialogs.js"></script>
+  <script src="info-modal.js"></script>
   <script>
     const token = localStorage.getItem('token');
     if (!token) window.location.href = 'index.html';
@@ -422,13 +438,14 @@
 
       document.getElementById('projects-tbody').innerHTML = d.top_projects.map(p => `
         <tr>
-          <td><span class="an-name">${escHtml(p.name)}</span></td>
+          <td><span class="an-name">${escHtml(p.name)}</span>${p.paused ? ' <span class="pill pill-bad">paused</span>' : ''}</td>
           <td>@${escHtml(p.owner)}</td>
           <td>${p.is_public ? '<span class="pill pill-good">public</span>' : '<span class="pill pill-muted">private</span>'}</td>
           <td class="num">${p.runs}</td>
           <td class="num">${p.audited ?? 0}</td>
           <td class="num">${p.verified ?? 0}</td>
           <td>${timeAgo(p.last_run_at)}</td>
+          <td><button class="tf-btn" style="background:${p.paused ? '#16a34a' : '#dc2626'};border-color:transparent;color:#fff" onclick="adminPause('${escHtml(p.id)}', ${p.paused ? 'false' : 'true'})">${p.paused ? 'Resume' : 'Pause'}</button></td>
         </tr>`).join('');
 
       document.getElementById('kpi-community').innerHTML = [
@@ -571,6 +588,13 @@
       lastSeriesJson = '';
       document.querySelectorAll('.bd-btn').forEach(b => b.classList.toggle('active', b.dataset.bd === bd));
       loadChart();
+    };
+
+    window.adminPause = async function(id, paused) {
+      if (paused && !await uiConfirm('Pause this project platform-wide? New runs will be rejected; in-flight runs finish.')) return;
+      const res = await authFetch('/projects/' + id + '/pause', { method: 'PATCH', body: JSON.stringify({ paused }) });
+      if (!res.ok) await uiAlert('Could not change pause state.');
+      loadOverview();
     };
 
     let lastOverviewAt = 0;

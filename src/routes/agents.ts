@@ -1,5 +1,7 @@
 import { Router, Response, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeTags } from '../lib/tags';
+import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Agent, AgentInvitation } from '../db/schema';
@@ -135,7 +137,7 @@ router.get('/public', (req: Request, res: Response): void => {
 
   const where: string[] = ['a.is_public = 1'];
   const params: unknown[] = [];
-  if (q) { where.push('(LOWER(a.name) LIKE LOWER(?) OR LOWER(a.description) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { where.push('(LOWER(a.name) LIKE LOWER(?) OR LOWER(a.description) LIKE LOWER(?) OR LOWER(a.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
   // Usage = reported (actually executed) invocations across all runs, any project.
@@ -211,8 +213,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /agents — create agent
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, input_schema, steps, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
-    name?: string; description?: string;
+  const { name, description, tags, input_schema, steps, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
+    name?: string; description?: string; tags?: unknown;
     input_schema?: unknown; steps?: unknown; content?: string; files?: unknown[];
     expected_output_format?: string; skill_ids?: string[]; project_ids?: string[];
   };
@@ -231,8 +233,8 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const outputFmt = expected_output_format || '';
 
   db.prepare(
-    'INSERT INTO agents (id, user_id, name, description, input_schema, steps, content, expected_output_format, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, req.userId!, name.trim(), description.trim(), schemaStr, stepsStr, entryContent, outputFmt, Date.now());
+    'INSERT INTO agents (id, user_id, name, description, tags, input_schema, steps, content, expected_output_format, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), schemaStr, stepsStr, entryContent, outputFmt, Date.now());
   writeEntityFiles(id, normalized.files, AGENT_FILES);
 
   if (Array.isArray(skill_ids) && skill_ids.length > 0) {
@@ -266,8 +268,8 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, input_schema, steps, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
-    name?: string; description?: string;
+  const { name, description, tags, input_schema, steps, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
+    name?: string; description?: string; tags?: unknown;
     input_schema?: unknown; steps?: unknown; content?: string; files?: unknown[];
     expected_output_format?: string; skill_ids?: string[]; project_ids?: string[];
   };
@@ -284,10 +286,11 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   db.prepare(
-    'UPDATE agents SET name=?, description=?, input_schema=?, steps=?, content=?, expected_output_format=? WHERE id=?'
+    'UPDATE agents SET name=?, description=?, tags=?, input_schema=?, steps=?, content=?, expected_output_format=? WHERE id=?'
   ).run(
     name?.trim() || agent.name,
     description?.trim() || agent.description,
+    tags !== undefined ? normalizeTags(tags) : agent.tags,
     input_schema ? JSON.stringify(input_schema) : agent.input_schema,
     steps ? JSON.stringify(steps) : agent.steps,
     entryContent,
@@ -374,6 +377,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
   db.prepare(
     'INSERT INTO agent_invitations (id, agent_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, agent.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
+  sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'agent', entityName: agent.name });
   res.status(201).json(db.prepare('SELECT * FROM agent_invitations WHERE id = ?').get(id));
 });
 

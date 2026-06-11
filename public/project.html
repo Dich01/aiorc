@@ -50,6 +50,22 @@
 
     /* ── Tabs ─────────────────────────────────────────────────────────────── */
     .tab-bar { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0; }
+    /* Onboarding checklist */
+    .onboard-card { background:linear-gradient(135deg, rgba(67,97,238,0.06), rgba(124,58,237,0.06)); border:1px solid #c7d2fe; border-radius:12px; padding:16px 20px; margin-bottom:18px; }
+    .onboard-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .onboard-title { font-weight:700; font-size:0.95rem; color:var(--text); }
+    .onboard-dismiss { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.78rem; font-family:inherit; }
+    .onboard-steps { display:flex; gap:10px; flex-wrap:wrap; }
+    .onboard-step { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; background:var(--card-bg); border:1px solid var(--border); font-size:0.84rem; cursor:pointer; transition:border-color .15s; flex:1; min-width:200px; }
+    .onboard-step:hover { border-color:var(--primary); }
+    .onboard-step.done { opacity:0.65; cursor:default; }
+    .onboard-step.done:hover { border-color:var(--border); }
+    .onboard-check { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; flex-shrink:0; background:#eef2ff; color:var(--primary); border:1.5px solid #c7d2fe; }
+    .onboard-step.done .onboard-check { background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+    .onboard-next { font-size:0.7rem; font-weight:700; color:var(--primary); margin-left:auto; white-space:nowrap; }
+    .connect-dot { width:8px; height:8px; border-radius:50%; background:#f59e0b; display:inline-block; margin-left:5px; animation:connectpulse 1.8s ease-in-out infinite; }
+    @keyframes connectpulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
     .tab-btn { background:none; border:none; cursor:pointer; padding:10px 18px; font-size:0.9rem; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s; }
     .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
     .tab-panel { display:none; }
@@ -402,6 +418,9 @@
       <a class="sidebar-item" href="analytics.html" title="Usage analytics">
         <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
       </a>
+      <a class="sidebar-item" href="audit.html" title="Audit">
+        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+      </a>
     </nav>
 
     <div class="sidebar-section-title">Community</div>
@@ -449,13 +468,35 @@
       </div>
     </div>
 
+    <!-- Onboarding checklist: shows until the project ran at least once -->
+    <div class="onboard-card" id="onboard-card" style="display:none">
+      <div class="onboard-head">
+        <span class="onboard-title">Get this project running</span>
+        <button class="onboard-dismiss" onclick="dismissOnboarding()">Hide</button>
+      </div>
+      <div class="onboard-steps">
+        <div class="onboard-step" id="ob-agents" onclick="switchTab('agents')">
+          <span class="onboard-check">1</span><span>Add agents to the project</span><span class="onboard-next" style="display:none">DO THIS →</span>
+        </div>
+        <div class="onboard-step" id="ob-flow" onclick="switchTab('flow')">
+          <span class="onboard-check">2</span><span>Design the flow</span><span class="onboard-next" style="display:none">DO THIS →</span>
+        </div>
+        <div class="onboard-step" id="ob-connect" onclick="switchTab('mcp')">
+          <span class="onboard-check">3</span><span>Connect your AI client</span><span class="onboard-next" style="display:none">DO THIS →</span>
+        </div>
+        <div class="onboard-step" id="ob-run" onclick="switchTab('mcp')">
+          <span class="onboard-check">4</span><span>Run it from Claude</span><span class="onboard-next" style="display:none">DO THIS →</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('flow')">Flow Builder</button>
       <button class="tab-btn" onclick="switchTab('agents')">Agents</button>
       <button class="tab-btn" onclick="switchTab('skills')">Skills</button>
       <button class="tab-btn" onclick="switchTab('contexts')">Contexts</button>
-      <button class="tab-btn" onclick="switchTab('mcp')">MCP Config</button>
+      <button class="tab-btn" onclick="switchTab('mcp')" id="tab-btn-mcp">Connect AI <span id="connect-attention" class="connect-dot" style="display:none"></span></button>
       <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
 
@@ -587,10 +628,23 @@
           <span id="cc-msg" style="font-size:0.83rem;color:#ef4444"></span>
         </div>
       </div>
+    
     </div>
 
     <!-- ── Settings tab ───────────────────────────────────────────────────── -->
     <div class="tab-panel" id="tab-settings">
+      <div class="card" style="margin-bottom:20px;border-color:#fecaca">
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">Kill switch</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px">
+          Pausing blocks NEW runs of this project's workflow. Runs already in progress are never interrupted —
+          to stop one of those, cancel it individually from the Audit page.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn btn-sm" id="pause-toggle-btn" style="border:1px solid var(--border)">…</button>
+          <span id="pause-status" style="font-size:0.82rem;color:var(--muted)"></span>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:20px">
         <div class="card-title" style="font-size:1rem;margin-bottom:6px">Description</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px">
@@ -666,8 +720,10 @@
     <div class="tab-panel" id="tab-mcp">
       <div class="card">
         <p class="mcp-intro">
-          Add the configuration below to the MCP file of the client you are going to use.
-          AIOrc compiles the visual flow into step-by-step instructions — the LLM executes them deterministically.
+          <strong>This is the step that brings your project to life.</strong> Your flow doesn't run inside AIOrc —
+          it runs inside YOUR AI client (Claude Code, Claude Desktop, Cursor...). Paste the configuration below into
+          that client and it will discover this project's workflow tools automatically. From then on, any task you
+          give it goes through your flow, step by step, validated by the server.
         </p>
 
         <div class="mcp-where">
@@ -728,7 +784,28 @@ skip steps or modify them with your own judgment.</pre>
           </div>
         </div>
       </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">External MCP servers</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px">
+          One connection rules them all: your client connects ONLY to AIOrc, and the servers you register
+          here are exposed through that same connection. Their tools appear as <code>server__tool</code> in
+          the client's tool list, and every call is proxied and logged by AIOrc.
+        </p>
+        <div id="mcp-servers-list" style="margin-bottom:14px"></div>
+        <div style="display:grid;grid-template-columns:1fr 2fr 2fr auto;gap:8px">
+          <input type="text" id="ms-name" placeholder="Name (e.g. jira)" autocomplete="off"
+                 style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit;font-size:0.85rem" />
+          <input type="text" id="ms-url" placeholder="URL (https://...)" autocomplete="off"
+                 style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit;font-size:0.85rem" />
+          <input type="text" id="ms-desc" placeholder="Description (optional)" autocomplete="off"
+                 style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit;font-size:0.85rem" />
+          <button class="btn btn-primary btn-sm" id="ms-add-btn">Add</button>
+        </div>
+        <p id="ms-error" style="font-size:0.8rem;color:#dc2626;margin-top:8px;display:none"></p>
+      </div>
     </div>
+
+
   </div>
   </main>
 
@@ -950,6 +1027,128 @@ skip steps or modify them with your own judgment.</pre>
 
     // ── Tabs ──────────────────────────────────────────────────────────────────
     const TABS = ['flow','agents','skills','contexts','mcp','settings'];
+    // Mirror of src/lib/mcpServers.ts sanitizeServerName, so the prefix shown
+    // matches exactly what the server advertises in tools/list.
+    function sanitizePrefix(name) {
+      return name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    }
+    // External MCP servers (single-connection registry)
+    async function loadMcpServers() {
+      const res = await authFetch(`/projects/${projectId}/mcp-servers`);
+      if (!res.ok) return;
+      const servers = await res.json();
+      const host = document.getElementById('mcp-servers-list');
+      if (!servers.length) {
+        host.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);font-style:italic">No external servers registered. Agents only see AIOrc workflow tools.</p>';
+        return;
+      }
+      host.innerHTML = servers.map(sv => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:0.85rem">
+          <span style="font-weight:600">${escHtml(sv.name)}</span>
+          <code style="font-size:0.76rem;color:var(--muted)">${escHtml(sv.url)}</code>
+          <span style="color:var(--muted);font-size:0.78rem;flex:1">${escHtml(sv.description || '')}</span>
+          <span style="font-size:0.74rem;color:var(--muted)">tools: <code>${escHtml(sanitizePrefix(sv.name))}__*</code></span>
+          <button class="btn btn-sm btn-ghost" onclick="deleteMcpServer('${escHtml(sv.id)}')">Remove</button>
+        </div>`).join('');
+    }
+    window.deleteMcpServer = async function(id) {
+      if (!await uiConfirm('Remove this external server? Its tools disappear from the client tool list.')) return;
+      await authFetch(`/projects/${projectId}/mcp-servers/${id}`, { method: 'DELETE' });
+      loadMcpServers();
+    };
+    document.getElementById('ms-add-btn').addEventListener('click', async () => {
+      const err = document.getElementById('ms-error');
+      err.style.display = 'none';
+      const body = {
+        name: document.getElementById('ms-name').value.trim(),
+        url: document.getElementById('ms-url').value.trim(),
+        description: document.getElementById('ms-desc').value.trim(),
+      };
+      const res = await authFetch(`/projects/${projectId}/mcp-servers`, { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        err.textContent = data.error || 'Could not add the server.';
+        err.style.display = '';
+        return;
+      }
+      ['ms-name','ms-url','ms-desc'].forEach(k => document.getElementById(k).value = '');
+      loadMcpServers();
+    });
+    loadMcpServers();
+
+    // ── Kill switch (pause) ─────────────────────────────────────────────────
+    let projectPaused = false;
+    function updatePauseUI(paused) {
+      projectPaused = paused;
+      const btn = document.getElementById('pause-toggle-btn');
+      const status = document.getElementById('pause-status');
+      btn.textContent = paused ? 'Resume project' : 'Pause project';
+      btn.style.background = paused ? '#16a34a' : '#dc2626';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'transparent';
+      status.textContent = paused
+        ? 'Paused — new runs are rejected. In-flight runs may finish.'
+        : 'Active — the workflow accepts new runs.';
+    }
+    document.getElementById('pause-toggle-btn').addEventListener('click', async () => {
+      const next = !projectPaused;
+      if (next && !await uiConfirm('Pause this project? New runs will be rejected until you resume. Runs already in progress are not interrupted.')) return;
+      const res = await authFetch(`/projects/${projectId}/pause`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paused: next })
+      });
+      if (!res.ok) { await uiAlert('Could not change the pause state.'); return; }
+      updatePauseUI(next);
+    });
+
+    // ── Onboarding checklist ────────────────────────────────────────────────
+    const OB_KEY = () => 'aiorc.onboard.dismissed.' + projectId;
+    function dismissOnboarding() {
+      localStorage.setItem(OB_KEY(), '1');
+      document.getElementById('onboard-card').style.display = 'none';
+    }
+    function markStep(id, done) {
+      const el = document.getElementById(id);
+      el.classList.toggle('done', done);
+      el.querySelector('.onboard-check').textContent = done ? '✓' : el.querySelector('.onboard-check').textContent;
+    }
+    async function updateOnboarding() {
+      if (localStorage.getItem(OB_KEY()) === '1') return;
+      try {
+        const [agentsRes, flowRes, runsRes] = await Promise.all([
+          authFetch('/agents?project_id=' + projectId),
+          authFetch('/projects/' + projectId + '/flow'),
+          authFetch('/runs'),
+        ]);
+        const agents = agentsRes.ok ? await agentsRes.json() : [];
+        const flow = flowRes.ok ? await flowRes.json() : {};
+        const runs = runsRes.ok ? (await runsRes.json()).filter(r => r.project_id === projectId) : [];
+        const hasAgents = agents.length > 0;
+        const flowNodes = (flow.flow && flow.flow.nodes) || flow.nodes || [];
+        const hasFlow = flowNodes.length > 1;
+        const hasRuns = runs.length > 0;
+
+        if (hasRuns) { document.getElementById('onboard-card').style.display = 'none'; document.getElementById('connect-attention').style.display = 'none'; return; }
+
+        document.getElementById('onboard-card').style.display = '';
+        markStep('ob-agents', hasAgents);
+        markStep('ob-flow', hasFlow);
+        markStep('ob-connect', false);
+        markStep('ob-run', false);
+        // Señala el próximo paso pendiente
+        const order = [['ob-agents', hasAgents], ['ob-flow', hasFlow], ['ob-connect', false], ['ob-run', false]];
+        let pointed = false;
+        for (const [id, done] of order) {
+          const next = document.getElementById(id).querySelector('.onboard-next');
+          const show = !done && !pointed;
+          next.style.display = show ? '' : 'none';
+          if (show) pointed = true;
+        }
+        // Punto de atención en el tab Connect cuando el flujo está listo pero nunca corrió
+        document.getElementById('connect-attention').style.display = (hasAgents && hasFlow) ? '' : 'none';
+      } catch { /* onboarding is best-effort */ }
+    }
+
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', TABS[i]===name));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -995,6 +1194,8 @@ skip steps or modify them with your own judgment.</pre>
       if (document.activeElement !== tagsInput) tagsInput.value = p.tags || '';
       renderProjectTagsHeader(p.tags || '');
       renderTagsPreview(p.tags || '');
+
+      updatePauseUI(!!p.paused);
 
       const toggle = document.getElementById('visibility-toggle');
       toggle.checked = isPublic;
@@ -2526,6 +2727,7 @@ skip steps or modify them with your own judgment.</pre>
     // ── Init ──────────────────────────────────────────────────────────────────
     async function init() {
       await Promise.all([loadProject(), loadAgents(), loadSkills(), loadContexts()]);
+      updateOnboarding();
       // Flow editor is now handled by React (flow-editor.js) — no renderPalette/loadFlow needed
     }
     init().catch(console.error);

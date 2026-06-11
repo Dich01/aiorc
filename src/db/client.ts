@@ -43,10 +43,16 @@ safeAlter("CREATE INDEX IF NOT EXISTS idx_skills_forked_from ON skills(forked_fr
 safeAlter("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE users ADD COLUMN last_login INTEGER");
 safeAlter("ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+safeAlter("ALTER TABLE agents ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+safeAlter("ALTER TABLE skills ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+safeAlter("ALTER TABLE contexts ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+safeAlter("ALTER TABLE projects ADD COLUMN paused INTEGER NOT NULL DEFAULT 0");
 safeAlter("ALTER TABLE runs ADD COLUMN flow_json TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE runs ADD COLUMN caller_email TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE runs ADD COLUMN mode TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE runs ADD COLUMN engine_state TEXT NOT NULL DEFAULT ''");
+safeAlter("ALTER TABLE runs ADD COLUMN last_activity_at INTEGER NOT NULL DEFAULT 0");
+safeAlter("UPDATE runs SET last_activity_at = created_at WHERE last_activity_at = 0");
 safeAlter("ALTER TABLE runs ADD COLUMN eval_case_id TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE runs ADD COLUMN eval_verdict TEXT NOT NULL DEFAULT ''");
 safeAlter("ALTER TABLE runs ADD COLUMN eval_reasons TEXT NOT NULL DEFAULT ''");

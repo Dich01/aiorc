@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Audit</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
+    .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo { font-size:1.15rem; font-weight:700; letter-spacing:0.02em; }
+    .sidebar-logo a { color:inherit; text-decoration:none; }
+    .sidebar-logo span { color:var(--primary); }
+    .sidebar-collapse-btn { background:none; border:none; color:#9ba3c8; cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:4px; line-height:1; }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .sidebar-section-title { padding:14px 22px 4px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#7a82a8; }
+    .sidebar-nav { padding:4px 10px; display:flex; flex-direction:column; gap:2px; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:#d8dcf2; text-decoration:none; font-size:0.875rem; font-weight:500; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+    .sidebar-item.active { background:rgba(67,97,238,0.22); color:#fff; font-weight:600; }
+    .sidebar-item-glyph { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+    .sidebar-item.active .sidebar-item-glyph { background:rgba(67,97,238,0.45); color:#fff; }
+    .sidebar-footer { margin-top:auto; padding:14px 18px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.82rem; display:flex; flex-direction:column; gap:6px; }
+    .sidebar-user { color:#d8dcf2; word-break:break-all; opacity:0.85; font-size:0.82rem; }
+    .sidebar-logout { color:#9ba3c8; text-decoration:none; font-size:0.82rem; align-self:flex-start; cursor:pointer; }
+    .sidebar-logout:hover { color:#fff; }
+    .sidebar.collapsed { width:60px; }
+    .sidebar.collapsed .sidebar-logo,
+    .sidebar.collapsed .sidebar-section-title,
+    .sidebar.collapsed .sidebar-item-label,
+    .sidebar.collapsed .sidebar-user { display:none; }
+    .sidebar.collapsed .sidebar-header { justify-content:center; padding:14px 8px; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 8px; }
+    .sidebar.collapsed .sidebar-footer { padding:12px 8px; align-items:center; }
+
+    .main-area { flex:1; min-width:0; }
+    .main-container { max-width:1100px; margin:0 auto; padding:36px 40px 60px; }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; gap:20px; flex-wrap:wrap; }
+    .page-header h1 { font-size:1.6rem; font-weight:700; margin:0; color:var(--text); }
+    .page-header .page-subtitle { font-size:0.88rem; color:var(--muted); margin-top:6px; }
+    .page-header-text { display:flex; flex-direction:column; }
+    .au-filters { display:flex; gap:10px; align-items:center; }
+    .au-filters select { padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.85rem; font-family:inherit; background:var(--card-bg); color:var(--text); cursor:pointer; }
+
+    .an-table-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow-x:auto; }
+    table.an-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+    .an-table th { text-align:left; padding:10px 14px; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .an-table td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .an-table tr:last-child td { border-bottom:none; }
+    .an-name { font-weight:600; color:var(--text); }
+    .an-mut { font-size:0.74rem; color:var(--muted); margin-top:2px; }
+    .an-empty { padding:36px 20px; text-align:center; color:var(--muted); font-size:0.88rem; }
+
+    .pill { display:inline-block; font-size:0.72rem; padding:2px 9px; border-radius:10px; font-weight:600; white-space:nowrap; }
+    .pill-good { background:#d1fae5; color:#065f46; }
+    .pill-warn { background:#fef3c7; color:#92400e; }
+    .pill-bad  { background:#fee2e2; color:#b91c1c; }
+    .pill-muted { background:#f3f4f6; color:#6b7280; }
+    .pill-run { background:#dbeafe; color:#1d4ed8; }
+
+    .au-action { background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:0.74rem; font-weight:600; cursor:pointer; font-family:inherit; color:var(--text); margin-right:4px; }
+    .au-action:hover { border-color:var(--primary); color:var(--primary); }
+    .au-action.danger:hover { border-color:#dc2626; color:#dc2626; }
+
+    .live-badge { display:inline-flex; align-items:center; gap:5px; font-size:0.66rem; font-weight:700; letter-spacing:0.06em; color:#059669; }
+    .live-badge .live-dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:livepulse 1.8s ease-in-out infinite; }
+    @keyframes livepulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+
+    /* Run detail modal (same pattern as analytics) */
+    .run-modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .run-modal-backdrop.open { display:flex; }
+    .run-modal-box { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; width:100%; max-width:860px; max-height:90vh; overflow-y:auto; padding:24px 28px; }
+    .run-modal-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+    .run-modal-head h3 { margin:0; font-size:1.1rem; }
+    .run-modal-meta { font-size:0.8rem; color:var(--muted); margin-bottom:16px; }
+    .run-modal-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--muted); line-height:1; }
+    .run-section-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:16px 0 8px; }
+    .run-path-step { display:flex; gap:10px; align-items:baseline; padding:7px 0; border-bottom:1px dashed var(--border); font-size:0.84rem; }
+    .run-path-step:last-child { border-bottom:none; }
+    .run-path-num { color:var(--muted); font-size:0.74rem; min-width:22px; }
+    .run-path-agent { font-weight:600; }
+    .run-path-via { color:var(--muted); font-size:0.78rem; }
+    .run-path-output { color:var(--muted); font-size:0.78rem; flex:1; }
+    .run-pre { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:12px 14px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.74rem; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-height:340px; overflow-y:auto; }
+
+    @media (max-width: 768px) {
+      body.has-sidebar { flex-direction:column; }
+      .sidebar { width:100% !important; height:auto; position:static; }
+      .main-container { padding:24px 20px; }
+      .sidebar-footer { flex-direction:row; justify-content:space-between; align-items:center; }
+    }
+  </style>
+</head>
+<body class="has-sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
+      <button class="sidebar-collapse-btn" id="sidebar-toggle" title="Collapse/expand menu" onclick="toggleSidebar()">‹</button>
+    </div>
+
+    <div class="sidebar-section-title">Workspace</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="dashboard.html?tab=projects" title="Projects">
+        <span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=agents" title="Agents">
+        <span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=skills" title="Skills">
+        <span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=contexts" title="Contexts">
+        <span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span>
+      </a>
+      <a class="sidebar-item" href="dashboard.html?tab=team" title="Team">
+        <span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Insights</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="analytics.html" title="Usage analytics">
+        <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
+      </a>
+      <a class="sidebar-item active" href="audit.html" title="Audit">
+        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+      </a>
+      <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
+        <span class="sidebar-item-glyph">G</span><span class="sidebar-item-label">Admin panel</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Community</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item" href="repository.html" title="Public repository">
+        <span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span>
+      </a>
+      <a class="sidebar-item" href="issues.html" title="Issues">
+        <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-title">Help</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
+        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+      </button>
+      <a class="sidebar-item" href="faq.html" title="Documentation">
+        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-user" id="user-nickname" style="font-weight:600;text-decoration:none;color:inherit">...</a>
+      <div class="sidebar-user" id="user-email" style="font-size:0.74rem;opacity:0.6">...</div>
+      <a href="#" class="sidebar-logout" id="logout-btn" title="Log out">Log out</a>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <div class="main-container">
+      <div class="page-header">
+        <div class="page-header-text">
+          <h1>Audit <span class="live-badge" style="margin-left:8px"><span class="live-dot"></span>LIVE</span></h1>
+          <span class="page-subtitle">Every run, auditable: who ran what, which path it took, and how it ended. Cancel an in-flight run or export a signed audit trail.</span>
+        </div>
+        <div class="au-filters">
+          <select id="filter-project"><option value="">All projects</option></select>
+          <select id="filter-status">
+            <option value="">All statuses</option>
+            <option value="running">Running</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="abandoned">Abandoned</option>
+            <option value="delivered">Delivered (compiled)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="error-msg" class="alert alert-error hidden"></div>
+
+      <div class="an-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Project</th>
+              <th>Caller</th>
+              <th>Mode</th>
+              <th>Status</th>
+              <th>Eval</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="runs-tbody"></tbody>
+        </table>
+        <div id="runs-empty" class="an-empty hidden">No runs match the current filters.</div>
+      </div>
+    </div>
+  </main>
+
+  <div class="run-modal-backdrop" id="run-modal" onclick="if(event.target.id==='run-modal')closeRunModal()">
+    <div class="run-modal-box">
+      <div class="run-modal-head">
+        <h3 id="run-modal-title">Run</h3>
+        <button class="run-modal-close" onclick="closeRunModal()" title="Close">×</button>
+      </div>
+      <div class="run-modal-meta" id="run-modal-meta"></div>
+      <div id="run-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="ui-dialogs.js"></script>
+  <script src="info-modal.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'index.html';
+
+    const userEmail = localStorage.getItem('userEmail') || '';
+    const userNickname = localStorage.getItem('userNickname') || '';
+    document.getElementById('user-email').textContent = userEmail;
+    const nickEl = document.getElementById('user-nickname');
+    nickEl.textContent = userNickname ? '@' + userNickname : userEmail;
+    if (userNickname) nickEl.href = `user.html?nick=${encodeURIComponent(userNickname)}`;
+    if (localStorage.getItem('userRole') === 'admin') document.getElementById('sb-admin').style.display = '';
+
+    document.getElementById('logout-btn').addEventListener('click', e => {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+
+    const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
+    function applySidebarState() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      const sb = document.getElementById('sidebar');
+      const btn = document.getElementById('sidebar-toggle');
+      if (sb) sb.classList.toggle('collapsed', collapsed);
+      if (btn) btn.textContent = collapsed ? '›' : '‹';
+    }
+    function toggleSidebar() {
+      const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
+      applySidebarState();
+    }
+    applySidebarState();
+
+    async function authFetch(url, opts = {}) {
+      const res = await fetch(url, {
+        ...opts,
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+      });
+      if (res.status === 401) { localStorage.clear(); window.location.href = 'index.html'; }
+      return res;
+    }
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function timeAgo(ts) {
+      if (!ts) return '—';
+      const s = Math.floor((Date.now() - ts) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+      return new Date(ts).toLocaleDateString();
+    }
+    function statusPill(s) {
+      if (s === 'running') return '<span class="pill pill-run">running</span>';
+      if (s === 'completed') return '<span class="pill pill-good">completed</span>';
+      if (s === 'cancelled') return '<span class="pill pill-bad">cancelled</span>';
+      if (s === 'abandoned') return '<span class="pill pill-warn" title="No activity for 2h+ — resumes automatically if the client comes back, or cancel it to close it">abandoned</span>';
+      return `<span class="pill pill-muted">${escHtml(s)}</span>`;
+    }
+
+    let allRuns = [];
+
+
+    async function load() {
+      const errEl = document.getElementById('error-msg');
+      const res = await authFetch('/runs');
+      if (!res.ok) {
+        errEl.textContent = 'Failed to load runs (' + res.status + ')';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      errEl.classList.add('hidden');   // clear a previous transient error on success
+      const data = await res.json();
+      allRuns = data.runs || [];
+
+      // Rebuild the project dropdown from the complete project list the server
+      // returns (not just the names in the current page), preserving selection.
+      const sel = document.getElementById('filter-project');
+      const current = sel.value;
+      const names = data.projects || [];
+      const wanted = '<option value="">All projects</option>' + names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+      if (sel.innerHTML !== wanted) { sel.innerHTML = wanted; sel.value = current; }
+      render();
+    }
+
+    function render() {
+      const proj = document.getElementById('filter-project').value;
+      const status = document.getElementById('filter-status').value;
+      const runs = allRuns.filter(r =>
+        (!proj || r.project_name === proj) && (!status || r.status === status));
+
+      document.getElementById('runs-empty').classList.toggle('hidden', runs.length > 0);
+      document.getElementById('runs-tbody').innerHTML = runs.map(r => `
+        <tr>
+          <td>${timeAgo(r.created_at)}</td>
+          <td><span class="an-name">${escHtml(r.project_name)}</span></td>
+          <td>${r.caller_email ? escHtml(r.caller_email) : '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${r.mode === 'stepped'
+            ? ((r.status === 'cancelled' || r.status === 'abandoned')
+                ? '<span class="pill pill-muted" title="Ran in stepped mode but did not finish — not counted as a trusted run">stepped</span>'
+                : '<span class="pill pill-good" title="Server-verified: every transition validated">verified</span>')
+            : '<span class="pill pill-muted">compiled</span>'}</td>
+          <td>${statusPill(r.status)}</td>
+          <td>${r.eval_verdict
+            ? (r.eval_verdict === 'pass' ? '<span class="pill pill-good">pass</span>' : '<span class="pill pill-bad">fail</span>')
+            : '—'}</td>
+          <td>
+            <button class="au-action" onclick="openRunDetail('${escHtml(r.id)}')">Detail</button>
+            <button class="au-action" onclick="exportRun('${escHtml(r.id)}')">Export</button>
+            ${(r.status === 'running' || r.status === 'abandoned') ? `<button class="au-action danger" onclick="cancelRun('${escHtml(r.id)}')">Cancel</button>` : ''}
+          </td>
+        </tr>`).join('');
+    }
+
+    window.cancelRun = async function(id) {
+      if (!await uiConfirm('Cancel this run? Only this run is affected — other runs and the project keep working.')) return;
+      const res = await authFetch('/runs/' + id + '/cancel', { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        await uiAlert(data.error || 'Could not cancel the run.');
+      }
+      load();
+    };
+
+    window.exportRun = async function(id) {
+      const res = await authFetch('/runs/' + id + '/export');
+      if (!res.ok) { await uiAlert('Could not export.'); return; }
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'aiorc-audit-' + id.slice(0, 8) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    // ── Run detail modal ────────────────────────────────────────────────────
+    window.closeRunModal = function() {
+      document.getElementById('run-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
+
+    window.openRunDetail = async function(id) {
+      const modal = document.getElementById('run-modal');
+      document.getElementById('run-modal-title').textContent = 'Run ' + id.slice(0, 8) + '…';
+      document.getElementById('run-modal-meta').textContent = 'Loading…';
+      document.getElementById('run-modal-body').innerHTML = '';
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      const res = await authFetch('/runs/' + encodeURIComponent(id));
+      if (!res.ok) {
+        document.getElementById('run-modal-meta').textContent = 'Could not load run (' + res.status + ')';
+        return;
+      }
+      const run = await res.json();
+      const metaBits = [
+        run.project_name,
+        run.caller_email || null,
+        new Date(run.created_at).toLocaleString(),
+        run.mode === 'stepped' ? 'server-verified (stepped)' : 'compiled mode',
+        run.status,
+      ].filter(Boolean);
+      document.getElementById('run-modal-meta').textContent = metaBits.join(' · ');
+
+      const parts = [];
+      const input = run.input && typeof run.input === 'object' ? (run.input.request || JSON.stringify(run.input)) : String(run.input || '');
+      if (input) parts.push(`<div class="run-section-title">Input</div><div style="font-size:0.86rem;line-height:1.5">${escHtml(input)}</div>`);
+
+      const engine = run.engine_state && typeof run.engine_state === 'object' ? run.engine_state : null;
+      if (engine && Array.isArray(engine.path) && engine.path.length > 0) {
+        parts.push(`<div class="run-section-title">Verified execution path (${engine.path.length} steps${engine.outcome ? ' — ' + escHtml(engine.outcome) : ''})</div>
+          <div>${engine.path.map((s, i) => `
+            <div class="run-path-step">
+              <span class="run-path-num">${i + 1}.</span>
+              <span class="run-path-agent">${escHtml(s.agent)}</span>
+              ${s.via ? `<span class="run-path-via">via "${escHtml(s.via)}"</span>` : ''}
+              ${s.output ? `<span class="run-path-output">${escHtml(s.output)}</span>` : ''}
+            </div>`).join('')}
+          </div>`);
+      }
+      if (run.eval_case) {
+        const reasons = Array.isArray(run.eval_reasons) ? run.eval_reasons.join('; ') : '';
+        parts.push(`<div class="run-section-title">Eval</div>
+          <div style="font-size:0.86rem">${escHtml(run.eval_case.name)} —
+            ${run.eval_verdict === 'pass' ? '<span class="pill pill-good">pass</span>'
+              : run.eval_verdict === 'fail' ? `<span class="pill pill-bad">fail</span> <span style="color:var(--muted);font-size:0.8rem">${escHtml(reasons)}</span>`
+              : '<span class="pill pill-muted">not graded</span>'}</div>`);
+      }
+      if (run.execution_report) {
+        const reportText = typeof run.execution_report === 'object'
+          ? JSON.stringify(run.execution_report, null, 2) : String(run.execution_report);
+        parts.push(`<div class="run-section-title">Execution report (self-declared by the LLM)</div>
+          <pre class="run-pre">${escHtml(reportText)}</pre>`);
+      }
+      if (run.workflow_snapshot) {
+        parts.push(`<div class="run-section-title">Compiled prompt</div>
+          <details><summary style="cursor:pointer;font-size:0.82rem;color:var(--primary)">Show the full compiled workflow</summary>
+          <pre class="run-pre">${escHtml(run.workflow_snapshot)}</pre></details>`);
+      }
+      if (parts.length === 0) parts.push('<div style="color:var(--muted);font-size:0.86rem">No details recorded for this run.</div>');
+      document.getElementById('run-modal-body').innerHTML = parts.join('');
+    };
+
+    document.getElementById('filter-project').addEventListener('change', render);
+    document.getElementById('filter-status').addEventListener('change', render);
+    setInterval(() => { if (!document.hidden) load(); }, 10000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+    load();
+  </script>
+</body>
+</html>

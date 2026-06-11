@@ -4,7 +4,7 @@
 
 > Todo lo que Dify y n8n te cobran en su plan Enterprise — multi-equipo, permisos, auditoría, instalarlo en tus servidores — aquí es gratis.
 
-AIOrc is a **multi-tenant registry and control plane for AI agents**. It stores, shares, governs and *measures* a company's agents — and exposes each project's workflow to any MCP-compatible LLM client (Claude Code, Cursor, or anything that speaks MCP), with **server-verified execution**: the orchestration graph is enforced by the server, not just suggested to the model.
+AIOrc is the **control plane for a company's AI agents**: a multi-tenant registry that stores, shares, governs and *measures* agents — and exposes each project's workflow to any MCP-compatible LLM client (Claude Code, Cursor, or anything that speaks MCP) with **server-verified execution**. The orchestration graph is enforced by the server, not just suggested to the model; any project can be paused instantly (kill switch), any in-flight run cancelled surgically, and every run exported as a signed, tamper-evident audit trail.
 
 ## Why
 
@@ -25,6 +25,8 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 | Visual flow editor | Start / Agent / Parallel / End nodes, natural-language edge conditions, loops via back-edges |
 | MCP server | `workflow.start` / `workflow.next` (server-verified stepped mode), `workflow` (compiled mode), `workflow.report`, `workflow.eval` over JSON-RPC 2.0 |
 | Verified execution | Server-driven stepping: illegal transitions rejected, caps enforced, every dispatch recorded as ground truth |
+| Kill switch & cancel | Pause a project (blocks new runs; in-flight runs finish) or cancel a single run without touching anything else |
+| Signed audit trails | Export any run as HMAC-signed JSON — tamper-evident evidence of who ran what and which path it took (Audit page) |
 | Evals | Per-project test cases, run via MCP, graded deterministically against the verified path |
 | Usage analytics | Live trading-style chart (1m→all-time ranges, 5s refresh), breakdowns by agent/project/skill/context, skip vs off-path classification, per-user attribution, run detail with full execution path |
 | Admin panel | Users, KPIs, adoption funnel, signups, top projects, community and system health (admin role only) |

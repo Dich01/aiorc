@@ -591,6 +591,27 @@ When you finish, OPTIONALLY call `workflow.report` with:
     <p>For those cases: LangGraph (state-based with interrupts), CrewAI (role-based), AutoGen (conversational).</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="eu-ai-act">Audit logging and the EU AI Act (Article 12)</h2>
+    <p>Article 12 of the EU AI Act requires high-risk AI systems to support automatic event logging across their lifetime, with logs that allow tracing how each output was produced (retention of at least six months under Articles 19/26). AIOrc's audit layer maps directly onto that requirement for agentic workflows:</p>
+    <ul>
+      <li><strong>Per-step events</strong>: in verified mode every dispatch is recorded server-side — agent, transition taken (and the condition that justified it), timestamps and the caller's identity (<code>x-user-email</code>).</li>
+      <li><strong>Interpretability</strong>: the Audit page reconstructs any run as a human-readable path; the same data is available as structured JSON.</li>
+      <li><strong>Tamper evidence</strong>: audit exports are HMAC-SHA256 signed — any alteration after export invalidates the signature.</li>
+      <li><strong>Tool-call trail</strong>: calls to external MCP servers proxied through AIOrc are logged with server, tool, caller, outcome and latency.</li>
+      <li><strong>Retention</strong>: runs and telemetry live in the instance database with no automatic expiry; the retention policy is in your hands (the deadline for high-risk obligations moved to December 2027 under the 2026 Digital Omnibus, but the logging architecture is in place today).</li>
+    </ul>
+    <p>This does not make a deployment "compliant" by itself — compliance is a property of the whole system — but the event log Article 12 demands is exactly what AIOrc produces as a side effect of verified execution.</p>
+
+    <h2 id="eval-gating">Gating agent changes with evals</h2>
+    <p>Evals turn "I think this change improved the agent" into a measurable verdict. The recommended working pattern:</p>
+    <ol>
+      <li>Define 3-10 eval cases per flow (Usage analytics → Evals): a fixed input, the expected End outcome, and the agents that must run.</li>
+      <li>Before changing an agent or the flow, run the suite from any MCP client: call <code>workflow.eval</code>, then <code>workflow.start</code> with each case id. The server grades each run against the verified path — the model never grades its own work.</li>
+      <li>Change the agent. Run the suite again.</li>
+      <li>Compare pass rates in the Evals table. A drop means the change broke a path your team depends on — fix it before anyone else hits it.</li>
+    </ol>
+    <p>Eval verdicts also appear per-run in the Audit page, so a failing case is traceable step by step.</p>
+
     <h2 id="referencias">References</h2>
     <div class="ref-list">
       <div class="ref-item">
@@ -684,6 +705,7 @@ When you finish, OPTIONALLY call `workflow.report` with:
           <div class="sidebar-section-title">Insights</div>
           <nav class="sidebar-nav">
             <a class="sidebar-item" href="analytics.html"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
+            <a class="sidebar-item" href="audit.html" title="Audit"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>
           </nav>
           <div class="sidebar-section-title">Community</div>
           <nav class="sidebar-nav">

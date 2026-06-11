@@ -4,6 +4,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { classifySkips } from '../lib/skipAnalysis';
 import { extractReportedInvocations } from '../lib/usage';
 import { FlowDocument } from '../db/schema';
+import { sweepAbandonedRuns } from './runs';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ interface UsageRow {
 //   3. Who is using them? (attribution = owner of the project the run came in through;
 //      MCP calls authenticate with a project key, not a personal token)
 router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
+  sweepAbandonedRuns();
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
   const isAdmin = user?.role === 'admin';
 
@@ -50,7 +52,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   // stepped engine (engine_state) — the latter is server-verified ground truth.
   const rows = db.prepare(
     `SELECT u.run_id, u.project_id, u.agent_id, u.agent_name, u.source, u.invocations, u.created_at,
-            CASE WHEN r.execution_report != '' OR r.engine_state != '' THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
             p.name AS project_name, p.user_id AS owner_id, ow.nickname AS owner_nickname,
             r.caller_email
      FROM agent_usage u
@@ -66,7 +68,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const reportedRuns = db.prepare(
     `SELECT r.id, r.project_id, r.flow_json, r.execution_report, r.engine_state
      FROM runs r JOIN projects p ON p.id = r.project_id
-     ${whereSql ? whereSql + ' AND' : 'WHERE'} (r.execution_report != '' OR r.engine_state != '')`
+     ${whereSql ? whereSql + ' AND' : 'WHERE'} (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned')`
   ).all(...args) as { id: string; project_id: string; flow_json: string; execution_report: string; engine_state: string }[];
 
   const currentFlowStmt = db.prepare('SELECT flow_json FROM project_flows WHERE project_id = ?');
@@ -115,8 +117,8 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
 
   const runStats = db.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN r.execution_report != '' OR r.engine_state != '' THEN 1 ELSE 0 END) AS with_report,
-            SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified
+            SUM(CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS with_report,
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified
      FROM runs r JOIN projects p ON p.id = r.project_id ${whereSql}`
   ).get(...args) as { total: number; with_report: number | null; verified: number | null };
 
@@ -236,7 +238,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
     if (!agg) { agg = { nickname: nick, runs: new Set(), invocations: 0, agents: new Set(), last_used: 0 }; byUser.set(nick, agg); }
     agg.runs.add(row.run_id);
     agg.last_used = Math.max(agg.last_used, row.created_at);
-    if (row.source === 'reported') {
+    if (row.source !== 'planned') {   // 'reported' (compiled) OR 'executed' (verified)
       agg.invocations += row.invocations;
       agg.agents.add(keyOf(row));
     }
@@ -248,8 +250,8 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const recentRuns = db.prepare(
     `SELECT r.id, r.created_at, r.status, p.name AS project_name, ow.nickname AS owner_nickname,
             r.caller_email,
-            CASE WHEN r.execution_report != '' OR r.engine_state != '' THEN 1 ELSE 0 END AS has_report,
-            CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END AS verified,
+            CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS verified,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source = 'planned') AS agents_planned,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source != 'planned') AS agents_reported
      FROM runs r JOIN projects p ON p.id = r.project_id JOIN users ow ON ow.id = p.user_id

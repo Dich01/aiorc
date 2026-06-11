@@ -297,6 +297,7 @@
           <div class="sidebar-section-title">Insights</div>
           <nav class="sidebar-nav">
             <a class="sidebar-item" href="analytics.html" title="Usage analytics"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
+            <a class="sidebar-item" href="audit.html" title="Audit"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>
           </nav>
           <div class="sidebar-section-title">Community</div>
           <nav class="sidebar-nav">
@@ -674,6 +675,12 @@
         </div>`;
     }
 
+    function entityTagsBlock(item) {
+      const list = (item.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      if (!list.length) return '';
+      return `<div class="tag-chips" style="margin-top:8px">${list.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`;
+    }
+
     function renderAgentCard(a) {
       const desc = (a.description || '').trim();
       const skills = a.skills || [];
@@ -693,6 +700,7 @@
             </div>
           </div>
           <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${entityTagsBlock(a)}
           ${statsBadges(a)}
           <div><div class="pc-section">Included skills (${skills.length})</div>${skillsBlock}</div>
           <div style="display:flex;gap:8px;align-items:center">${actionsRow('agents', a)}</div>
@@ -714,6 +722,7 @@
             </div>
           </div>
           <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${entityTagsBlock(s)}
           ${statsBadges(s)}
           <div style="font-size:0.78rem;color:var(--muted);font-style:italic;border:1px dashed var(--border);border-radius:6px;padding:8px 10px">
             The full skill content is included when forking.
@@ -737,6 +746,7 @@
             </div>
           </div>
           <div class="repo-card-desc${desc ? '' : ' empty'}">${esc(desc || 'No description.')}</div>
+          ${entityTagsBlock(c)}
           ${statsBadges(c)}
           <div style="font-size:0.78rem;color:var(--muted);font-style:italic;border:1px dashed var(--border);border-radius:6px;padding:8px 10px">
             Business documentation / know-how. Full content is included when forking.

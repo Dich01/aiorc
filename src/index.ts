@@ -4,6 +4,7 @@ import path from 'path';
 
 import './db/client';
 import { backfillUsageFromRuns } from './lib/usage';
+import { mailEnabled } from './lib/mailer';
 
 import authRouter from './routes/auth';
 import usersRouter from './routes/users';
@@ -55,6 +56,7 @@ app.get('/health', (_req, res) => {
     app.listen(PORT, () => {
       console.log(`[AIOrc] Server running at http://localhost:${PORT}`);
       console.log(`[AIOrc] MCP endpoint: http://localhost:${PORT}/mcp`);
+      console.log(`[AIOrc] Email notifications: ${mailEnabled ? 'enabled' : 'disabled (create .mail-config.json to enable)'}`);
     });
   } catch (err) {
     console.error('[AIOrc] Startup error:', err);

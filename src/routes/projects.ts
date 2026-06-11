@@ -39,26 +39,9 @@ const starsCountStmt = db.prepare('SELECT COUNT(*) as n FROM project_stars WHERE
 const forksCountStmt = db.prepare('SELECT COUNT(*) as n FROM projects WHERE forked_from = ?');
 const starredByStmt = db.prepare('SELECT 1 FROM project_stars WHERE project_id = ? AND user_id = ?');
 
-// Normalize a tags input (array or comma-separated string) into a clean,
-// deduped, comma-separated string. Caps individual tag length and total count.
-function normalizeTags(input: unknown): string {
-  let raw: string[];
-  if (Array.isArray(input)) raw = input.map(t => String(t));
-  else if (typeof input === 'string') raw = input.split(',');
-  else return '';
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const t of raw) {
-    const tag = t.trim().replace(/\s+/g, ' ').slice(0, 30);
-    if (!tag) continue;
-    const key = tag.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(tag);
-    if (out.length >= 12) break;
-  }
-  return out.join(', ');
-}
+import { normalizeTags } from '../lib/tags';
+import { sendInvitationEmail } from '../lib/mailer';
+import { validateMcpServer, sanitizeServerName } from '../lib/mcpServers';
 
 interface ProjectRow { id: string; user_id: string; }
 function enrichProject<T extends ProjectRow>(p: T, viewerId?: string): T & {
@@ -104,7 +87,7 @@ router.get('/public', (req, res: Response): void => {
 
   const where: string[] = ['p.is_public = 1'];
   const params: unknown[] = [];
-  if (q) { where.push('(LOWER(p.name) LIKE LOWER(?) OR LOWER(p.description) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { where.push('(LOWER(p.name) LIKE LOWER(?) OR LOWER(p.description) LIKE LOWER(?) OR LOWER(p.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
   const rows = db.prepare(`
@@ -302,9 +285,63 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
   db.prepare(
     'INSERT INTO project_invitations (id, project_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, project.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
+  sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'project', entityName: project.name });
 
   const created = db.prepare('SELECT * FROM project_invitations WHERE id = ?').get(id);
   res.status(201).json(created);
+});
+
+// ── MCP server registry (inventory of external tools the project's agents use) ──
+router.get('/:id/mcp-servers', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json(db.prepare('SELECT * FROM mcp_servers WHERE project_id = ? ORDER BY created_at ASC').all(project.id));
+});
+
+router.post('/:id/mcp-servers', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+
+  const v = validateMcpServer(req.body as Record<string, unknown>);
+  if (!v.ok) { res.status(400).json({ error: v.error }); return; }
+  // Two names that collapse to the same namespace prefix would make tool routing
+  // ambiguous, so the sanitized name must be unique within the project.
+  const wantKey = sanitizeServerName(v.name!);
+  const existing = db.prepare('SELECT name FROM mcp_servers WHERE project_id = ?').all(project.id) as { name: string }[];
+  if (!wantKey || existing.some(e => sanitizeServerName(e.name) === wantKey)) {
+    res.status(400).json({ error: `A server with the tool prefix "${wantKey}__" already exists in this project. Choose a distinct name.` });
+    return;
+  }
+  const id = uuidv4();
+  db.prepare('INSERT INTO mcp_servers (id, project_id, name, url, description, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, project.id, v.name!, v.url!, v.description!, Date.now());
+  res.status(201).json(db.prepare('SELECT * FROM mcp_servers WHERE id = ?').get(id));
+});
+
+router.delete('/:id/mcp-servers/:serverId', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  db.prepare('DELETE FROM mcp_servers WHERE id = ? AND project_id = ?').run(req.params['serverId'], project.id);
+  res.json({ ok: true });
+});
+
+// PATCH /projects/:id/pause — kill switch. Blocks NEW runs; in-flight runs finish.
+router.patch('/:id/pause', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+
+  const { paused } = req.body as { paused?: boolean };
+  if (typeof paused !== 'boolean') { res.status(400).json({ error: 'paused boolean is required' }); return; }
+  db.prepare('UPDATE projects SET paused = ? WHERE id = ?').run(paused ? 1 : 0, project.id);
+  res.json({ id: project.id, paused });
 });
 
 // GET /projects/:id/invitations — list invitations sent for this project (owner only).

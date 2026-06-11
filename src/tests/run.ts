@@ -3,6 +3,9 @@ import { FlowDocument } from '../db/schema';
 import { classifySkips } from '../lib/skipAnalysis';
 import { gradeEval } from '../lib/evalGrading';
 import { chooseTransition, resolveDispatch, allowedEdges } from '../orchestrator/engineCore';
+import { gateExecution, signAudit, verifyAudit, isAbandoned, canAcceptReport, countsAsVerified } from '../lib/controlPlane';
+import { isSafeOutboundUrl } from '../lib/mcpServers';
+import { validateMcpServer, externalToolName, parseExternalTool } from '../lib/mcpServers';
 
 // Pure unit tests — no DB, no server. Run with: npm test
 //
@@ -198,6 +201,138 @@ test('outcome vacío acepta cualquier finalización limpia', () => {
     { completed: true, outcome: 'lo que sea', executedAgents: new Set() }
   );
   assert.strictEqual(v.pass, true);
+});
+
+console.log('controlPlane');
+
+test('proyecto pausado bloquea runs nuevos', () => {
+  const g = gateExecution({ action: 'start', projectPaused: true, runStatus: null });
+  assert.strictEqual(g.allowed, false);
+  assert.ok(g.reason.includes('paus'));
+});
+
+test('proyecto pausado NO interrumpe un run en curso (pause quirúrgico)', () => {
+  const g = gateExecution({ action: 'step', projectPaused: true, runStatus: 'running' });
+  assert.strictEqual(g.allowed, true);
+});
+
+test('run cancelado bloquea su próximo paso sin afectar a otros', () => {
+  const cancelled = gateExecution({ action: 'step', projectPaused: false, runStatus: 'cancelled' });
+  assert.strictEqual(cancelled.allowed, false);
+  assert.ok(cancelled.reason.includes('cancel'));
+  const other = gateExecution({ action: 'step', projectPaused: false, runStatus: 'running' });
+  assert.strictEqual(other.allowed, true);
+});
+
+test('proyecto activo permite todo', () => {
+  assert.strictEqual(gateExecution({ action: 'start', projectPaused: false, runStatus: null }).allowed, true);
+  assert.strictEqual(gateExecution({ action: 'step', projectPaused: false, runStatus: 'running' }).allowed, true);
+});
+
+test('un run abandonado puede retomar (auto-resurrección, no bloqueo)', () => {
+  const g = gateExecution({ action: 'step', projectPaused: false, runStatus: 'abandoned' });
+  assert.strictEqual(g.allowed, true);
+});
+
+test('isAbandoned: 2h sin actividad marca abandono, actividad reciente no', () => {
+  const TWO_H = 2 * 3600 * 1000;
+  assert.strictEqual(isAbandoned(1000, 1000 + TWO_H + 1, TWO_H), true);
+  assert.strictEqual(isAbandoned(1000, 1000 + TWO_H - 1, TWO_H), false);
+});
+
+console.log('report gating');
+
+test('un run cancelado NO acepta workflow.report', () => {
+  assert.strictEqual(canAcceptReport('cancelled'), false);
+});
+test('un run abandonado NO acepta workflow.report', () => {
+  assert.strictEqual(canAcceptReport('abandoned'), false);
+});
+test('running, completed y delivered SÍ aceptan report', () => {
+  assert.strictEqual(canAcceptReport('running'), true);
+  assert.strictEqual(canAcceptReport('completed'), true);
+  assert.strictEqual(canAcceptReport('delivered'), true);
+});
+
+console.log('verified/audited honesty');
+
+test('un run stepped cancelado o abandonado no cuenta como verificado', () => {
+  assert.strictEqual(countsAsVerified('stepped', 'completed'), true);
+  assert.strictEqual(countsAsVerified('stepped', 'running'), true);
+  assert.strictEqual(countsAsVerified('stepped', 'cancelled'), false);
+  assert.strictEqual(countsAsVerified('stepped', 'abandoned'), false);
+  assert.strictEqual(countsAsVerified('', 'completed'), false); // compiled nunca es verified
+});
+
+console.log('SSRF guard');
+
+test('rechaza URLs a hosts internos/privados', () => {
+  assert.strictEqual(isSafeOutboundUrl('http://localhost:3001'), false);
+  assert.strictEqual(isSafeOutboundUrl('http://127.0.0.1/x'), false);
+  assert.strictEqual(isSafeOutboundUrl('http://169.254.169.254/latest'), false);
+  assert.strictEqual(isSafeOutboundUrl('http://10.0.0.5/x'), false);
+  assert.strictEqual(isSafeOutboundUrl('http://192.168.1.1/x'), false);
+  assert.strictEqual(isSafeOutboundUrl('https://mcp.empresa.com/jira'), true);
+});
+
+console.log('auditExport');
+
+test('la firma del export es determinista y verificable', () => {
+  const payload = JSON.stringify({ runId: 'r1', path: ['brain', 'security-qa'] });
+  const sig = signAudit(payload, 'secret-1');
+  assert.strictEqual(sig, signAudit(payload, 'secret-1'));
+  assert.strictEqual(verifyAudit(payload, sig, 'secret-1'), true);
+});
+
+test('alterar el payload o usar otra clave invalida la firma', () => {
+  const payload = JSON.stringify({ runId: 'r1', path: ['brain', 'security-qa'] });
+  const sig = signAudit(payload, 'secret-1');
+  const tampered = JSON.stringify({ runId: 'r1', path: ['brain'] });
+  assert.strictEqual(verifyAudit(tampered, sig, 'secret-1'), false);
+  assert.strictEqual(verifyAudit(payload, sig, 'otra-clave'), false);
+});
+
+console.log('mcpServers (B1)');
+
+test('acepta un MCP server válido', () => {
+  const v = validateMcpServer({ name: 'jira', url: 'https://mcp.empresa.com/jira', description: 'tickets' });
+  assert.strictEqual(v.ok, true);
+});
+
+test('rechaza URL que no sea http/https', () => {
+  assert.strictEqual(validateMcpServer({ name: 'x', url: 'ftp://malo' }).ok, false);
+  assert.strictEqual(validateMcpServer({ name: 'x', url: 'javascript:alert(1)' }).ok, false);
+  assert.strictEqual(validateMcpServer({ name: 'x', url: 'no-es-url' }).ok, false);
+});
+
+test('rechaza nombre vacío o demasiado largo', () => {
+  assert.strictEqual(validateMcpServer({ name: '', url: 'https://ok.com' }).ok, false);
+  assert.strictEqual(validateMcpServer({ name: 'x'.repeat(80), url: 'https://ok.com' }).ok, false);
+});
+
+console.log('gateway B2 (una sola conexión)');
+
+test('los tools externos se namespacean como servidor__tool', () => {
+  assert.strictEqual(externalToolName('jira', 'create_issue'), 'jira__create_issue');
+});
+
+test('el nombre namespaced se parsea de vuelta', () => {
+  const p = parseExternalTool('jira__create_issue');
+  assert.deepStrictEqual(p, { server: 'jira', tool: 'create_issue' });
+});
+
+test('tools propios de AIOrc no se confunden con externos', () => {
+  assert.strictEqual(parseExternalTool('workflow.start'), null);
+  assert.strictEqual(parseExternalTool('workflow'), null);
+});
+
+test('nombres de server se sanitizan al charset MCP', () => {
+  assert.strictEqual(externalToolName('Mi Server!', 'tool'), 'mi-server__tool');
+});
+
+test('un tool con doble guion bajo en su nombre se preserva', () => {
+  const p = parseExternalTool('jira__sub__tool');
+  assert.deepStrictEqual(p, { server: 'jira', tool: 'sub__tool' });
 });
 
 console.log(`\n${passed} tests passed${process.exitCode ? ' (con fallos)' : ''}`);

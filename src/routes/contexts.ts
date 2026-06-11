@@ -1,5 +1,7 @@
 import { Router, Response, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeTags } from '../lib/tags';
+import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Context, ContextInvitation } from '../db/schema';
@@ -95,7 +97,7 @@ router.get('/public', (req: Request, res: Response): void => {
 
   const where: string[] = ['c.is_public = 1'];
   const params: unknown[] = [];
-  if (q) { where.push('(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { where.push('(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?) OR LOWER(c.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
   // A context is emitted into every compiled workflow of the projects that
@@ -167,8 +169,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /contexts — create context
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, content, files, project_attachments } = req.body as {
-    name?: string; description?: string; content?: string; files?: unknown[]; project_attachments?: ProjectAttachment[];
+  const { name, description, tags, content, files, project_attachments } = req.body as {
+    name?: string; description?: string; tags?: unknown; content?: string; files?: unknown[]; project_attachments?: ProjectAttachment[];
   };
 
   if (!name?.trim() || !description?.trim()) {
@@ -181,8 +183,8 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const id = uuidv4();
   const entryContent = normalized.files.find(f => f.is_entry)?.content ?? '';
   db.prepare(
-    'INSERT INTO contexts (id, user_id, name, description, content, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, req.userId!, name.trim(), description.trim(), entryContent, Date.now());
+    'INSERT INTO contexts (id, user_id, name, description, tags, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), entryContent, Date.now());
   writeEntityFiles(id, normalized.files, CONTEXT_FILES);
 
   if (Array.isArray(project_attachments) && project_attachments.length > 0) {
@@ -207,8 +209,8 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, content, files, project_attachments } = req.body as {
-    name?: string; description?: string; content?: string; files?: unknown[]; project_attachments?: ProjectAttachment[];
+  const { name, description, tags, content, files, project_attachments } = req.body as {
+    name?: string; description?: string; tags?: unknown; content?: string; files?: unknown[]; project_attachments?: ProjectAttachment[];
   };
 
   let entryContent = ctx.content;
@@ -219,9 +221,10 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     writeEntityFiles(ctx.id, normalized.files, CONTEXT_FILES);
   }
 
-  db.prepare('UPDATE contexts SET name=?, description=?, content=? WHERE id=?').run(
+  db.prepare('UPDATE contexts SET name=?, description=?, tags=?, content=? WHERE id=?').run(
     name?.trim() || ctx.name,
     description?.trim() || ctx.description,
+    tags !== undefined ? normalizeTags(tags) : ctx.tags,
     entryContent,
     ctx.id
   );
@@ -319,6 +322,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
   db.prepare(
     'INSERT INTO context_invitations (id, context_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, ctx.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
+  sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'context', entityName: ctx.name });
   res.status(201).json(db.prepare('SELECT * FROM context_invitations WHERE id = ?').get(id));
 });
 

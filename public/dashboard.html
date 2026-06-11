@@ -83,6 +83,9 @@
     .page-header .page-subtitle { font-size:0.88rem; color:var(--muted); margin-top:6px; }
     .page-header-text { display:flex; flex-direction:column; }
 
+    .tab-search { width:100%; max-width:420px; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:0.88rem; font-family:inherit; margin-bottom:18px; background:var(--card-bg); color:var(--text); }
+    .tab-search:focus { outline:none; border-color:var(--primary); }
+
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
 
@@ -233,6 +236,9 @@
       <a class="sidebar-item" href="analytics.html" title="Usage analytics">
         <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
       </a>
+      <a class="sidebar-item" href="audit.html" title="Audit">
+        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+      </a>
       <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
         <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
       </a>
@@ -278,6 +284,7 @@
           </div>
           <button class="btn btn-primary" onclick="openNewProjectModal()">+ New project</button>
         </div>
+        <input type="text" id="search-projects" class="tab-search" placeholder="Search projects by name, description or tags…" autocomplete="off" />
         <div id="projects-grid" class="card-grid"></div>
       </div>
 
@@ -291,6 +298,7 @@
           <button class="btn btn-primary" onclick="openAgentModal(null)">+ New agent</button>
         </div>
         <div id="agents-error" class="alert alert-error hidden"></div>
+        <input type="text" id="search-agents" class="tab-search" placeholder="Search agents by name, description or tags…" autocomplete="off" />
         <div id="agents-grid" class="card-grid"></div>
       </div>
 
@@ -304,6 +312,7 @@
           <button class="btn btn-primary" onclick="openSkillModal(null)">+ New skill</button>
         </div>
         <div id="skills-error" class="alert alert-error hidden"></div>
+        <input type="text" id="search-skills" class="tab-search" placeholder="Search skills by name, description or tags…" autocomplete="off" />
         <div id="skills-grid" class="card-grid"></div>
       </div>
 
@@ -317,6 +326,7 @@
           <button class="btn btn-primary" onclick="openContextModal(null)">+ New context</button>
         </div>
         <div id="contexts-error" class="alert alert-error hidden"></div>
+        <input type="text" id="search-contexts" class="tab-search" placeholder="Search contexts by name, description or tags…" autocomplete="off" />
         <div id="contexts-grid" class="card-grid"></div>
       </div>
 
@@ -388,6 +398,10 @@
         <input type="text" id="agent-desc" placeholder="Reviews code for quality and security" autocomplete="off" />
       </div>
       <div class="form-group">
+        <label for="agent-tags">Tags <span style="color:var(--muted);font-weight:400">(optional, comma-separated)</span></label>
+        <input type="text" id="agent-tags" placeholder="backend, tdd, security" autocomplete="off" />
+      </div>
+      <div class="form-group">
         <label for="agent-output-format">Expected output format <span style="color:var(--muted);font-weight:400">(optional)</span></label>
         <input type="text" id="agent-output-format" placeholder='e.g.: JSON { "verdict": "PASS|FAIL" }' autocomplete="off" />
         <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Useful for gates: the next node reads this output literally.</p>
@@ -451,6 +465,10 @@
         <input type="text" id="skill-desc" placeholder="Strict TDD execution guide" autocomplete="off" />
       </div>
       <div class="form-group">
+        <label for="skill-tags">Tags <span style="color:var(--muted);font-weight:400">(optional, comma-separated)</span></label>
+        <input type="text" id="skill-tags" placeholder="backend, tdd, security" autocomplete="off" />
+      </div>
+      <div class="form-group">
         <label>Files</label>
         <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They're hoisted together when any agent in the flow uses this skill; non-markdown files are passed to the agent verbatim inside a code block.</p>
         <div id="skill-files-list" class="skill-files-list"></div>
@@ -501,6 +519,10 @@
       <div class="form-group">
         <label for="context-desc">Description *</label>
         <input type="text" id="context-desc" placeholder="New customer onboarding process" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="context-tags">Tags <span style="color:var(--muted);font-weight:400">(optional, comma-separated)</span></label>
+        <input type="text" id="context-tags" placeholder="backend, tdd, security" autocomplete="off" />
       </div>
       <div class="form-group">
         <label>Files</label>
@@ -672,6 +694,63 @@ workflow.start({
     </div>
   </div>
 
+  <!-- Welcome modal: first visit per user -->
+  <div class="modal-overlay" id="welcome-modal">
+    <div class="modal-box" style="max-width:620px">
+      <h3>Welcome to AIOrc</h3>
+      <p class="modal-subtitle">A note from the person who built it</p>
+
+      <div style="font-size:0.88rem;line-height:1.7;color:var(--text)">
+        <p style="margin-bottom:12px">
+          Hi — I'm Diego. I built AIOrc to solve two problems I got tired of suffering while
+          working with AI agents — and chances are you know them too.
+        </p>
+        <p style="margin-bottom:10px">
+          <strong>The first: sharing flows meant copy and pray.</strong> If you wanted to use the flow
+          a teammate built, you had to ask for the files, copy them by hand into your repo and hope your
+          Claude followed them the same way. Here that disappears: agents, skills and flows live in one
+          place, your AI connects with a token, and if someone improves a crew, everyone gets the
+          improvement instantly.
+        </p>
+        <p style="margin-bottom:10px">
+          <strong>The second: agents don't follow the flows.</strong> They skip steps, invent their own
+          agents, take the easy path. In verified mode, the server hands your AI one step at a time and
+          rejects any deviation — skipping an agent becomes impossible.
+        </p>
+        <p style="margin-bottom:16px">
+          <strong>And the third, which nobody had: the registry.</strong> Every agent on the team is
+          registered and under control here — what exists, who owns it, which flows it's in and what it
+          did, with every run audited step by step. With that come the data: live analytics of which
+          agents actually run, who uses them, and tests the server grades on its own.
+        </p>
+
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:6px">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:8px">Where to start</div>
+          <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:0.84rem">
+            <li>Browse the <a href="repository.html">public repository</a> and fork a crew that fits your work — one click, not an afternoon copying files.</li>
+            <li>Or build your own: agents + flow in a new project.</li>
+            <li>Open the project and follow the "Get this project running" steps to connect your Claude.</li>
+            <li>And when you build something that works — an agent, a skill, a whole crew — <strong>make it public</strong>: someone else forks it, improves it, and the library grows for everyone.</li>
+          </ol>
+        </div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-top:12px">
+          This is an evolving prototype: what helps me most is that you use it, break it and tell me about it.
+          Any blocker or idea, file it in <a href="issues.html">Issues</a> — early feedback is what decides
+          where this goes.
+        </p>
+        <p style="font-size:0.86rem;margin-top:14px">
+          Thanks for trying it.<br>
+          <strong>— Diego</strong>
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <a href="repository.html" class="btn btn-ghost">Explore the repository</a>
+        <button class="btn btn-primary" onclick="closeWelcomeModal()">Get started</button>
+      </div>
+    </div>
+  </div>
+
   <!-- File inputs -->
   <!-- Skill/agent/context file uploads are handled by per-editor hidden inputs
        created dynamically in createFileEditor(). -->
@@ -689,6 +768,16 @@ workflow.start({
     nickEl.textContent = userNickname ? '@' + userNickname : userEmail;
     if (userNickname) nickEl.href = `user.html?nick=${encodeURIComponent(userNickname)}`;
     if (userRole === 'admin') document.getElementById('sb-admin').style.display = '';
+
+    // Welcome message: shown once per user on their first visit to the dashboard.
+    const WELCOME_KEY = 'aiorc.welcomed.' + userEmail;
+    function closeWelcomeModal() {
+      localStorage.setItem(WELCOME_KEY, '1');
+      document.getElementById('welcome-modal').classList.remove('open');
+    }
+    if (!localStorage.getItem(WELCOME_KEY)) {
+      document.getElementById('welcome-modal').classList.add('open');
+    }
 
     document.getElementById('logout-btn').addEventListener('click', e => {
       e.preventDefault();
@@ -863,21 +952,43 @@ workflow.start({
         </div>`;
     }
 
+    function tagChips(tags) {
+      const list = (tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      if (!list.length) return '';
+      return `<div class="tag-chips" style="margin-bottom:10px">${list.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>`;
+    }
+
+    // Client-side search: name + description + tags.
+    function filterBySearch(items, inputId, withTags = false) {
+      const q = (document.getElementById(inputId)?.value || '').trim().toLowerCase();
+      if (!q) return items;
+      return items.filter(it =>
+        (it.name || '').toLowerCase().includes(q) ||
+        (it.description || '').toLowerCase().includes(q) ||
+        (withTags && (it.tags || '').toLowerCase().includes(q)));
+    }
+    const NO_RESULTS = '<p style="color:var(--muted)">No results for that search.</p>';
+
+    let allProjectsCache = [];
     async function loadProjects() {
       try {
         const res = await authFetch('/projects');
-        const projects = await res.json();
-        const grid = document.getElementById('projects-grid');
-        if (!projects.length) {
-          grid.innerHTML = '<p style="color:var(--muted)">No projects yet. Create one to get started.</p>';
-          return;
-        }
-        grid.innerHTML = projects.map(p => renderProjectCard(p)).join('');
+        allProjectsCache = await res.json();
+        renderProjectsGrid();
       } catch {
         const el = document.getElementById('error-msg');
         el.textContent = 'Could not load projects.';
         el.classList.remove('hidden');
       }
+    }
+    function renderProjectsGrid() {
+      const grid = document.getElementById('projects-grid');
+      if (!allProjectsCache.length) {
+        grid.innerHTML = '<p style="color:var(--muted)">No projects yet. Create one to get started.</p>';
+        return;
+      }
+      const projects = filterBySearch(allProjectsCache, 'search-projects', true);
+      grid.innerHTML = projects.length ? projects.map(p => renderProjectCard(p)).join('') : NO_RESULTS;
     }
 
     async function deleteProject(id, name) {
@@ -921,16 +1032,27 @@ workflow.start({
 
     // ── Agents ────────────────────────────────────────────────────────────────
     let currentAgentId = null;
+    let allAgentsCache = [];
     async function loadAgents() {
       try {
         const res = await authFetch('/agents');
-        const agents = await res.json();
-        const grid = document.getElementById('agents-grid');
-        if (!agents.length) {
-          grid.innerHTML = '<p style="color:var(--muted)">No agents yet. Create one or upload a .md file.</p>';
-          return;
-        }
-        grid.innerHTML = agents.map(a => {
+        allAgentsCache = await res.json();
+        renderAgentsGrid();
+      } catch {
+        const el = document.getElementById('agents-error');
+        el.textContent = 'Could not load agents.';
+        el.classList.remove('hidden');
+      }
+    }
+    function renderAgentsGrid() {
+      const grid = document.getElementById('agents-grid');
+      if (!allAgentsCache.length) {
+        grid.innerHTML = '<p style="color:var(--muted)">No agents yet. Create one or upload a .md file.</p>';
+        return;
+      }
+      const agents = filterBySearch(allAgentsCache, 'search-agents', true);
+      if (!agents.length) { grid.innerHTML = NO_RESULTS; return; }
+      grid.innerHTML = agents.map(a => {
           const skills = a.skills || [];
           const skillBadge = skills.length
             ? `<div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">
@@ -941,6 +1063,7 @@ workflow.start({
           return `<div class="item-card">
             <div class="item-card-name">${escHtml(a.name)}</div>
             <div class="item-card-desc">${escHtml(a.description)}</div>
+            ${tagChips(a.tags)}
             ${skillBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
@@ -948,11 +1071,6 @@ workflow.start({
             </div>
           </div>`;
         }).join('');
-      } catch {
-        const el = document.getElementById('agents-error');
-        el.textContent = 'Could not load agents.';
-        el.classList.remove('hidden');
-      }
     }
     // ── Project picker state (shared by agent & skill modals) ─────────────────
     let availableProjects = [];           // [{id, name}]
@@ -1041,7 +1159,7 @@ workflow.start({
     async function openAgentModal(id) {
       currentAgentId = id || null;
       document.getElementById('agent-modal-title').textContent = id ? 'Edit agent' : 'New agent';
-      ['agent-name','agent-desc','agent-output-format'].forEach(k => document.getElementById(k).value = '');
+      ['agent-name','agent-desc','agent-tags','agent-output-format'].forEach(k => document.getElementById(k).value = '');
       document.getElementById('agent-modal-error').classList.add('hidden');
       document.getElementById('skill-picker-search').value = '';
       selectedSkillIds = [];
@@ -1060,6 +1178,7 @@ workflow.start({
           const a = await res.json();
           document.getElementById('agent-name').value = a.name || '';
           document.getElementById('agent-desc').value = a.description || '';
+          document.getElementById('agent-tags').value = a.tags || '';
           document.getElementById('agent-output-format').value = a.expected_output_format || '';
           agentFiles = Array.isArray(a.files) ? a.files : null;
           agentContent = a.content || '';
@@ -1144,6 +1263,7 @@ workflow.start({
     async function saveAgent() {
       const name = document.getElementById('agent-name').value.trim();
       const description = document.getElementById('agent-desc').value.trim();
+      const tags = document.getElementById('agent-tags').value.trim();
       const expected_output_format = document.getElementById('agent-output-format').value.trim();
       const errEl = document.getElementById('agent-modal-error');
       const btn = document.getElementById('agent-save-btn');
@@ -1159,7 +1279,7 @@ workflow.start({
         const method = currentAgentId ? 'PUT' : 'POST';
         const res = await authFetch(url, {
           method,
-          body: JSON.stringify({ name, description, files: agentFiles, expected_output_format, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
+          body: JSON.stringify({ name, description, tags, files: agentFiles, expected_output_format, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
         });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }
@@ -1177,16 +1297,27 @@ workflow.start({
 
     // ── Skills ────────────────────────────────────────────────────────────────
     let currentSkillId = null;
+    let allSkillsCache = [];
     async function loadSkills() {
       try {
         const res = await authFetch('/skills');
-        const skills = await res.json();
-        const grid = document.getElementById('skills-grid');
-        if (!skills.length) {
-          grid.innerHTML = '<p style="color:var(--muted)">No skills yet. Create one or upload a .md file.</p>';
-          return;
-        }
-        grid.innerHTML = skills.map(s => {
+        allSkillsCache = await res.json();
+        renderSkillsGrid();
+      } catch {
+        const el = document.getElementById('skills-error');
+        el.textContent = 'Could not load skills.';
+        el.classList.remove('hidden');
+      }
+    }
+    function renderSkillsGrid() {
+      const grid = document.getElementById('skills-grid');
+      if (!allSkillsCache.length) {
+        grid.innerHTML = '<p style="color:var(--muted)">No skills yet. Create one or upload a .md file.</p>';
+        return;
+      }
+      const skills = filterBySearch(allSkillsCache, 'search-skills', true);
+      if (!skills.length) { grid.innerHTML = NO_RESULTS; return; }
+      grid.innerHTML = skills.map(s => {
           const fc = s.files_count || 0;
           // Only show the multi-file badge when the author actually split the skill.
           // Single-file skills (the default) get no badge to avoid noise.
@@ -1197,6 +1328,7 @@ workflow.start({
           <div class="item-card">
             <div class="item-card-name">${escHtml(s.name)}</div>
             <div class="item-card-desc">${escHtml(s.description)}</div>
+            ${tagChips(s.tags)}
             ${filesBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
@@ -1205,11 +1337,6 @@ workflow.start({
           </div>
         `;
         }).join('');
-      } catch {
-        const el = document.getElementById('skills-error');
-        el.textContent = 'Could not load skills.';
-        el.classList.remove('hidden');
-      }
     }
     // ── Generic multi-file editor (shared by skills, agents, contexts) ──────────
     // Names may be any text resource (.md, .sh, .json…). Only the entry file is
@@ -1361,7 +1488,7 @@ workflow.start({
     async function openSkillModal(id) {
       currentSkillId = id || null;
       document.getElementById('skill-modal-title').textContent = id ? 'Edit skill' : 'New skill';
-      ['skill-name','skill-desc'].forEach(k => document.getElementById(k).value = '');
+      ['skill-name','skill-desc','skill-tags'].forEach(k => document.getElementById(k).value = '');
       document.getElementById('skill-modal-error').classList.add('hidden');
       selectedSkillProjectIds = [];
       let skillFiles = null, skillContent = '';
@@ -1376,6 +1503,7 @@ workflow.start({
         if (res.ok) {
           const s = await res.json();
           document.getElementById('skill-name').value = s.name || '';
+          document.getElementById('skill-tags').value = s.tags || '';
           document.getElementById('skill-desc').value = s.description || '';
           skillFiles = Array.isArray(s.files) ? s.files : null;
           skillContent = s.content || '';
@@ -1454,6 +1582,7 @@ workflow.start({
     async function saveSkill() {
       const name = document.getElementById('skill-name').value.trim();
       const description = document.getElementById('skill-desc').value.trim();
+      const tags = document.getElementById('skill-tags').value.trim();
       const errEl = document.getElementById('skill-modal-error');
       const btn = document.getElementById('skill-save-btn');
       if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
@@ -1479,7 +1608,7 @@ workflow.start({
         const res = await authFetch(url, {
           method,
           body: JSON.stringify({
-            name, description,
+            name, description, tags,
             files: skillFiles,
             project_ids: selectedSkillProjectIds
           })
@@ -1502,16 +1631,27 @@ workflow.start({
     let currentContextId = null;
     let selectedContextAttachments = []; // [{project_id, share_on_fork}]
 
+    let allContextsCache = [];
     async function loadContexts() {
       try {
         const res = await authFetch('/contexts');
-        const items = await res.json();
-        const grid = document.getElementById('contexts-grid');
-        if (!items.length) {
-          grid.innerHTML = '<p style="color:var(--muted)">No contexts yet. Create one with the project documentation or know-how.</p>';
-          return;
-        }
-        grid.innerHTML = items.map(c => {
+        allContextsCache = await res.json();
+        renderContextsGrid();
+      } catch {
+        const el = document.getElementById('contexts-error');
+        el.textContent = 'Could not load contexts.';
+        el.classList.remove('hidden');
+      }
+    }
+    function renderContextsGrid() {
+      const grid = document.getElementById('contexts-grid');
+      if (!allContextsCache.length) {
+        grid.innerHTML = '<p style="color:var(--muted)">No contexts yet. Create one with the project documentation or know-how.</p>';
+        return;
+      }
+      const items = filterBySearch(allContextsCache, 'search-contexts', true);
+      if (!items.length) { grid.innerHTML = NO_RESULTS; return; }
+      grid.innerHTML = items.map(c => {
           const atts = c.project_attachments || [];
           const shareCount = atts.filter(a => a.share_on_fork).length;
           const summary = atts.length
@@ -1521,6 +1661,7 @@ workflow.start({
             <div class="item-card">
               <div class="item-card-name">${escHtml(c.name)}</div>
               <div class="item-card-desc">${escHtml(c.description)}</div>
+              ${tagChips(c.tags)}
               <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
               <div class="item-card-footer">
                 <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
@@ -1529,12 +1670,11 @@ workflow.start({
             </div>
           `;
         }).join('');
-      } catch {
-        const el = document.getElementById('contexts-error');
-        el.textContent = 'Could not load contexts.';
-        el.classList.remove('hidden');
-      }
     }
+    document.getElementById('search-projects').addEventListener('input', renderProjectsGrid);
+    document.getElementById('search-agents').addEventListener('input', renderAgentsGrid);
+    document.getElementById('search-skills').addEventListener('input', renderSkillsGrid);
+    document.getElementById('search-contexts').addEventListener('input', renderContextsGrid);
 
     function renderContextProjectChips() {
       const host = document.getElementById('context-project-picker');
@@ -1585,7 +1725,7 @@ workflow.start({
     async function openContextModal(id) {
       currentContextId = id || null;
       document.getElementById('context-modal-title').textContent = id ? 'Edit context' : 'New context';
-      ['context-name','context-desc'].forEach(k => document.getElementById(k).value = '');
+      ['context-name','context-desc','context-tags'].forEach(k => document.getElementById(k).value = '');
       document.getElementById('context-modal-error').classList.add('hidden');
       selectedContextAttachments = [];
       let ctxFiles = null, ctxContent = '';
@@ -1599,6 +1739,7 @@ workflow.start({
         if (res.ok) {
           const c = await res.json();
           document.getElementById('context-name').value = c.name || '';
+          document.getElementById('context-tags').value = c.tags || '';
           document.getElementById('context-desc').value = c.description || '';
           ctxFiles = Array.isArray(c.files) ? c.files : null;
           ctxContent = c.content || '';
@@ -1677,6 +1818,7 @@ workflow.start({
     async function saveContext() {
       const name = document.getElementById('context-name').value.trim();
       const description = document.getElementById('context-desc').value.trim();
+      const tags = document.getElementById('context-tags').value.trim();
       const errEl = document.getElementById('context-modal-error');
       const btn = document.getElementById('context-save-btn');
       if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
@@ -1693,7 +1835,7 @@ workflow.start({
         const method = currentContextId ? 'PUT' : 'POST';
         const res = await authFetch(url, {
           method,
-          body: JSON.stringify({ name, description, files: ctxFiles, project_attachments: selectedContextAttachments })
+          body: JSON.stringify({ name, description, tags, files: ctxFiles, project_attachments: selectedContextAttachments })
         });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }

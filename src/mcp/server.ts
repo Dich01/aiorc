@@ -4,6 +4,55 @@ import { requireProjectKey, ProjectKeyRequest } from '../middleware/projectKey';
 import { compileFlow } from '../orchestrator';
 import { startRun, nextStep } from '../orchestrator/engine';
 import { recordReportedUsage } from '../lib/usage';
+import { gateExecution } from '../lib/controlPlane';
+import { externalToolName, parseExternalTool, sanitizeServerName } from '../lib/mcpServers';
+import { canAcceptReport } from '../lib/controlPlane';
+import { v4 as uuidv4 } from 'uuid';
+
+// ── External MCP proxy (single-connection principle) ────────────────────────
+// The client keeps ONE MCP connection: AIOrc. Tools of external servers
+// registered in the project appear namespaced (`<server>__<tool>`) in
+// tools/list and their calls are forwarded server-side with logging.
+interface McpServerRow { id: string; project_id: string; name: string; url: string; description: string }
+
+async function callExternal(url: string, method: string, params?: unknown, timeoutMs = 5000): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      signal: ctrl.signal,
+    });
+    return await r.json() as { result?: unknown; error?: { code: number; message: string } };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Short-TTL cache so the MCP handshake (tools/list) never blocks on a dead
+// external server, and repeated handshakes don't re-fetch every time.
+const extToolsCache = new Map<string, { at: number; tools: unknown[] }>();
+const EXT_TOOLS_TTL = 30_000;
+
+async function listExternalTools(projectId: string): Promise<unknown[]> {
+  const cached = extToolsCache.get(projectId);
+  if (cached && Date.now() - cached.at < EXT_TOOLS_TTL) return cached.tools;
+  const servers = db.prepare('SELECT * FROM mcp_servers WHERE project_id = ?').all(projectId) as McpServerRow[];
+  const out: unknown[] = [];
+  await Promise.all(servers.map(async s => {
+    try {
+      const resp = await callExternal(s.url, 'tools/list', undefined, 2500);
+      const tools = (resp.result as { tools?: { name: string; description?: string }[] } | undefined)?.tools ?? [];
+      for (const t of tools) {
+        out.push({ ...t, name: externalToolName(s.name, t.name), description: `[${s.name}] ${t.description ?? ''}`.trim() });
+      }
+    } catch { /* unreachable server: skip its tools, AIOrc's own tools still work */ }
+  }));
+  extToolsCache.set(projectId, { at: Date.now(), tools: out });
+  return out;
+}
 
 const router = Router();
 
@@ -158,7 +207,8 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
       return;
     }
 
-    res.json(rpcResult(id, { tools: [START_TOOL, NEXT_TOOL, WORKFLOW_TOOL, REPORT_TOOL, EVAL_TOOL] }));
+    const externalTools = await listExternalTools(project.id);
+    res.json(rpcResult(id, { tools: [START_TOOL, NEXT_TOOL, WORKFLOW_TOOL, REPORT_TOOL, EVAL_TOOL, ...externalTools] }));
     return;
   }
 
@@ -166,6 +216,32 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
   if (method === 'tools/call') {
     const toolName = (params as { name?: string; arguments?: Record<string, unknown> })?.name;
     const toolArgs = (params as { name?: string; arguments?: Record<string, unknown> })?.arguments || {};
+
+    // External tool? Proxy it through the single AIOrc connection, with logging.
+    const ext = toolName ? parseExternalTool(toolName) : null;
+    if (ext) {
+      const servers = db.prepare('SELECT * FROM mcp_servers WHERE project_id = ?').all(project.id) as McpServerRow[];
+      const server = servers.find(s => sanitizeServerName(s.name) === ext.server);
+      if (!server) {
+        res.json(rpcError(id, -32602, `Unknown external server "${ext.server}". Register it in the project's Connect tab.`));
+        return;
+      }
+      const started = Date.now();
+      const callerEmail = String(req.headers['x-user-email'] ?? '').trim().slice(0, 254);
+      let ok = 0;
+      try {
+        const resp = await callExternal(server.url, 'tools/call', { name: ext.tool, arguments: toolArgs });
+        ok = resp && !resp.error ? 1 : 0;
+        res.json(resp.error ? { jsonrpc: '2.0', id, error: resp.error } : rpcResult(id, resp.result));
+      } catch (err) {
+        res.json(rpcError(id, -32603, `External server "${server.name}" unreachable: ${(err as Error).message}`));
+      } finally {
+        db.prepare(
+          'INSERT INTO mcp_tool_calls (id, project_id, server_id, server_name, tool, caller_email, ok, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).run(uuidv4(), project.id, server.id, server.name, ext.tool, callerEmail, ok, Date.now() - started, Date.now());
+      }
+      return;
+    }
 
     const KNOWN_TOOLS = ['workflow', 'workflow.start', 'workflow.next', 'workflow.report', 'workflow.eval'];
     if (!toolName || !KNOWN_TOOLS.includes(toolName)) {
@@ -196,6 +272,16 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
           ].join('\n');
       res.json(rpcResult(id, { content: [{ type: 'text', text }], _meta: { cases: cases.length } }));
       return;
+    }
+
+    // Kill switch: a paused project accepts no NEW runs. In-flight stepped
+    // runs are gated per-step below (cancel affects a single run only).
+    if (toolName === 'workflow' || toolName === 'workflow.start') {
+      const gate = gateExecution({ action: 'start', projectPaused: !!project.paused, runStatus: null });
+      if (!gate.allowed) {
+        res.json(rpcResult(id, { content: [{ type: 'text', text: gate.reason }], _meta: { blocked: 'paused' } }));
+        return;
+      }
     }
 
     // workflow.start — stepped, server-verified execution
@@ -236,10 +322,20 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
         return;
       }
       const runRow = db.prepare(
-        'SELECT id, project_id, flow_json, engine_state, mode, eval_case_id FROM runs WHERE id = ? AND project_id = ?'
-      ).get(runId, project.id) as { id: string; project_id: string; flow_json: string; engine_state: string; mode: string; eval_case_id: string } | undefined;
+        'SELECT id, project_id, flow_json, engine_state, mode, eval_case_id, status FROM runs WHERE id = ? AND project_id = ?'
+      ).get(runId, project.id) as { id: string; project_id: string; flow_json: string; engine_state: string; mode: string; eval_case_id: string; status: string } | undefined;
       if (!runRow) {
         res.json(rpcError(id, -32602, `Unknown runId "${runId}" for this project.`));
+        return;
+      }
+      // Soft-abandoned runs resurrect when the client comes back.
+      if (runRow.status === 'abandoned') {
+        db.prepare(`UPDATE runs SET status = 'running', last_activity_at = ? WHERE id = ?`).run(Date.now(), runRow.id);
+        runRow.status = 'running';
+      }
+      const stepGate = gateExecution({ action: 'step', projectPaused: !!project.paused, runStatus: runRow.status });
+      if (!stepGate.allowed) {
+        res.json(rpcResult(id, { content: [{ type: 'text', text: stepGate.reason }], _meta: { blocked: runRow.status } }));
         return;
       }
       const result = nextStep(runRow, String(toolArgs['output'] ?? ''), String(toolArgs['next'] ?? ''));
@@ -260,9 +356,13 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
         return;
       }
 
-      const run = db.prepare('SELECT id FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id);
+      const run = db.prepare('SELECT id, status FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { id: string; status: string } | undefined;
       if (!run) {
         res.json(rpcError(id, -32602, `Unknown runId "${runId}" for this project.`));
+        return;
+      }
+      if (!canAcceptReport(run.status)) {
+        res.json(rpcError(id, -32602, `Run "${runId}" is ${run.status}; it no longer accepts reports.`));
         return;
       }
 

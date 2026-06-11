@@ -1,5 +1,7 @@
 import { Router, Response, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeTags } from '../lib/tags';
+import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Skill, SkillFile, SkillInvitation } from '../db/schema';
@@ -175,7 +177,7 @@ router.get('/public', (req: Request, res: Response): void => {
 
   const where: string[] = ['s.is_public = 1'];
   const params: unknown[] = [];
-  if (q) { where.push('(LOWER(s.name) LIKE LOWER(?) OR LOWER(s.description) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`); }
+  if (q) { where.push('(LOWER(s.name) LIKE LOWER(?) OR LOWER(s.description) LIKE LOWER(?) OR LOWER(s.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
   // A skill "runs" whenever an agent that carries it is executed, so usage is
@@ -256,8 +258,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /skills — create skill. Accepts `files: [...]` or legacy `content: "..."`.
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, files, content, project_ids } = req.body as {
-    name?: string; description?: string;
+  const { name, description, tags, files, content, project_ids } = req.body as {
+    name?: string; description?: string; tags?: unknown;
     files?: IncomingFile[]; content?: string;
     project_ids?: string[];
   };
@@ -271,8 +273,8 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const id = uuidv4();
   const entryContent = normalized.files.find(f => f.is_entry)?.content ?? '';
   db.prepare(
-    'INSERT INTO skills (id, user_id, name, description, content, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, req.userId!, name.trim(), description.trim(), entryContent, Date.now());
+    'INSERT INTO skills (id, user_id, name, description, tags, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), entryContent, Date.now());
   writeSkillFiles(id, normalized.files);
 
   if (Array.isArray(project_ids) && project_ids.length > 0) {
@@ -298,15 +300,16 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, files, content, project_ids } = req.body as {
-    name?: string; description?: string;
+  const { name, description, tags, files, content, project_ids } = req.body as {
+    name?: string; description?: string; tags?: unknown;
     files?: IncomingFile[]; content?: string;
     project_ids?: string[];
   };
 
-  db.prepare('UPDATE skills SET name=?, description=? WHERE id=?').run(
+  db.prepare('UPDATE skills SET name=?, description=?, tags=? WHERE id=?').run(
     name?.trim() || skill.name,
     description?.trim() || skill.description,
+    tags !== undefined ? normalizeTags(tags) : skill.tags,
     skill.id
   );
 
@@ -391,6 +394,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
   db.prepare(
     'INSERT INTO skill_invitations (id, skill_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, skill.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
+  sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'skill', entityName: skill.name });
   res.status(201).json(db.prepare('SELECT * FROM skill_invitations WHERE id = ?').get(id));
 });
 

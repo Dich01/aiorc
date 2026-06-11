@@ -486,13 +486,13 @@
 
   <!-- ===== HERO ===== -->
   <section class="hero">
-    <div class="hero-eyebrow">AI agent orchestration · MCP · Server-verified execution</div>
+    <div class="hero-eyebrow">Deterministic agent orchestration · Server-enforced · MCP-native</div>
     <h1 class="hero-title">
-      <span class="hero-title-main">AI<span style="color:#4361ee">Orc</span> is a platform for teams &amp; developers to build AI workflows, share them, and reuse across projects.</span><br><em>"One developer builds a flow... everyone uses it."</em>
+      <span class="hero-title-main">AI<span style="color:#4361ee">Orc</span> makes your AI agents follow the workflow you define — instead of skipping steps and going off-script.</span><br><em>"One developer builds a flow... everyone uses it."</em>
 
     </h1>
     <p class="hero-subtitle">
-      AIOrc turns visual agent flows into instructions any MCP client can execute — and, in verified mode, the server validates every step the model takes. Define the process once, share it with your team, and prove it ran as designed.
+      Your AI agents skip steps and ignore the process you defined. AIOrc fixes that at the root: a server drives execution one step at a time and rejects anything your workflow doesn't allow — so agents can't go off-script or skip a step. Design the process once, share it with your team or the community, and — when you need it — audit every run as signed evidence.
     </p>
     <div class="hero-actions">
       <button class="btn-hero-primary" onclick="openRegisterModal()">Get started free</button>
@@ -507,9 +507,9 @@
   <section class="section how-section">
     <div class="section-inner">
       <div class="section-eyebrow">How it works</div>
-      <h2 class="section-title">Design-time compilation, not runtime</h2>
+      <h2 class="section-title">Design it once. Run it verified. Prove what happened.</h2>
       <p class="section-body">
-        Unlike traditional agent frameworks that orchestrate in real time, AIOrc compiles the flow before execution. The target model receives exact instructions and follows them sequentially.
+        Building agents is the easy part. The hard part is knowing they followed the right process. AIOrc turns a visual workflow into a contract the server enforces — and a record you can audit. No new tool for your team: it works through the AI clients they already use.
       </p>
       <div class="steps-grid">
         <div class="step-card">
@@ -520,21 +520,21 @@
         </div>
         <div class="step-card">
           <div class="step-num">Step 02</div>
-          <div class="step-icon">⚙️</div>
-          <h3>Compile the graph</h3>
-          <p>AIOrc topo-sorts the graph, resolves parallel branches, detects convergences and generates ordered imperative instructions ready to execute.</p>
+          <div class="step-icon">🔌</div>
+          <h3>Connect once</h3>
+          <p>Your team's AI client (Claude Code, Cursor…) connects to AIOrc with a single token. No new app to learn, no per-developer setup — the workflow shows up where they already work.</p>
         </div>
         <div class="step-card">
           <div class="step-num">Step 03</div>
-          <div class="step-icon">🔌</div>
-          <h3>Configure via MCP</h3>
-          <p>Connect AIOrc to your work environment in minutes. Once integrated, your AI model detects available flows and can invoke them directly, with no manual steps or extra configuration.</p>
+          <div class="step-icon">🛡️</div>
+          <h3>Run it verified</h3>
+          <p>The server drives execution one step at a time and rejects any move the flow doesn't allow. Agents can't skip steps or go off-script — the unpredictability that keeps agents out of production, gone by design.</p>
         </div>
         <div class="step-card">
           <div class="step-num">Step 04</div>
-          <div class="step-icon">🚀</div>
-          <h3>Execute</h3>
-          <p>Compiled mode: one MCP call returns the whole flow. Verified mode: the server hands the model one step at a time, rejecting any transition the graph does not allow.</p>
+          <div class="step-icon">📋</div>
+          <h3>Audit &amp; govern</h3>
+          <p>Every run is recorded step by step and exportable as signed, tamper-evident evidence. Pause any project instantly, see which agents actually run, and prove the process was followed.</p>
         </div>
       </div>
     </div>
@@ -544,15 +544,15 @@
   <section class="section">
     <div class="section-inner">
       <div class="section-eyebrow">Capabilities</div>
-      <h2 class="section-title">Everything you need to orchestrate AI agents</h2>
+      <h2 class="section-title">Everything you need to put agents in production — and keep them in line</h2>
       <p class="section-body">
-        From simple linear flows to pipelines with conditional logic and quality validations.
+        Govern, verify and audit your team's agents, and reuse what works across every project.
       </p>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-glyph">⚡</div>
           <h3>Two execution modes</h3>
-          <p>Compiled: the whole flow in a single MCP response, zero orchestration latency. Verified: server-driven stepping where illegal transitions are rejected and every dispatch is recorded as ground truth.</p>
+          <p>Compiled: the whole flow in a single MCP response, zero orchestration latency. Verified: server-driven stepping where illegal transitions are rejected, every dispatch is recorded as ground truth, and any project can be paused or any run cancelled — surgically, without touching the rest.</p>
         </div>
         <div class="feature-card">
           <div class="feature-glyph">🔀</div>
@@ -593,6 +593,16 @@
           <div class="feature-glyph">✅</div>
           <h3>Deterministic evals</h3>
           <p>Test cases per flow, graded by the server against the verified execution path. Know whether a change to an agent improved the flow or broke it — before your team finds out.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🗂️</div>
+          <h3>Signed audit trails</h3>
+          <p>Every run is reconstructable step by step: who ran it, which transitions it took and why. Export any run as HMAC-signed JSON — tamper-evident evidence, aligned with EU AI Act logging requirements.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-glyph">🔗</div>
+          <h3>One connection to rule them all</h3>
+          <p>Your client connects to AIOrc once. Workflow tools and any external MCP servers you register are exposed through that single connection — proxied, namespaced and logged.</p>
         </div>
       </div>
     </div>
@@ -659,7 +669,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
     <div class="section-inner">
       <div class="section-eyebrow">The platform</div>
       <h2 class="section-title">Designed to work, not to configure</h2>
-      <p class="section-body">From the visual canvas to the project panel — all in one interface built for teams building with AI agents.</p>
+      <p class="section-body">From the visual canvas to the project panel — all in one interface built for anyone building with AI agents.</p>
       <div class="screenshots-grid">
         <div class="screenshot-card" onclick="openLightbox('Screen_Icon.png', 'Flow Builder — agent canvas')">
           <img src="Screen_Icon.png" alt="Flow Builder — agent canvas" />
@@ -683,7 +693,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
   <section class="section usecases-section">
     <div class="section-inner">
       <div class="section-eyebrow">Who AIOrc is for</div>
-      <h2 class="section-title">Built for teams working with AI agents</h2>
+      <h2 class="section-title">Built for anyone shipping AI agents — solo or in a team</h2>
       <div class="usecase-list">
         <div class="usecase-card"><div class="usecase-glyph">👥</div><div><h3>Collaborating teams</h3><p>Share flows and agents with your teammates. Every team member builds on what others have already tested, without starting from scratch on each project.</p></div></div>
         <div class="usecase-card"><div class="usecase-glyph">🧩</div><div><h3>Skills as team assets</h3><p>Package specific capabilities as reusable skills. A well-defined skill becomes available to all projects and developers on the team.</p></div></div>

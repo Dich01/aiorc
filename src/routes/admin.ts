@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { sweepAbandonedRuns } from './runs';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ const count = (sql: string, ...args: unknown[]): number =>
 // top projects, community and system health. Everything an operator needs to
 // answer "is this app being used, by whom, and is it healthy?".
 router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Response): void => {
+  sweepAbandonedRuns();
   const now = Date.now();
   const d1 = now - 86_400_000;
   const d7 = now - 7 * 86_400_000;
@@ -43,8 +45,8 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
   const runsTotal = count('SELECT COUNT(*) n FROM runs');
   const runs24h = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d1);
   const runs7d = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d7);
-  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE execution_report != '' OR engine_state != ''`);
-  const runsVerified = count(`SELECT COUNT(*) n FROM runs WHERE mode = 'stepped'`);
+  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE (execution_report != '' OR engine_state != '') AND status NOT IN ('cancelled','abandoned')`);
+  const runsVerified = count(`SELECT COUNT(*) n FROM runs WHERE mode = 'stepped' AND status NOT IN ('cancelled','abandoned')`);
   const invocationsTotal = (db.prepare(
     `SELECT COALESCE(SUM(invocations), 0) s FROM agent_usage WHERE source != 'planned'`
   ).get() as { s: number }).s;
@@ -113,10 +115,10 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
 
   // ── Top projects ───────────────────────────────────────────────────────────
   const topProjects = db.prepare(
-    `SELECT p.id, p.name, p.is_public, ow.nickname AS owner,
+    `SELECT p.id, p.name, p.is_public, p.paused, ow.nickname AS owner,
             COUNT(r.id) AS runs,
-            SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified,
-            SUM(CASE WHEN r.execution_report != '' OR r.engine_state != '' THEN 1 ELSE 0 END) AS audited,
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified,
+            SUM(CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS audited,
             MAX(r.created_at) AS last_run_at
      FROM projects p
      JOIN users ow ON ow.id = p.user_id

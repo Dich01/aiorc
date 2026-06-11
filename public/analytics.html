@@ -178,6 +178,9 @@
       <a class="sidebar-item active" href="analytics.html" title="Usage analytics">
         <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
       </a>
+      <a class="sidebar-item" href="audit.html" title="Audit">
+        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+      </a>
       <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
         <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
       </a>
@@ -195,6 +198,9 @@
 
     <div class="sidebar-section-title">Help</div>
     <nav class="sidebar-nav">
+      <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
+        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+      </button>
       <a class="sidebar-item" href="faq.html" title="Documentation">
         <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
       </a>
@@ -437,6 +443,7 @@
     </div>
   </div>
 
+  <script src="info-modal.js"></script>
   <script>
     const token = localStorage.getItem('token');
     if (!token) window.location.href = 'index.html';

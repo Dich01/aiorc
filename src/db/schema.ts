@@ -19,6 +19,7 @@ export interface Project {
   tags: string; // comma-separated labels for identifying/filtering projects (may be '')
   api_key: string;
   is_public: number; // 0 = private (api key required), 1 = public (no auth)
+  paused: number;    // 1 = kill switch on: new runs blocked (in-flight runs may finish)
   forked_from: string | null; // source project id if this is a fork
   created_at: number;
 }
@@ -28,6 +29,7 @@ export interface Agent {
   user_id: string;
   name: string;
   description: string;
+  tags: string; // comma-separated labels (may be '')
   input_schema: string; // JSON string
   steps: string;        // JSON string
   content: string;      // full markdown
@@ -42,6 +44,7 @@ export interface Skill {
   user_id: string;
   name: string;
   description: string;
+  tags: string; // comma-separated labels (may be '')
   /** @deprecated Legacy single-blob content. New code reads/writes skill_files;
    *  this column is kept populated with the entry file's content for safe rollback. */
   content: string;
@@ -69,6 +72,7 @@ export interface Context {
   user_id: string;
   name: string;
   description: string;
+  tags: string; // comma-separated labels (may be '')
   /** @deprecated Legacy single-blob content. New code reads/writes context_files;
    *  kept populated with the entry file's content for safe rollback. */
   content: string;          // markdown body — business know-how / documentation
@@ -335,6 +339,7 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT NOT NULL DEFAULT '',
   api_key TEXT UNIQUE NOT NULL,
   is_public INTEGER NOT NULL DEFAULT 0,
+  paused INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
@@ -346,6 +351,7 @@ CREATE TABLE IF NOT EXISTS agents (
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '',
   input_schema TEXT NOT NULL,
   steps TEXT NOT NULL,
   content TEXT NOT NULL DEFAULT '',
@@ -362,6 +368,7 @@ CREATE TABLE IF NOT EXISTS skills (
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '',
   content TEXT NOT NULL DEFAULT '',  -- legacy column kept for safe rollback; new code reads/writes skill_files
   is_public INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
@@ -447,6 +454,7 @@ CREATE TABLE IF NOT EXISTS contexts (
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '',
   content TEXT NOT NULL,
   is_public INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
@@ -631,10 +639,36 @@ CREATE TABLE IF NOT EXISTS runs (
   caller_email TEXT NOT NULL DEFAULT '',
   mode TEXT NOT NULL DEFAULT '',
   engine_state TEXT NOT NULL DEFAULT '',
+  last_activity_at INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id)
 );
+
+CREATE TABLE IF NOT EXISTS mcp_servers (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_servers_project ON mcp_servers(project_id);
+
+CREATE TABLE IF NOT EXISTS mcp_tool_calls (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  server_id TEXT NOT NULL,
+  server_name TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  caller_email TEXT NOT NULL DEFAULT '',
+  ok INTEGER NOT NULL DEFAULT 0,
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_tool_calls_project ON mcp_tool_calls(project_id);
 
 CREATE TABLE IF NOT EXISTS eval_cases (
   id TEXT PRIMARY KEY,
