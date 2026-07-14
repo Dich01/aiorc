@@ -17,7 +17,7 @@ import db from '../db/client';
 //   "smtp_host": "smtp.gmail.com",        // optional, defaults to Gmail
 //   "smtp_port": 465,                     // optional
 //   "from_name": "AIOrc",                 // optional
-//   "public_url": "https://aiorc.tailb15007.ts.net"  // links in the emails
+//   "public_url": "https://204-216-144-224.sslip.io"  // links in the emails
 // }
 
 interface MailConfig {

@@ -5,3 +5,18 @@ dist/
 .jwt-secret
 .mail-config.json
 .audit-secret
+*.key
+*.pem
+.env
+
+# Runtime database (contiene datos reales; la DB viva vive en el servidor)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.bak
+data/*.bak-shm
+data/*.bak-wal
+
+# Config local de Claude Code (importa rutas privadas)
+CLAUDE.md
+.claude/
