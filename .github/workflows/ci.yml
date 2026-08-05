@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Build flow editor bundle
+        run: npm run build:flow
+
+  no-database-committed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if a database or secret file is tracked
+        run: |
+          matches=$(git ls-files | grep -Ei '\.db$|\.db-wal$|\.db-shm$|\.bak$|\.bak-wal$|\.bak-shm$|\.sqlite$|\.env$|\.pem$|\.key$|jwt-secret|audit-secret' || true)
+          if [ -n "$matches" ]; then
+            echo "These files must never be committed — they hold real user data or secrets:"
+            echo "$matches"
+            exit 1
+          fi
+          echo "No database or secret files tracked."

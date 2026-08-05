@@ -4,6 +4,7 @@
 
 > Todo lo que Dify y n8n te cobran en su plan Enterprise — multi-equipo, permisos, auditoría, instalarlo en tus servidores — aquí es gratis.
 
+[![CI](https://github.com/Dich01/aiorc/actions/workflows/ci.yml/badge.svg)](https://github.com/Dich01/aiorc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ### Live demo

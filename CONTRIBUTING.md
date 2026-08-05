@@ -24,7 +24,7 @@ npm run build        # tsc typecheck + emit
 npm run build:flow   # Vite build of the editor bundle
 ```
 
-Please make sure all three pass locally before opening a PR. Node 20 and 22 are the supported versions.
+All three run in CI on Node 20 and 22. Please make sure they pass locally before opening a PR.
 
 The test runner is a small custom harness in `src/tests/run.ts` — there is no Jest or Vitest. To add a test, register it in that file following the existing pattern. Tests are plain assertions against the orchestrator and library functions; they do not need a running server.
 
