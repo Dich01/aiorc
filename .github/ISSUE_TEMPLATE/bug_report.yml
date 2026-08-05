@@ -1,0 +1,68 @@
+name: Bug report
+description: Something behaves differently than documented or expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do not include real project API keys, tokens or user emails in anything you paste below.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you observed, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a project with two agents
+        2. Draw a flow with a conditional edge
+        3. Call workflow.start via MCP
+        4. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of AIOrc
+      options:
+        - Orchestration engine (transitions, caps, stepped mode)
+        - MCP server or bridge
+        - Flow editor (React Flow)
+        - Analytics or skip detection
+        - Evals
+        - Audit export or signing
+        - Auth, invitations or permissions
+        - Admin panel
+        - Other or not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Output of `git rev-parse --short HEAD`, or the release tag.
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      description: Output of `node -v`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server output or browser console. Redact keys and emails.
+      render: shell

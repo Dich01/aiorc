@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Dich01/aiorc/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue. See SECURITY.md.
+  - name: Live demo
+    url: https://204-216-144-224.sslip.io
+    about: A running instance, if you want to see AIOrc before installing it.

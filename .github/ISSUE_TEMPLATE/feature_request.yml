@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a capability or a change in behavior
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the situation you are in, not the solution you have in mind. This is the most useful part of the request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to see
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including whether this can already be done another way.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Does this fit AIOrc's design constraints
+      description: AIOrc's server never calls an LLM — it enforces the contract and audits execution, while the consuming model does the work. Proposals that move inference into the server are usually out of scope.
+      options:
+        - label: This does not require the AIOrc server to call an LLM
+        - label: I am willing to work on this myself

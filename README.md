@@ -4,6 +4,14 @@
 
 > Todo lo que Dify y n8n te cobran en su plan Enterprise — multi-equipo, permisos, auditoría, instalarlo en tus servidores — aquí es gratis.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+### Live demo
+
+**There is an instance running right now at [204-216-144-224.sslip.io](https://204-216-144-224.sslip.io)** — the landing page is open to anyone; register a free account to create a project and draw a flow.
+
+![AIOrc — deterministic agent orchestration, server-enforced, MCP-native](docs/img/hero.png)
+
 AIOrc is the **control plane for a company's AI agents**: a multi-tenant registry that stores, shares, governs and *measures* agents — and exposes each project's workflow to any MCP-compatible LLM client (Claude Code, Cursor, or anything that speaks MCP) with **server-verified execution**. The orchestration graph is enforced by the server, not just suggested to the model; any project can be paused instantly (kill switch), any in-flight run cancelled surgically, and every run exported as a signed, tamper-evident audit trail.
 
 ## Why
@@ -31,6 +39,20 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 | Usage analytics | Live trading-style chart (1m→all-time ranges, 5s refresh), breakdowns by agent/project/skill/context, skip vs off-path classification, per-user attribution, run detail with full execution path |
 | Admin panel | Users, KPIs, adoption funnel, signups, top projects, community and system health (admin role only) |
 | Community layer | Stars, forks, invitations, issues with voting — an internal app store for your company's agents |
+
+## Screenshots
+
+**Design once, run verified, prove what happened** — the four stages of a flow's life.
+
+![How it works: design the flow, connect once, run it verified, audit and govern](docs/img/how-it-works.png)
+
+**What you get** — execution modes, conditional routing, reusable skills, live analytics and deterministic evals.
+
+![Capabilities: two execution modes, conditional routing, agents in markdown, reusable skills, fail-closed by design, multi-project with auth, contexts, live usage analytics, deterministic evals](docs/img/capabilities.png)
+
+**Who it's for** — from a solo developer shipping agents to a team standardizing its process.
+
+![Who AIOrc is for: collaborating teams, skills as team assets, flow community, multiple projects, development pipelines, standardized processes, engineering leads](docs/img/who-its-for.png)
 
 ## Quickstart
 
@@ -79,4 +101,16 @@ Point any MCP client at your project using the bridge:
 
 ## Status
 
-Early stage (v0.1), used in production internally. SQLite-backed, single-node. Postgres support and broader test coverage are on the roadmap. Issues and PRs welcome.
+Early stage (v0.1), used in production internally. SQLite-backed, single-node. Postgres support and broader test coverage are on the roadmap.
+
+## Contributing
+
+Issues and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, project layout and conventions — the short version is `npm install && npm test` (42 tests, no framework), branch off `development`, and never commit anything under `data/`.
+
+The areas where help goes furthest right now are Postgres support, test coverage on the routes and MCP surface, and documentation of the MCP integration path.
+
+For security vulnerabilities, please use private reporting rather than a public issue — see [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 Diego Cheloni.
