@@ -14,7 +14,13 @@ npm run dev          # API + UI on http://localhost:3001
 
 Open `http://localhost:3001`, register a user, create a project, then add agents and draw a flow.
 
-`npm run seed` loads sample data if you want something to look at immediately.
+Sample data — three users, four projects, agents and skills — is seeded automatically the first time the server starts against an empty database. You do not need to run anything for it. Log in as `user1@aiorc.dev` / `password123`, or `admin@aiorc.dev` / `admin123` for the admin panel.
+
+One caveat: the seeded example flows predate the mandatory Start node, so `workflow.start` rejects them until you run the migration once:
+
+```bash
+./node_modules/.bin/ts-node src/migrate-add-start.ts
+```
 
 ## Running the checks
 

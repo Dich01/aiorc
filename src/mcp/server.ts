@@ -255,18 +255,18 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
         'SELECT id, name, input, expected_outcome, must_run_agents FROM eval_cases WHERE project_id = ? ORDER BY created_at ASC'
       ).all(project.id) as { id: string; name: string; input: string; expected_outcome: string; must_run_agents: string }[];
       const text = cases.length === 0
-        ? 'Este proyecto no tiene eval cases definidos. Crealos en la página de Usage analytics.'
+        ? 'This project has no eval cases defined. Create them on the Usage analytics page, then call workflow.eval again.'
         : [
-            `# Eval suite — ${cases.length} caso(s)`,
+            `# Eval suite — ${cases.length} case(s)`,
             '',
-            'Para correr la suite: por CADA caso llamá `workflow.start` con `{"evalCase": "<id>"}` y llevá el run hasta el final con `workflow.next`. El servidor califica automáticamente al completar.',
+            'To run the suite: for EACH case, call `workflow.start` with `{"evalCase": "<id>"}` and drive the run to completion with `workflow.next`. The server grades each run automatically once it completes.',
             '',
             ...cases.map(c => [
               `## ${c.name}`,
               `- id: \`${c.id}\``,
               `- input: ${c.input}`,
-              c.expected_outcome ? `- outcome esperado: ${c.expected_outcome}` : '- outcome esperado: (cualquier finalización limpia)',
-              c.must_run_agents ? `- agentes obligatorios: ${c.must_run_agents}` : '',
+              c.expected_outcome ? `- expected outcome: ${c.expected_outcome}` : '- expected outcome: (any clean completion)',
+              c.must_run_agents ? `- required agents: ${c.must_run_agents}` : '',
               ''
             ].filter(Boolean).join('\n')),
           ].join('\n');

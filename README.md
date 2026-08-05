@@ -1,8 +1,6 @@
 # AIOrc
 
-**Everything Dify and n8n charge for in their Enterprise plans — multi-team workspaces, permissions, audit trails, self-hosting — is free and open source here.**
-
-> Todo lo que Dify y n8n te cobran en su plan Enterprise — multi-equipo, permisos, auditoría, instalarlo en tus servidores — aquí es gratis.
+**The control plane for a company's AI agents. The server enforces your workflow graph instead of suggesting it to the model — illegal transitions are rejected, skipped steps are impossible by construction, and every run exports as signed evidence.**
 
 [![CI](https://github.com/Dich01/aiorc/actions/workflows/ci.yml/badge.svg)](https://github.com/Dich01/aiorc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -40,6 +38,12 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 | Usage analytics | Live trading-style chart (1m→all-time ranges, 5s refresh), breakdowns by agent/project/skill/context, skip vs off-path classification, per-user attribution, run detail with full execution path |
 | Admin panel | Users, KPIs, adoption funnel, signups, top projects, community and system health (admin role only) |
 | Community layer | Stars, forks, invitations, issues with voting — an internal app store for your company's agents |
+
+## How it compares
+
+Dify and n8n put multi-team workspaces, granular permissions, audit trails and self-hosting behind an Enterprise plan. Here they are in the MIT-licensed core, with no seat count and no paid tier.
+
+The larger difference is architectural. Those tools — and agent frameworks like LangGraph and CrewAI — hand the model a workflow and trust it to follow along. AIOrc drives execution from the server: it releases one step at a time, validates every transition against the graph's edges, enforces per-agent invocation caps, and records each dispatch as ground truth. "The agent skipped a step" stops being something you discover afterwards from a self-reported log, because the skip is refused while it is being attempted.
 
 ## Screenshots
 

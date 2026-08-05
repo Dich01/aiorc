@@ -60,7 +60,7 @@ router.put('/', requireAuth, (req: AuthRequest, res: Response): void => {
     );
     if (validationErrors.length > 0) {
       res.status(400).json({
-        error: 'Flow inválido',
+        error: 'Invalid flow',
         validation_errors: validationErrors,
       });
       return;

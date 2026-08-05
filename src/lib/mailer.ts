@@ -69,11 +69,11 @@ if (config) {
 
 export const mailEnabled = !!config;
 
-const ENTITY_ES: Record<string, string> = {
-  project: 'al proyecto',
-  agent: 'al agente',
-  skill: 'a la skill',
-  context: 'al context',
+const ENTITY_LABEL: Record<string, string> = {
+  project: 'the project',
+  agent: 'the agent',
+  skill: 'the skill',
+  context: 'the context',
 };
 
 export interface InvitationMail {
@@ -90,28 +90,28 @@ export function sendInvitationEmail(opts: InvitationMail): void {
 
   const inviter = db.prepare('SELECT nickname, email FROM users WHERE id = ?')
     .get(opts.inviterUserId) as { nickname: string; email: string } | undefined;
-  const inviterName = inviter?.nickname ? '@' + inviter.nickname : (inviter?.email ?? 'Alguien');
-  const what = ENTITY_ES[opts.entityType] ?? 'a';
-  const subject = `AIOrc — ${inviterName} te invitó ${what} "${opts.entityName}"`;
+  const inviterName = inviter?.nickname ? '@' + inviter.nickname : (inviter?.email ?? 'Someone');
+  const what = ENTITY_LABEL[opts.entityType] ?? 'the item';
+  const subject = `AIOrc — ${inviterName} invited you to ${what} "${opts.entityName}"`;
 
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:540px;margin:0 auto;color:#1f2937">
     <div style="padding:24px 28px;border:1px solid #e5e7eb;border-radius:12px">
       <div style="font-size:1.15rem;font-weight:700;margin-bottom:4px">AI<span style="color:#4361ee">Orc</span></div>
       <p style="font-size:0.95rem;line-height:1.6">
-        <strong>${inviterName}</strong> te invitó ${what} <strong>"${opts.entityName}"</strong> en AIOrc,
-        la plataforma donde el equipo comparte y ejecuta sus agentes de IA.
+        <strong>${inviterName}</strong> invited you to ${what} <strong>"${opts.entityName}"</strong> on AIOrc,
+        where your team shares and runs its AI agents.
       </p>
       <p style="font-size:0.9rem;line-height:1.6">
-        Para aceptar la invitación, entrá con este email (<strong>${opts.inviteeEmail}</strong>) —
-        si todavía no tenés cuenta, creala con este mismo email y la invitación te va a estar esperando
-        en la sección <strong>Team</strong> del dashboard.
+        To accept, sign in with this address (<strong>${opts.inviteeEmail}</strong>).
+        If you do not have an account yet, create one with this same address and the
+        invitation will be waiting in the <strong>Team</strong> section of the dashboard.
       </p>
       <a href="${config.publicUrl}" style="display:inline-block;background:#4361ee;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:0.9rem;font-weight:600;margin:10px 0">
-        Abrir AIOrc
+        Open AIOrc
       </a>
       <p style="font-size:0.75rem;color:#6b7280;margin-top:14px">
-        Si no esperabas este mensaje, podés ignorarlo.
+        If you were not expecting this message, you can ignore it.
       </p>
     </div>
   </div>`;
@@ -122,8 +122,8 @@ export function sendInvitationEmail(opts: InvitationMail): void {
     subject,
     html,
   }).then(() => {
-    console.log(`[mail] invitación enviada a ${opts.inviteeEmail} (${opts.entityType} "${opts.entityName}")`);
+    console.log(`[mail] invitation sent to ${opts.inviteeEmail} (${opts.entityType} "${opts.entityName}")`);
   }).catch(err => {
-    console.warn(`[mail] fallo enviando a ${opts.inviteeEmail}:`, err?.message ?? err);
+    console.warn(`[mail] failed sending to ${opts.inviteeEmail}:`, err?.message ?? err);
   });
 }

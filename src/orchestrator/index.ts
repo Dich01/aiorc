@@ -36,9 +36,9 @@ export function validateFlow(
 
   // Rule 1: exactly 1 Start
   if (startNodes.length === 0) {
-    errors.push('El flujo no tiene nodo Start. Agregá uno desde la toolbar.');
+    errors.push('The flow has no Start node. Add one from the toolbar and connect it to the first agent.');
   } else if (startNodes.length > 1) {
-    errors.push(`El flujo tiene ${startNodes.length} nodos Start. Solo puede haber uno.`);
+    errors.push(`The flow has ${startNodes.length} Start nodes. Delete all but one — a flow has a single entry point.`);
   }
 
   // Rule 1 cont: Start must have exactly 1 outgoing edge, 0 incoming
@@ -46,13 +46,13 @@ export function validateFlow(
     const incoming = edges.filter(e => e.to === start.id);
     const outgoing = edges.filter(e => e.from === start.id);
     if (incoming.length > 0) {
-      errors.push(`El nodo Start no puede tener aristas entrantes.`);
+      errors.push(`The Start node cannot have incoming edges. Remove the edges pointing at it.`);
     }
     if (outgoing.length === 0) {
-      errors.push(`El nodo Start tiene que conectarse al primer agente.`);
+      errors.push(`The Start node must connect to the first agent. Draw an edge from Start to the agent the flow begins with.`);
     }
     if (outgoing.length > 1) {
-      errors.push(`El nodo Start tiene ${outgoing.length} aristas salientes. Solo puede tener una.`);
+      errors.push(`The Start node has ${outgoing.length} outgoing edges and may only have one. To fan out at the beginning, point Start at a Parallel node instead.`);
     }
   }
 
@@ -61,26 +61,26 @@ export function validateFlow(
     const outgoing = edges.filter(e => e.from === end.id);
     if (outgoing.length > 0) {
       const label = end.outcome ? `End "${end.outcome}"` : `End ${end.id}`;
-      errors.push(`El nodo ${label} no puede tener aristas salientes.`);
+      errors.push(`${label} cannot have outgoing edges — End terminates the flow. Remove them, or point them at an agent instead.`);
     }
   }
 
   // Rule 3: agent nodes reference real agents
   for (const node of agentNodes) {
     if (!node.agent_id) {
-      errors.push(`Nodo agente ${node.id} no tiene agent_id.`);
+      errors.push(`Agent node ${node.id} has no agent assigned. Open the node and pick an agent, or delete the node.`);
     } else if (!agentsById.has(node.agent_id)) {
-      errors.push(`Nodo agente ${node.id} referencia un agente que no existe (${node.agent_id}).`);
+      errors.push(`Agent node ${node.id} references an agent that no longer exists (${node.agent_id}). Reassign the node to an existing agent, or delete it.`);
     }
   }
 
   // Rule 4: edges reference real nodes
   for (const edge of edges) {
     if (!nodeIds.has(edge.from)) {
-      errors.push(`Arista ${edge.id}: nodo origen (${edge.from}) no existe.`);
+      errors.push(`Edge ${edge.id} starts at a node that does not exist (${edge.from}). Delete the edge.`);
     }
     if (!nodeIds.has(edge.to)) {
-      errors.push(`Arista ${edge.id}: nodo destino (${edge.to}) no existe.`);
+      errors.push(`Edge ${edge.id} points at a node that does not exist (${edge.to}). Delete the edge.`);
     }
   }
 
@@ -90,10 +90,10 @@ export function validateFlow(
     const outgoing = edges.filter(e => e.from === par.id);
     const label = par.label ? `Parallel "${par.label}"` : `Parallel ${par.id}`;
     if (incoming.length === 0) {
-      errors.push(`El nodo ${label} no tiene aristas entrantes.`);
+      errors.push(`${label} has no incoming edges, so it can never be reached. Connect an agent or Start to it, or delete it.`);
     }
     if (outgoing.length < 2) {
-      errors.push(`El nodo ${label} tiene ${outgoing.length} arista(s) saliente(s). Un nodo Parallel necesita al menos 2 (es un fork).`);
+      errors.push(`${label} has ${outgoing.length} outgoing edge(s). A Parallel node is a fork and needs at least 2 — add another branch, or replace it with a direct edge.`);
     }
   }
 
@@ -160,14 +160,14 @@ function loadSkillsForAgent(agentId: string): Skill[] {
 export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
   const skills = loadSkillsForAgent(agent.id);
   const lines: string[] = [];
-  lines.push(`### Agente: ${agent.name}`);
-  lines.push(`**Máximo de invocaciones:** ${maxInvocations}`);
-  if (agent.description) lines.push(`**Descripción:** ${agent.description}`);
+  lines.push(`### Agent: ${agent.name}`);
+  lines.push(`**Maximum invocations:** ${maxInvocations}`);
+  if (agent.description) lines.push(`**Description:** ${agent.description}`);
   if (agent.expected_output_format) {
-    lines.push(`**Formato de output esperado:** ${agent.expected_output_format}`);
+    lines.push(`**Expected output format:** ${agent.expected_output_format}`);
   }
   if (skills.length > 0) {
-    lines.push(`**Skills aplicadas (consultá la sección "Skills" del prompt arriba para las reglas completas):**`);
+    lines.push(`**Skills that apply (see the "Skills" section above for the full rules):**`);
     for (const skill of skills) {
       lines.push(`- *${skill.name}*: ${skill.description}`);
     }
@@ -177,15 +177,15 @@ export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
   const files = loadEntityFiles(agent.id, AGENT_FILES);
   const hasFileContent = files.some(f => f.content && f.content.trim());
   if (hasFileContent) {
-    lines.push(`**Instrucciones del agente:**`);
+    lines.push(`**Agent instructions:**`);
     renderFilesToLines(files, lines);
   } else if (agent.content && agent.content.trim()) {
-    lines.push(`**Instrucciones del agente:**`);
+    lines.push(`**Agent instructions:**`);
     lines.push(agent.content.trim());
   }
   if (skills.length > 0) {
     lines.push('');
-    lines.push(`**Verificación obligatoria:** antes de continuar, releé tu output y confirmá explícitamente que cumple cada skill aplicada arriba — incluyendo las reglas detalladas en la sección "Skills". Si no cumple, corregilo antes de pasar al siguiente paso.`);
+    lines.push(`**Mandatory self-check:** before moving on, re-read your output and state explicitly that it satisfies every skill listed above, including the detailed rules in the "Skills" section. If it does not, fix it before taking the next step.`);
   }
   return lines.join('\n');
 }
@@ -202,12 +202,12 @@ export function renderContextsSection(projectId: string, lines: string[]): void 
   ).all(projectId) as Context[];
 
   if (contexts.length === 0) return;
-  lines.push('## Contexto del proyecto');
+  lines.push('## Project context');
   lines.push('');
-  lines.push('Documentación y conocimiento del negocio que aplica a TODO el flujo. Leelo antes de actuar y mantenelo en mente al razonar sobre cada paso.');
+  lines.push('Documentation and business knowledge that applies to the WHOLE flow. Read it before acting and keep it in mind when reasoning about each step.');
   lines.push('');
   for (const ctx of contexts) {
-    lines.push(`### Contexto: ${ctx.name}`);
+    lines.push(`### Context: ${ctx.name}`);
     if (ctx.description) {
       lines.push(`*${ctx.description}*`);
       lines.push('');
@@ -237,9 +237,9 @@ export function renderSkillsSection(agents: Agent[], lines: string[]): void {
   }
 
   if (skillsById.size === 0) return;
-  lines.push('## Skills (reglas obligatorias — consultalas antes y durante la invocación de cada agente)');
+  lines.push('## Skills (mandatory rules — consult them before and during every agent invocation)');
   lines.push('');
-  lines.push('Cada agente declara qué skills aplica. Antes de actuar, leé las reglas de los skills declarados por el agente que estás invocando y validá tu output contra ellas. Una skill puede tener varios archivos: el primero (SKILL.md) es la entrada principal y los demás son material de soporte que la entrada puede referenciar por nombre. Los archivos de soporte pueden ser documentación o recursos ejecutables (scripts `.sh`, configs `.json`/`.yaml`, etc.); cuando un archivo viene en un bloque de código, usalo tal cual — es un recurso que la skill provee para que lo ejecutes o lo apliques.');
+  lines.push('Each agent declares which skills it applies. Before acting, read the rules of the skills declared by the agent you are invoking and validate your output against them. A skill can have several files: the first (SKILL.md) is the entry point and the rest are supporting material the entry point may reference by name. Supporting files can be documentation or executable resources (`.sh` scripts, `.json`/`.yaml` configs, and so on); when a file arrives in a code fence, use it as-is — it is a resource the skill provides for you to run or apply.');
   lines.push('');
   for (const skill of skillsById.values()) {
     lines.push(`### Skill: ${skill.name}`);
@@ -277,7 +277,7 @@ export function compileFlow(
   if (!flowRecord) {
     return {
       runId, nodeCount: 0, agentNames: [],
-      workflow: 'No hay flujo configurado para este proyecto. Configurá el flow en el dashboard de AIOrc.',
+      workflow: 'This project has no flow configured. Draw one in the flow builder on the project page, then call this tool again.',
       error: 'no_flow'
     };
   }
@@ -287,7 +287,7 @@ export function compileFlow(
   if (flow.nodes.length === 0) {
     return {
       runId, nodeCount: 0, agentNames: [],
-      workflow: 'El flujo está vacío. Agregá nodos en el flow builder.',
+      workflow: 'This project\'s flow is empty. Add a Start node and at least one agent in the flow builder, then call this tool again.',
       error: 'empty_flow'
     };
   }
@@ -311,13 +311,13 @@ export function compileFlow(
 
   // Build the prompt
   const lines: string[] = [];
-  lines.push('# AIOrc — Workflow Multi-Agente');
+  lines.push('# AIOrc — multi-agent workflow');
   lines.push('');
-  lines.push('Sos el orquestador. Tenés disponibles los siguientes sub-agentes y una topología recomendada para invocarlos. Seguí la topología como guía; las condiciones en las aristas son hints en lenguaje natural — interpretalas con criterio.');
+  lines.push('You are the orchestrator. Below are the sub-agents available to you and the topology for invoking them. Follow the topology; the conditions on the edges are natural-language hints, so interpret them against the previous agent output.');
   lines.push('');
 
   if (input && Object.keys(input).length > 0) {
-    lines.push('## Input del usuario');
+    lines.push('## User input');
     lines.push('```json');
     lines.push(JSON.stringify(input, null, 2));
     lines.push('```');
@@ -327,7 +327,7 @@ export function compileFlow(
   renderContextsSection(projectId, lines);
   renderSkillsSection(agents, lines);
 
-  lines.push('## Sub-agentes disponibles');
+  lines.push('## Available sub-agents');
   lines.push('');
   for (const node of flow.nodes.filter(n => n.type === 'agent')) {
     const agent = agentsById.get(node.agent_id!);
@@ -340,28 +340,28 @@ export function compileFlow(
   }
 
   // Topology
-  lines.push('## Topología del flujo');
+  lines.push('## Flow topology');
   lines.push('');
 
   function nodeLabel(n: FlowNode): string {
     if (n.type === 'agent') return agentsById.get(n.agent_id!)?.name ?? n.agent_name ?? n.id;
-    if (n.type === 'end') return n.outcome ? `🏁 End: "${n.outcome}"` : `🏁 End`;
-    if (n.type === 'start') return '🟢 Start';
-    if (n.type === 'parallel') return n.label ? `⫲ Parallel: "${n.label}"` : `⫲ Parallel`;
+    if (n.type === 'end') return n.outcome ? `End: "${n.outcome}"` : `End`;
+    if (n.type === 'start') return 'Start';
+    if (n.type === 'parallel') return n.label ? `Parallel: "${n.label}"` : `Parallel`;
     return n.id;
   }
 
   const startNode = flow.nodes.find(n => n.type === 'start');
   const startEdge = startNode ? flow.edges.find(e => e.from === startNode.id) : null;
   const startTarget = startEdge ? flow.nodes.find(n => n.id === startEdge.to) : null;
-  const startTargetLabel = startTarget ? nodeLabel(startTarget) : '(sin destino)';
+  const startTargetLabel = startTarget ? nodeLabel(startTarget) : '(no target)';
   const startVerb = startTarget?.type === 'parallel'
-    ? `dispará el fork *${startTargetLabel}* (todas sus ramas en paralelo).`
-    : `comenzá invocando al sub-agente *${startTargetLabel}*.`;
+    ? `fire the *${startTargetLabel}* fork — all of its branches, in parallel.`
+    : `begin by invoking the *${startTargetLabel}* sub-agent.`;
 
-  lines.push(`**Punto de entrada (Start):** ${startVerb}`);
+  lines.push(`**Entry point (Start):** ${startVerb}`);
   lines.push('');
-  lines.push(`**Aristas (transiciones permitidas):**`);
+  lines.push(`**Edges (allowed transitions):**`);
   lines.push('');
 
   // Build outgoing adjacency
@@ -392,48 +392,48 @@ export function compileFlow(
     const fromLabel = nodeLabel(node);
     const edgesOut = (outgoing.get(node.id) ?? []).slice().sort((a, b) => (a.priority ?? 1000) - (b.priority ?? 1000));
     if (edgesOut.length === 0 && node.type !== 'start') {
-      lines.push(`- *${fromLabel}* — sin aristas salientes (terminal: si llegás acá, terminás el workflow)`);
+      lines.push(`- *${fromLabel}* — no outgoing edges (terminal: if you reach it, end the workflow)`);
     } else if (node.type === 'parallel') {
-      lines.push(`- Desde *${fromLabel}* (FORK — ejecutá TODAS las ramas siguientes en paralelo y esperá a que terminen antes de continuar):`);
+      lines.push(`- From *${fromLabel}* (FORK — run ALL of the branches below in parallel and wait for them to finish before continuing):`);
       for (const eo of edgesOut) {
         const targetNode = flow.nodes.find(x => x.id === eo.to);
         const targetLabel = targetNode ? nodeLabel(targetNode) : eo.to;
         lines.push(`    ∥ → *${targetLabel}*`);
       }
     } else {
-      lines.push(`- Desde *${fromLabel}*:`);
+      lines.push(`- From *${fromLabel}*:`);
       for (const eo of edgesOut) {
         const targetNode = flow.nodes.find(x => x.id === eo.to);
         const targetLabel = targetNode ? nodeLabel(targetNode) : eo.to;
-        const cond = eo.condition ? ` *cuando:* ${eo.condition}` : ' *(sin condición — fallback)*';
+        const cond = eo.condition ? ` *when:* ${eo.condition}` : ' *(no condition — fallback)*';
         lines.push(`    → *${targetLabel}*${cond}`);
       }
     }
   }
 
   lines.push('');
-  lines.push('## Reglas de ejecución');
+  lines.push('## Execution rules');
   lines.push('');
-  lines.push(`1. Empezá por el punto de entrada (Start). El primer agente a invocar es el destino de la arista que sale de Start.`);
-  lines.push(`2. Después de cada agente, evaluá las condiciones de sus aristas salientes y elegí UNA sola transición.`);
-  lines.push(`3. Las condiciones son lenguaje natural — interpretalas según el output del agente anterior.`);
-  lines.push(`4. Si una arista no tiene condición, es la transición default (fallback) cuando ninguna otra coincide.`);
-  lines.push(`5. Si TODAS las aristas tienen condición y NINGUNA coincide, terminá el workflow exitosamente.`);
-  lines.push(`6. Las aristas hacia un agente anterior son legítimas — implementan loops/reintentos.`);
-  lines.push(`7. **Cap por agente:** llevá la cuenta de cuántas veces invocaste cada agente. Si llegás a su máximo y la topología te quiere mandar de nuevo a él, cortá el flujo y reportá al usuario.`);
-  lines.push(`8. **Nodos Parallel (⫲):** cuando la topología te lleva a un nodo Parallel, NO elijás una rama — disparás TODAS las ramas concurrentemente. Idealmente, en una misma respuesta del LLM emití una llamada a la Agent tool por rama (\`subagent_type: "general-purpose"\` con la prescripción del agente correspondiente embebida en el prompt) para que corran con context windows separados en paralelo real. Si no es viable, ejecutá las prescripciones de las ramas de forma secuencial sin elegir — todas se ejecutan. Esperá a que TODAS las ramas terminen y consolidá sus outputs antes de avanzar al nodo común downstream. El cap por agente sigue aplicando dentro de cada rama.`);
-  lines.push(`9. Si llegás a un nodo End, terminá el workflow y reportá su outcome (si tiene).`);
-  lines.push(`10. Si llegás a un agente sin aristas salientes, terminá el workflow.`);
-  lines.push(`11. Si no podés decidir entre varias transiciones (ambigüedad real), parar y consultar al usuario.`);
+  lines.push(`1. Begin at the entry point (Start). The first agent to invoke is the target of the edge leaving Start.`);
+  lines.push(`2. After each agent, evaluate the conditions on its outgoing edges and take exactly ONE transition.`);
+  lines.push(`3. Conditions are natural language. Interpret them against the output of the agent that just ran.`);
+  lines.push(`4. An edge with no condition is the fallback: take it when no other condition matches.`);
+  lines.push(`5. If EVERY edge has a condition and NONE matches, end the workflow successfully.`);
+  lines.push(`6. Edges pointing back to an earlier agent are legitimate: they implement loops and retries.`);
+  lines.push(`7. **Per-agent cap:** keep count of how many times you invoke each agent. If an agent reaches its maximum and the topology sends you back to it, stop the flow and tell the user which cap was hit.`);
+  lines.push(`8. **Parallel nodes:** when the topology leads to a Parallel node, do NOT pick a branch — you fire ALL of them concurrently. Preferably emit one Agent tool call per branch in a single response (\`subagent_type: "general-purpose"\`, with that branch's agent instructions embedded in the prompt) so each runs in its own context window and the parallelism is real. If that is not possible, execute every branch sequentially without choosing between them — all of them run either way. Wait for ALL branches to finish and consolidate their outputs before advancing to the shared node downstream. Per-agent caps still apply inside each branch.`);
+  lines.push(`9. When you reach an End node, end the workflow and report its outcome if it has one.`);
+  lines.push(`10. When you reach an agent with no outgoing edges, end the workflow.`);
+  lines.push(`11. If you genuinely cannot choose between transitions, stop and ask the user rather than guessing.`);
   lines.push('');
 
   // List the End nodes for clarity
   const ends = flow.nodes.filter(n => n.type === 'end');
   if (ends.length > 0) {
-    lines.push('## Outcomes posibles del workflow');
+    lines.push('## Possible workflow outcomes');
     lines.push('');
     for (const end of ends) {
-      const outcomeText = end.outcome ?? '(sin etiqueta)';
+      const outcomeText = end.outcome ?? '(unlabelled)';
       lines.push(`- ${outcomeText}`);
     }
     lines.push('');
@@ -441,16 +441,16 @@ export function compileFlow(
 
   // Mandatory report — the audit trail that powers usage analytics and
   // skip detection. A run without a report can't be verified.
-  lines.push('## Reporte obligatorio');
+  lines.push('## Mandatory report');
   lines.push('');
-  lines.push('Cuando el workflow termine (por éxito, error o corte), llamá SIEMPRE a `workflow.report`. El workflow NO está completo hasta que lo hagas. Usá exactamente los nombres de agente tal como aparecen en este prompt:');
+  lines.push('When the workflow ends — success, failure or early stop — you MUST call `workflow.report`. The workflow is not complete, and the run is not auditable, until you do. Use the agent names exactly as they appear in this prompt:');
   lines.push('```json');
   lines.push(JSON.stringify({
     runId,
     report: {
       path: ['agent_name_1', 'agent_name_2'],
       invocations_per_agent: { 'agent_name_1': 1, 'agent_name_2': 3 },
-      branches_taken: { 'agent_name_1': 'condición que se cumplió' },
+      branches_taken: { 'agent_name_1': 'the condition that matched' },
       ended_at: 'End: success',
       final_summary: '...'
     }

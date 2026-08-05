@@ -19,6 +19,12 @@ import {
 } from './engineCore';
 import { v4 as uuidv4 } from 'uuid';
 
+// Outcome prefix used when a run is stopped by an invocation cap. Eval grading
+// decides "clean completion" by testing for this prefix, so the text that is
+// written and the text that is matched must never drift apart — that is the
+// only reason it lives in a constant rather than inline.
+export const CAP_OUTCOME_PREFIX = 'invocation cap reached';
+
 // ── Stepped execution engine ─────────────────────────────────────────────────
 //
 // In compiled mode the whole workflow is delivered as one prompt and the LLM
@@ -57,7 +63,7 @@ function gradeIfEval(runId: string, evalCaseId: string, state: EngineState): str
   if (!evalCase) return '';
 
   const outcome = state.outcome ?? '';
-  const cleanCompletion = state.status === 'completed' && !outcome.startsWith('cap alcanzado');
+  const cleanCompletion = state.status === 'completed' && !outcome.startsWith(CAP_OUTCOME_PREFIX);
   const verdict = gradeEval(
     { expected_outcome: evalCase.expected_outcome, must_run_agents: evalCase.must_run_agents },
     { completed: cleanCompletion, outcome, executedAgents: new Set(state.path.map(s => s.agent)) }
@@ -67,7 +73,7 @@ function gradeIfEval(runId: string, evalCaseId: string, state: EngineState): str
     .run(verdict.pass ? 'pass' : 'fail', verdict.pass ? '' : JSON.stringify(verdict.reasons), runId);
 
   return verdict.pass
-    ? `\n\n**EVAL "${evalCase.name}": PASS** (calificado por el servidor contra el path verificado).`
+    ? `\n\n**EVAL "${evalCase.name}": PASS** (graded by the server against the verified execution path).`
     : `\n\n**EVAL "${evalCase.name}": FAIL** — ${verdict.reasons.join('; ')}.`;
 }
 
@@ -88,11 +94,11 @@ function dispatchText(
   lines: string[]
 ): void {
   if (nodes.length > 1) {
-    lines.push(`## Ejecutá AHORA estos ${nodes.length} agentes EN PARALELO (fork — todas las ramas son obligatorias)`);
+    lines.push(`## Execute these ${nodes.length} agents NOW, IN PARALLEL (fork — every branch is mandatory)`);
     lines.push('');
-    lines.push('Idealmente lanzá una Agent tool por rama en una misma respuesta para que corran concurrentes. Esperá a que TODAS terminen antes de llamar `workflow.next`.');
+    lines.push('Launch one Agent tool per branch in a single response so they run concurrently. Wait for ALL of them to finish before calling `workflow.next`.');
   } else {
-    lines.push(`## Ejecutá AHORA este agente`);
+    lines.push(`## Execute this agent NOW`);
   }
   lines.push('');
   for (const node of nodes) {
@@ -102,17 +108,17 @@ function dispatchText(
     lines.push('');
   }
   const edges = allowedEdges(flow, state.current);
-  lines.push('## Al terminar');
+  lines.push('## When you are done');
   lines.push('');
-  lines.push(`Llamá \`workflow.next\` con \`{"runId": "${runId}", "output": "<resumen del resultado>", "next": "<destino o condición que se cumplió>"}\`.`);
+  lines.push(`Call \`workflow.next\` with \`{"runId": "${runId}", "output": "<summary of the result>", "next": "<target, or the condition that matched>"}\`.`);
   if (edges.length > 0) {
-    lines.push('Transiciones permitidas (elegí UNA según el output; si ninguna condición se cumple y no hay fallback, pasá `"next": "none"`):');
+    lines.push('Allowed transitions — pick exactly ONE based on the output. If no condition holds and there is no fallback, pass `"next": "none"`:');
     for (const e of edges) lines.push(`- ${describeEdge(flow, e)}`);
   } else {
-    lines.push('Este agente no tiene transiciones salientes: al terminar llamá `workflow.next` con tu output y el run se cerrará.');
+    lines.push('This agent has no outgoing transitions. When you finish, call `workflow.next` with your output and the run will close.');
   }
   lines.push('');
-  lines.push('NO ejecutes ningún otro agente del flujo por tu cuenta — el servidor te entrega el siguiente paso.');
+  lines.push('Do NOT execute any other agent in the flow on your own. The server hands you each step.');
 }
 
 function persistState(runId: string, state: EngineState): void {
@@ -134,7 +140,7 @@ function dispatchNodes(
     const count = (state.invocations[node.id] ?? 0) + 1;
     if (count > capOf(node)) {
       state.status = 'completed';
-      state.outcome = `cap alcanzado: ${node.agent_name ?? node.id} llegó a su máximo de invocaciones (${capOf(node)})`;
+      state.outcome = `${CAP_OUTCOME_PREFIX}: ${node.agent_name ?? node.id} hit its maximum of ${capOf(node)} invocation(s)`;
       return { ok: false, capped: node };
     }
     state.invocations[node.id] = count;
@@ -150,15 +156,15 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
   const runId = uuidv4();
   const flowRecord = db.prepare('SELECT flow_json FROM project_flows WHERE project_id = ?')
     .get(projectId) as { flow_json: string } | undefined;
-  if (!flowRecord) return { runId, text: 'No hay flujo configurado para este proyecto.', done: true, error: 'no_flow' };
+  if (!flowRecord) return { runId, text: 'This project has no flow configured. Draw one in the flow builder before starting a run.', done: true, error: 'no_flow' };
 
   const flow = normalizeFlow(JSON.parse(flowRecord.flow_json));
-  if (flow.nodes.length === 0) return { runId, text: 'El flujo está vacío.', done: true, error: 'empty_flow' };
+  if (flow.nodes.length === 0) return { runId, text: 'This project\'s flow is empty. Add a Start node and at least one agent in the flow builder.', done: true, error: 'empty_flow' };
 
   const agentsById = loadAgents(flow);
   const errors = validateFlow(flow.nodes, flow.edges, agentsById);
   if (errors.length > 0) {
-    return { runId, text: 'Errores de validación en el flujo:\n' + errors.map(e => `- ${e}`).join('\n'), done: true, error: 'invalid_flow' };
+    return { runId, text: 'This flow does not validate, so no run was started. Fix the following in the flow builder and try again:\n' + errors.map(e => `- ${e}`).join('\n'), done: true, error: 'invalid_flow' };
   }
 
   const start = flow.nodes.find(n => n.type === 'start')!;
@@ -168,12 +174,12 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
   const state: EngineState = { status: 'active', current: [], invocations: {}, path: [] };
 
   const lines: string[] = [];
-  lines.push('# AIOrc — Workflow paso a paso (modo verificado)');
+  lines.push('# AIOrc — stepped workflow (server-verified mode)');
   lines.push('');
-  lines.push('El servidor orquesta este workflow: te entrega UN paso por vez y valida cada transición contra el flujo. Ejecutá solo lo que se te indica.');
+  lines.push('The server orchestrates this workflow: it hands you ONE step at a time and validates every transition against the flow graph. Execute only what you are given.');
   lines.push('');
   if (input && Object.keys(input).length > 0) {
-    lines.push('## Input del usuario');
+    lines.push('## User input');
     lines.push('```json');
     lines.push(JSON.stringify(input, null, 2));
     lines.push('```');
@@ -192,9 +198,9 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
 
   if (end || toDispatch.length === 0) {
     state.status = 'completed';
-    state.outcome = end?.outcome ?? 'flujo sin agentes alcanzables';
+    state.outcome = end?.outcome ?? 'flow has no reachable agents';
     persistState(runId, state);
-    return { runId, text: `El flujo termina inmediatamente (${state.outcome}).`, done: true };
+    return { runId, text: `This flow terminates immediately (${state.outcome}). Nothing to execute — report back to the user.`, done: true };
   }
 
   dispatchNodes(runId, projectId, state, toDispatch, agentsById);
@@ -206,11 +212,11 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
 export function nextStep(runRow: RunRow, output: string, hint: string): StepResult {
   const runId = runRow.id;
   if (runRow.mode !== 'stepped' || !runRow.engine_state) {
-    return { runId, text: 'Este run no está en modo paso a paso. Usá workflow.start para iniciar uno.', done: true, error: 'not_stepped' };
+    return { runId, text: 'This run is not in stepped mode, so `workflow.next` does not apply to it. Call `workflow.start` to begin a server-verified run.', done: true, error: 'not_stepped' };
   }
   const state = JSON.parse(runRow.engine_state) as EngineState;
   if (state.status === 'completed') {
-    return { runId, text: 'Este run ya terminó. Llamá `workflow.report` con el resumen final si todavía no lo hiciste.', done: true };
+    return { runId, text: 'This run has already finished. Call `workflow.report` with the final summary if you have not done so yet.', done: true };
   }
 
   const flow = normalizeFlow(JSON.parse(runRow.flow_json));
@@ -225,12 +231,12 @@ export function nextStep(runRow: RunRow, output: string, hint: string): StepResu
   if (choice.error) {
     const edges = allowedEdges(flow, state.current);
     const text = [
-      `Transición rechazada: ${choice.error}`,
+      `Transition rejected: ${choice.error}`,
       '',
-      'Transiciones permitidas:',
+      'Allowed transitions from the current step:',
       ...edges.map(e => `- ${describeEdge(flow, e)}`),
       '',
-      `Reintentá \`workflow.next\` con un \`next\` válido.`,
+      'The run is still open and no step was consumed. Call `workflow.next` again with the same `runId` and `output`, setting `next` to one of the transitions above. Pass `"next": "none"` if no condition matched.',
     ].join('\n');
     persistState(runId, state); // keep the output summary even on a rejected hop
     return { runId, text, done: false, error: 'invalid_transition' };
@@ -238,10 +244,10 @@ export function nextStep(runRow: RunRow, output: string, hint: string): StepResu
 
   if (choice.end || !choice.edge) {
     state.status = 'completed';
-    state.outcome = state.outcome ?? 'fin del flujo (sin transiciones aplicables)';
+    state.outcome = state.outcome ?? 'end of flow (no applicable transitions)';
     persistState(runId, state);
     const evalText = gradeIfEval(runId, runRow.eval_case_id, state);
-    return { runId, text: `Workflow completado: ${state.outcome}. Llamá \`workflow.report\` con {runId, report: {final_summary}}.${evalText}`, done: true };
+    return { runId, text: `Workflow completed: ${state.outcome}. Now call \`workflow.report\` with {runId, report: {final_summary}} — the run is not auditable until you do.${evalText}`, done: true };
   }
 
   const target = flow.nodes.find(n => n.id === choice.edge!.to)!;
@@ -252,14 +258,14 @@ export function nextStep(runRow: RunRow, output: string, hint: string): StepResu
     state.outcome = end.outcome ?? 'success';
     persistState(runId, state);
     const evalText = gradeIfEval(runId, runRow.eval_case_id, state);
-    return { runId, text: `Workflow completado — End: ${state.outcome}. Llamá \`workflow.report\` con {runId, report: {final_summary}}.${evalText}`, done: true };
+    return { runId, text: `Workflow completed — reached End: ${state.outcome}. Now call \`workflow.report\` with {runId, report: {final_summary}} — the run is not auditable until you do.${evalText}`, done: true };
   }
 
   const dispatched = dispatchNodes(runId, runRow.project_id, state, toDispatch, agentsById, hint || undefined);
   if (!dispatched.ok) {
     persistState(runId, state);
     const evalText = gradeIfEval(runId, runRow.eval_case_id, state);
-    return { runId, text: `Workflow cortado: ${state.outcome}. Reportá esto al usuario y llamá \`workflow.report\`.${evalText}`, done: true };
+    return { runId, text: `Workflow stopped early: ${state.outcome}. Tell the user why it stopped, then call \`workflow.report\` with what did run.${evalText}`, done: true };
   }
 
   const lines: string[] = [];

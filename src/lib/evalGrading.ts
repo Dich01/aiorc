@@ -30,21 +30,21 @@ export function gradeEval(criteria: EvalCriteria, facts: EvalRunFacts): EvalVerd
   const reasons: string[] = [];
 
   if (!facts.completed) {
-    reasons.push(`el run no se completó (${facts.outcome || 'sin outcome'})`);
+    reasons.push(`the run did not complete (${facts.outcome || 'no outcome recorded'})`);
   }
 
   if (facts.completed && criteria.expected_outcome.trim()) {
     const expected = norm(criteria.expected_outcome);
     const got = norm(facts.outcome);
     if (!got.includes(expected) && !expected.includes(got)) {
-      reasons.push(`outcome esperado "${criteria.expected_outcome}" pero terminó en "${facts.outcome || '(vacío)'}"`);
+      reasons.push(`expected outcome "${criteria.expected_outcome}" but the run ended in "${facts.outcome || '(empty)'}"`);
     }
   }
 
   const executed = new Set([...facts.executedAgents].map(norm));
   const missing = parseMustRun(criteria.must_run_agents).filter(a => !executed.has(norm(a)));
   if (missing.length > 0) {
-    reasons.push(`agentes obligatorios sin ejecutar: ${missing.join(', ')}`);
+    reasons.push(`required agents never executed: ${missing.join(', ')}`);
   }
 
   return { pass: reasons.length === 0, reasons };

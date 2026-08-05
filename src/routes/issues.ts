@@ -197,7 +197,7 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   res.status(204).end();
 });
 
-// POST /issues/:id/vote — toggle 👍.
+// POST /issues/:id/vote — toggle an upvote.
 router.post('/:id/vote', requireAuth, (req: AuthRequest, res: Response): void => {
   const issue = db.prepare('SELECT id FROM issues WHERE id = ?').get(req.params['id']) as { id: string } | undefined;
   if (!issue) { res.status(404).json({ error: 'Issue not found' }); return; }

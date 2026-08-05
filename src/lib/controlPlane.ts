@@ -35,10 +35,10 @@ export function gateExecution(opts: {
   runStatus: string | null;   // 'running' | 'completed' | 'cancelled' | null (no run yet)
 }): ExecutionGate {
   if (opts.runStatus === 'cancelled') {
-    return { allowed: false, reason: 'Este run fue cancelado por su dueño o un admin. No se ejecutan más pasos.' };
+    return { allowed: false, reason: 'This run was cancelled by its owner or an admin. No further steps will execute. Stop here and tell the user the run was cancelled.' };
   }
   if (opts.action === 'start' && opts.projectPaused) {
-    return { allowed: false, reason: 'El proyecto está pausado por su dueño — no se aceptan runs nuevos. Los runs en curso pueden terminar.' };
+    return { allowed: false, reason: 'This project is paused by its owner, so no new runs are accepted. Runs already in flight can finish. Tell the user the project is paused instead of retrying.' };
   }
   return { allowed: true, reason: '' };
 }

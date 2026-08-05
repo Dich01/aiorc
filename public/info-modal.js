@@ -44,7 +44,7 @@
   modal.innerHTML = `
     <div class="modal-box info-modal-box">
       <h3>How to use AIOrc</h3>
-      <p class="modal-subtitle">Multi-agent workflow compiler over MCP — getting started guide.</p>
+      <p class="modal-subtitle">Control plane for AI agents, with server-enforced workflows over MCP — getting started guide.</p>
 
       <div class="info-tabs">
         <button class="info-tab-btn active" onclick="switchInfoTab('how')">Get started</button>

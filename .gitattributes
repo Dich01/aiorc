@@ -1,0 +1,29 @@
+# Language classification (github/linguist)
+#
+# AIOrc is a TypeScript backend. The vanilla HTML pages under public/ are large
+# enough to outweigh it in GitHub's language stats, which pushes the repository
+# out of TypeScript searches and filters. The rules below exclude what is not
+# hand-written backend or frontend source, so the classification reflects what
+# the project actually is.
+
+# The vanilla pages: markup with inline styles and scripts, not the source of
+# record for any logic. Excluded from stats, still diffed normally.
+public/*.html linguist-documentation
+public/project.html.legacy linguist-documentation
+
+# Vite output. Built by `npm run build:flow` from src-frontend/ into public/.
+# Linguist already skips minified files, but declaring it keeps the stats stable
+# if the bundle ever ships unminified.
+public/flow-editor.js linguist-generated
+public/flow-editor.css linguist-generated
+
+# Deliberately NOT excluded:
+#   src-frontend/  — first-party TypeScript and TSX (the React Flow editor).
+#                    It is the source the bundle is built from, it counts as
+#                    TypeScript, and excluding it would lower the very total
+#                    this file exists to raise.
+#   public/*.css, public/info-modal.js, public/ui-dialogs.js
+#                  — hand-written, small, and honest to count.
+
+# Normalize line endings for text files.
+* text=auto

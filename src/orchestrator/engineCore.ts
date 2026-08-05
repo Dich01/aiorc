@@ -41,7 +41,7 @@ export function describeEdge(flow: FlowDocument, e: FlowEdge): string {
     : target.type === 'end' ? `End${target.outcome ? `: "${target.outcome}"` : ''}`
     : target.type === 'parallel' ? `Parallel${target.label ? `: "${target.label}"` : ''}`
     : target.agent_name ?? target.id;
-  return e.condition ? `→ ${label} — cuando: ${e.condition}` : `→ ${label} (sin condición — fallback)`;
+  return e.condition ? `→ ${label} — when: ${e.condition}` : `→ ${label} (no condition — fallback)`;
 }
 
 // Resolve the LLM's transition hint against the legal edges. The hint can be
@@ -66,7 +66,7 @@ export function chooseTransition(flow: FlowDocument, currentIds: string[], hint:
     // node (each parallel branch carries its own edge) — not a real choice.
     const targets = new Set(edges.map(e => e.to));
     if (targets.size === 1 && edges.every(e => !e.condition)) return { edge: edges[0]! };
-    return { error: 'Transición ambigua: indicá `next` con el agente destino o la condición que se cumplió.' };
+    return { error: 'ambiguous transition — several are legal from here and no hint was given. Set `next` to the target agent name, or to the edge condition that matched.' };
   }
 
   const matches = edges.filter(e => {
@@ -88,9 +88,9 @@ export function chooseTransition(flow: FlowDocument, currentIds: string[], hint:
     // Converging edges to the same node are equivalent — take the first.
     const targets = new Set(matches.map(e => e.to));
     if (targets.size === 1) return { edge: matches[0]! };
-    return { error: `El hint "${hint}" matchea ${matches.length} transiciones. Sé más específico.` };
+    return { error: `"${hint}" matches ${matches.length} transitions at once. Set \`next\` to the exact target agent name instead of a partial condition.` };
   }
-  return { error: `"${hint}" no corresponde a ninguna transición permitida desde acá.` };
+  return { error: `"${hint}" is not a legal transition from the current step.` };
 }
 
 // Given a chosen target node, which agent nodes get dispatched?

@@ -170,10 +170,10 @@ test('pasa cuando completa, outcome matchea y los agentes requeridos corrieron',
 test('falla si el run no se completó', () => {
   const v = gradeEval(
     { expected_outcome: '', must_run_agents: '' },
-    { completed: false, outcome: 'cap alcanzado: brain', executedAgents: new Set(['brain']) }
+    { completed: false, outcome: 'invocation cap reached: brain', executedAgents: new Set(['brain']) }
   );
   assert.strictEqual(v.pass, false);
-  assert.ok(v.reasons[0]!.includes('no se completó'));
+  assert.ok(v.reasons[0]!.includes('did not complete'));
 });
 
 test('falla por outcome distinto al esperado', () => {
@@ -182,7 +182,7 @@ test('falla por outcome distinto al esperado', () => {
     { completed: true, outcome: 'verify done', executedAgents: new Set(['brain']) }
   );
   assert.strictEqual(v.pass, false);
-  assert.ok(v.reasons[0]!.includes('outcome esperado'));
+  assert.ok(v.reasons[0]!.includes('expected outcome'));
 });
 
 test('falla listando los agentes obligatorios que faltaron', () => {
