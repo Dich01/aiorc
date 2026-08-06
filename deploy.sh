@@ -25,7 +25,15 @@ fi
 
 # ── 1. Copiar codigo (sin node_modules/dist/.git/data/secretos) ──────────────
 echo "==> Subiendo codigo a la VM..."
-rsync -az \
+# --delete: sin esto, un archivo borrado del repo se sigue sirviendo desde la VM
+# para siempre. Paso exactamente eso con public/FaqBackup.html. Los --exclude
+# protegen al receptor, asi que --delete NO toca data/, .env ni los secretos.
+#
+# Los secretos de produccion se excluyen a proposito: viven solo en la VM. Si se
+# sincronizaran desde la maquina de desarrollo, un deploy pisaria el JWT_SECRET
+# (cierra todas las sesiones) y la clave de firma de auditoria (invalida las
+# firmas ya emitidas).
+rsync -az --delete \
   --exclude='node_modules' \
   --exclude='dist' \
   --exclude='.git' \
@@ -34,6 +42,9 @@ rsync -az \
   --exclude='.DS_Store' \
   --exclude='*.key' \
   --exclude='.env' \
+  --exclude='.jwt-secret' \
+  --exclude='.audit-secret' \
+  --exclude='.mail-config.json' \
   -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" \
   ./ "$HOST:$REMOTE_DIR/"
 
