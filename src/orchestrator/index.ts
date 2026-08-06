@@ -304,7 +304,7 @@ export function compileFlow(
   if (errors.length > 0) {
     return {
       runId, nodeCount: 0, agentNames: [],
-      workflow: 'Errores de validación en el flujo:\n' + errors.map(e => `- ${e}`).join('\n'),
+      workflow: 'This flow has validation errors and cannot run. Fix them in the flow editor before starting a run, then call this tool again:\n' + errors.map(e => `- ${e}`).join('\n'),
       error: 'invalid_flow',
     };
   }
