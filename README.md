@@ -5,6 +5,8 @@
 [![CI](https://github.com/Dich01/aiorc/actions/workflows/ci.yml/badge.svg)](https://github.com/Dich01/aiorc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+**This project is open to collaborators.** It is early stage and looking for people to build it with, not only to use it. Every open issue is scoped so you can start without asking first, and several are tagged [`good first issue`](https://github.com/Dich01/aiorc/issues?q=is%3Aopen+label%3A%22good+first+issue%22). See [Contributing](#contributing).
+
 ### Live demo
 
 **There is an instance running right now at [204-216-144-224.sslip.io](https://204-216-144-224.sslip.io)** — the landing page is open to anyone; register a free account to create a project and draw a flow.
@@ -110,9 +112,18 @@ Early stage (v0.1), used in production internally. SQLite-backed, single-node. P
 
 ## Contributing
 
-Issues and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, project layout and conventions — the short version is `npm install && npm test` (42 tests, no framework), branch off `development`, and never commit anything under `data/`.
+**The project is open to collaborators and actively wants them.** It is early stage with one maintainer so far, which means there is room to own an area rather than send a one-off patch. If you want to take something on, say so in the issue and it is yours.
 
-The areas where help goes furthest right now are Postgres support, test coverage on the routes and MCP surface, and documentation of the MCP integration path.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, project layout and conventions — the short version is `npm install && npm test` (42 tests, no framework), branch off `development`, and never commit anything under `data/`.
+
+Where to start:
+
+- [`good first issue`](https://github.com/Dich01/aiorc/issues?q=is%3Aopen+label%3A%22good+first+issue%22) — genuinely small and self-contained: a route test, a documentation section, a seed fix.
+- [`help wanted`](https://github.com/Dich01/aiorc/issues?q=is%3Aopen+label%3A%22help+wanted%22) — the heavier pieces: a Postgres adapter behind the db layer, engine transition coverage, retry semantics in the MCP bridge.
+- [Open design questions](https://github.com/Dich01/aiorc/issues?q=is%3Aopen+label%3Aquestion) are unresolved on purpose. An opinion there is worth as much as code, and it is the fastest way to shape where this goes.
+- [Discussions](https://github.com/Dich01/aiorc/discussions) for usage questions, so the issue tracker stays for work.
+
+Every issue states what to change, which file and line, and how to verify it.
 
 For security vulnerabilities, please use private reporting rather than a public issue — see [SECURITY.md](SECURITY.md).
 
