@@ -17,5 +17,10 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
 COPY package.json ./
+# Never run as root. /app must stay writable by node for the secret files the
+# server generates on first start (.jwt-secret, audit key). On a host volume,
+# chown the mounted ./data directory to uid 1000 once.
+RUN mkdir -p /app/data && chown -R node:node /app
+USER node
 EXPOSE 3001
 CMD ["node", "dist/index.js"]

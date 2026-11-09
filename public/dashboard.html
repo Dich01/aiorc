@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
   <style>
     /* ── Sidebar layout ──────────────────────────────────────────────────── */
@@ -45,7 +48,7 @@
     .team-section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:12px; }
     .team-card { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); margin-bottom:10px; }
     .team-card.responded { opacity:0.6; }
-    .team-card-icon { width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg,#4361ee,#7c3aed); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.85rem; flex-shrink:0; }
+    .team-card-icon { width:36px; height:36px; border-radius:8px; background:var(--route-tint); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--primary); font-size:0.85rem; flex-shrink:0; }
     .team-card-body { flex:1; min-width:0; }
     .team-card-title { font-weight:600; font-size:0.95rem; }
     .team-card-meta { font-size:0.78rem; color:var(--muted); margin-top:2px; }
@@ -112,7 +115,7 @@
     .info-steps { list-style:none; padding:0; margin:0; }
     .info-step { display:flex; gap:12px; margin-bottom:16px; align-items:flex-start; font-size:0.88rem; line-height:1.65; }
     .info-step-num { background:var(--primary); color:#fff; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; margin-top:1px; }
-    .info-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:14px 16px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.78rem; line-height:1.6; white-space:pre; overflow-x:auto; margin:10px 0; }
+    .info-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:14px 16px; font-family:var(--mono); font-size:0.78rem; line-height:1.6; white-space:pre; overflow-x:auto; margin:10px 0; }
     .info-block { margin-bottom:18px; }
     .info-block h4 { font-size:0.92rem; font-weight:700; margin-bottom:6px; color:var(--text); display:flex; align-items:center; gap:8px; }
     .info-block-glyph { display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:6px; font-weight:700; font-size:0.85rem; flex-shrink:0; }
@@ -213,19 +216,19 @@
     <div class="sidebar-section-title">Workspace</div>
     <nav class="sidebar-nav">
       <button class="sidebar-item active" id="sb-projects" onclick="switchTab('projects')" title="Projects">
-        <span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h3.8l1.9 2h5.3A1.5 1.5 0 0 1 17 8.5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/></svg></span><span class="sidebar-item-label">Projects</span>
       </button>
       <button class="sidebar-item" id="sb-agents" onclick="switchTab('agents')" title="Agents">
-        <span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6.5" width="12" height="9.5" rx="2.2"/><path d="M10 3.5v3M7.6 10.6h.01M12.4 10.6h.01M8.3 13.4h3.4"/></svg></span><span class="sidebar-item-label">Agents</span>
       </button>
       <button class="sidebar-item" id="sb-skills" onclick="switchTab('skills')" title="Skills">
-        <span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 3 6.5 10 10l7-3.5z"/><path d="m3 10 7 3.5 7-3.5"/><path d="m3 13.5 7 3.5 7-3.5"/></svg></span><span class="sidebar-item-label">Skills</span>
       </button>
       <button class="sidebar-item" id="sb-contexts" onclick="switchTab('contexts')" title="Contexts">
-        <span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 4.5A1.5 1.5 0 0 1 6 3h9.5v11H6a1.5 1.5 0 0 0-1.5 1.5z"/><path d="M4.5 15.5A1.5 1.5 0 0 0 6 17h9.5v-3"/></svg></span><span class="sidebar-item-label">Contexts</span>
       </button>
       <button class="sidebar-item" id="sb-team" onclick="switchTab('team')" title="Team">
-        <span class="sidebar-item-glyph">E</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="2.8"/><path d="M2.8 16.5a5.2 5.2 0 0 1 10.4 0"/><path d="M13 4.4a2.8 2.8 0 0 1 0 5.2M15.2 12.2a5.2 5.2 0 0 1 2 4.3"/></svg></span>
         <span class="sidebar-item-label">Team</span>
         <span id="team-badge" class="team-badge" style="display:none">0</span>
       </button>
@@ -234,34 +237,35 @@
     <div class="sidebar-section-title">Insights</div>
     <nav class="sidebar-nav">
       <a class="sidebar-item" href="analytics.html" title="Usage analytics">
-        <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16V10M10 16V4.5M15.5 16v-6"/></svg></span><span class="sidebar-item-label">Usage analytics</span>
       </a>
       <a class="sidebar-item" href="audit.html" title="Audit">
-        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8 4.2 5.2v4.3c0 3.6 2.5 6.4 5.8 7.7 3.3-1.3 5.8-4.1 5.8-7.7V5.2z"/><path d="m7.6 10 1.7 1.7 3.2-3.4"/></svg></span><span class="sidebar-item-label">Audit</span>
       </a>
       <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
-        <span class="sidebar-item-glyph">⚙</span><span class="sidebar-item-label">Admin panel</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6h7.5M14.5 6h2M3.5 14h2M9 14h7.5"/><circle cx="12.8" cy="6" r="1.8"/><circle cx="7.2" cy="14" r="1.8"/></svg></span><span class="sidebar-item-label">Admin panel</span>
       </a>
     </nav>
 
     <div class="sidebar-section-title">Community</div>
     <nav class="sidebar-nav">
       <a class="sidebar-item" href="repository.html" title="Public repository">
-        <span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span>
       </a>
       <a class="sidebar-item" href="issues.html" title="Issues">
-        <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span>
       </a>
     </nav>
 
     <div class="sidebar-section-title">Help</div>
     <nav class="sidebar-nav">
       <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
-        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg></span><span class="sidebar-item-label">How to use AIOrc</span>
       </button>
       <a class="sidebar-item" href="faq.html" title="Documentation">
-        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span>
       </a>
+      <a class="sidebar-item" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -335,7 +339,7 @@
         <div class="page-header">
           <div class="page-header-text">
             <h1>Team</h1>
-            <span class="page-subtitle">Invitations to fork projects, and a summary of what you've shared with others.</span>
+            <span class="page-subtitle">Projects, agents, skills and contexts shared with you (a project invitation also lets you run it with its ID and your token), and what you've shared.</span>
           </div>
         </div>
 
@@ -360,7 +364,7 @@
   <div class="modal-overlay" id="new-project-modal" onclick="if(event.target===this)closeNewProjectModal()">
     <div class="modal-box" style="max-width:420px">
       <h3>New project</h3>
-      <p class="modal-subtitle">An MCP key will be generated to connect the target project via MCP.</p>
+      <p class="modal-subtitle">A project key (for CI and runners) is generated; people connect with the project ID and their personal token.</p>
       <div class="form-group">
         <label for="new-project-name">Title</label>
         <input type="text" id="new-project-name" placeholder="My project" autocomplete="off" />
@@ -376,6 +380,12 @@
         <input type="text" id="new-project-tags" placeholder="comma-separated, e.g. code-review, backend, internal" autocomplete="off" />
         <p style="font-size:0.78rem;color:var(--muted);margin:4px 0 0">Short labels to identify and group projects. Shown on the card and in the public repository.</p>
       </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="new-project-fast" style="width:18px;height:18px;cursor:pointer"/> Model-orchestrated mode (one prompt, self-declared)
+        </label>
+        <p style="font-size:0.78rem;color:var(--muted);margin:6px 0 0">Off (recommended, server-orchestrated): the server hands your AI one step at a time, validates every output and decides or checks every transition. On: your AI receives the whole flow at once and reports what it did; nothing is verified. You can switch it later in Settings.</p>
+      </div>
       <div id="new-project-error" class="alert alert-error hidden" style="margin-top:10px"></div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeNewProjectModal()">Cancel</button>
@@ -388,7 +398,7 @@
   <div class="modal-overlay" id="agent-modal" onclick="if(event.target===this)closeAgentModal()">
     <div class="modal-box">
       <h3 id="agent-modal-title">New agent</h3>
-      <p class="modal-subtitle">The content is injected verbatim into the compiled prompt as a step of the flow.</p>
+      <p class="modal-subtitle">Its instructions are delivered to the model, as written, when the flow reaches this agent's step.</p>
       <div class="form-group">
         <label for="agent-name">Name *</label>
         <input type="text" id="agent-name" placeholder="code-reviewer" autocomplete="off" />
@@ -402,16 +412,16 @@
         <input type="text" id="agent-tags" placeholder="backend, tdd, security" autocomplete="off" />
       </div>
       <div class="form-group">
-        <label for="agent-output-format">Expected output format <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-        <input type="text" id="agent-output-format" placeholder='e.g.: JSON { "verdict": "PASS|FAIL" }' autocomplete="off" />
+        <label for="agent-output-format">Output schema <span style="color:var(--muted);font-weight:400">(JSON Schema, optional; empty = any JSON object)</span></label>
+        <textarea id="agent-output-format" rows="4" style="font-family:ui-monospace,monospace;font-size:0.82rem" placeholder='{"type":"object","required":["verdict"],"properties":{"verdict":{"enum":["PASS","FAIL"]}}}'></textarea>
         <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Useful for gates: the next node reads this output literally.</p>
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">AGENT.md holds the agent's instructions and is always loaded (injected verbatim into the compiled prompt). Add more files to attach resources the agent can use (e.g. checklist.md, deploy.sh, schema.json) — non-markdown files are passed to the agent inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">AGENT.md holds the agent's instructions in plain language and is delivered, as written, every time the flow reaches this agent. Add more files for supporting material (e.g. checklist.md, examples.md). Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="agent-files-list" class="skill-files-list"></div>
         <div id="agent-files-drop" class="files-dropzone">
-          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+          <span class="files-dropzone-inner"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5V4M6 8l4-4 4 4M4 16.5h12"/></svg> Drop files here or <span class="files-dropzone-link">click to upload</span></span>
         </div>
         <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.agent.addFile()">+ Write new file</button>
       </div>
@@ -470,10 +480,10 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They're hoisted together when any agent in the flow uses this skill; non-markdown files are passed to the agent verbatim inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They are delivered once per run when any agent in the flow uses this skill. Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="skill-files-list" class="skill-files-list"></div>
         <div id="skill-files-drop" class="files-dropzone">
-          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+          <span class="files-dropzone-inner"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5V4M6 8l4-4 4 4M4 16.5h12"/></svg> Drop files here or <span class="files-dropzone-link">click to upload</span></span>
         </div>
         <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.skill.addFile()">+ Write new file</button>
       </div>
@@ -526,10 +536,10 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up or attach resources (e.g. glossary.md, data.json) — non-markdown files are passed to the model inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up (e.g. glossary.md). Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="context-files-list" class="skill-files-list"></div>
         <div id="context-files-drop" class="files-dropzone">
-          <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
+          <span class="files-dropzone-inner"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5V4M6 8l4-4 4 4M4 16.5h12"/></svg> Drop files here or <span class="files-dropzone-link">click to upload</span></span>
         </div>
         <button type="button" class="upload-link" style="margin-top:8px" onclick="FILE_EDITORS.context.addFile()">+ Write new file</button>
       </div>
@@ -581,7 +591,7 @@
         <ol class="info-steps">
           <li class="info-step">
             <div class="info-step-num">1</div>
-            <span><strong>Define the agents</strong> — In the <em>Agents</em> tab, create one for each logical step. Each agent is a Markdown prompt that the target model will execute verbatim as a section of the compiled flow.</span>
+            <span><strong>Define the agents</strong> — In the <em>Agents</em> tab, create one for each logical step. Each agent is a Markdown prompt. In server-orchestrated mode the model receives it when the flow reaches its step; in model-orchestrated mode it is part of the whole-flow prompt.</span>
           </li>
           <li class="info-step">
             <div class="info-step-num">2</div>
@@ -589,7 +599,7 @@
           </li>
           <li class="info-step">
             <div class="info-step-num">3</div>
-            <span><strong>Create a project</strong> — In <em>Projects</em>. An MCP key is generated (format <code>key-XXXX...</code>) that you'll use in the target configuration.</span>
+            <span><strong>Create a project</strong> — In <em>Projects</em>. Each project gets an id and a project key (<code>aiorc_pk_...</code>, for CI and runners); people connect with the project id and their own personal token.</span>
           </li>
           <li class="info-step">
             <div class="info-step-num">4</div>
@@ -597,7 +607,7 @@
           </li>
           <li class="info-step">
             <div class="info-step-num">5</div>
-            <span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors (missing Start, broken agent references, malformed Parallel forks), they show inline and saving is blocked. Cycles are legal — a back-edge is a loop.</span>
+            <span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors (missing Start, broken agent references, malformed Parallel forks), they are listed in a dialog and saving is blocked. Cycles are legal — a back-edge is a loop.</span>
           </li>
           <li class="info-step">
             <div class="info-step-num">6</div>
@@ -605,7 +615,7 @@
           </li>
           <li class="info-step">
             <div class="info-step-num">7</div>
-            <span><strong>Done</strong> — When Claude receives a task in the target, it will call <code>workflow(request)</code>, AIOrc compiles the flow and returns a mega-prompt with step-by-step imperative instructions.</span>
+            <span><strong>Done</strong> — When Claude receives a task it calls <code>workflow.start</code>. In <strong>server-orchestrated mode</strong> (default) the server hands it one step at a time, validating each output and deciding or checking each transition, until the flow reaches an End. In <strong>model-orchestrated mode</strong> it receives the whole flow at once and finishes with <code>workflow.report</code>, a self-declared report.</span>
           </li>
         </ol>
       </div>
@@ -617,12 +627,13 @@
           <p>Tells Claude (Claude Code, Cursor, or any MCP client) how to connect to the AIOrc server.</p>
           <div class="info-code" id="mcp-config-snippet">{
   "mcpServers": {
-    "aiorc": {
+    "aiorc-&lt;project&gt;": {
       "type": "stdio",
       "command": "node",
       "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
       "env": {
-        "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
+        "AIORC_PROJECT_ID": "&lt;project id&gt;",
+        "AIORC_TOKEN": "${AIORC_TOKEN}",
         "AIORC_URL": "__AIORC_ORIGIN__/mcp"
       }
     }
@@ -633,27 +644,22 @@
 
         <div class="info-block">
           <h4>2. Rule in the target project's <code style="font-size:0.85em">CLAUDE.md</code></h4>
-          <p>Tells the model to <em>always</em> call the <code>workflow</code> tool before responding. Without this rule, Claude may ignore AIOrc.</p>
-          <div class="info-code">## Mandatory rule
+          <p>Tells the model to <em>always</em> start with <code>workflow.start</code>. Without this rule, Claude may ignore AIOrc.</p>
+          <div class="info-code">## AIOrc: &lt;project name&gt;
 
-For any technical task (planning, implementation, code review,
-security, quality, bugs), always start by calling AIOrc's
-`workflow.start` tool (or `workflow` if start is unavailable).
-Never respond with a direct technical solution.
+Server: `aiorc-&lt;project&gt;` (AIOrc project "&lt;project name&gt;").
+Use it for: &lt;project description&gt;
 
-In stepped mode, execute ONLY the agent the server hands you
-and advance with `workflow.next` — never skip or modify steps.
-
-```
-workflow.start({
-  request: "<task description>",
-  context: "<optional context>"
-})
-```</div>
+When a task fits that use, start it by calling `workflow.start` on the
+`aiorc-&lt;project&gt;` server, not on another AIOrc server. NEVER respond with a
+direct solution for those tasks without going through the workflow.
+Do exactly what workflow.start returns: either ONE step at a time, advanced
+with `workflow.next`, or the whole flow, finished with `workflow.report`.
+Never skip steps or modify them with your own judgment.</div>
         </div>
 
         <div class="info-note">
-          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path (e.g.: <code>/Users/me/dev/AIOrc/mcp-bridge.js</code>) and <code>key-XX...</code> with the project's MCP key in AIOrc.
+          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path, <code>aiorc-&lt;project&gt;</code> with the server name and <code>&lt;project id&gt;</code> with the project id. Each person exports their own personal token (<code>export AIORC_TOKEN=aiorc_pat_...</code>, created in their profile), so the file can be committed. The project's <em>Connect AI</em> tab generates both snippets for you.
         </div>
       </div>
 
@@ -663,13 +669,13 @@ workflow.start({
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-decision">◇</span> Decision — content-based branching</h4>
-          <p><em>Pattern:</em> an agent followed by several outgoing edges with natural-language conditions. Edges are evaluated by ascending priority and a single transition is taken; an edge without condition acts as the fallback.</p>
+          <p><em>Pattern:</em> an agent followed by several outgoing edges with natural-language conditions. The client picks exactly one edge by its id (the server rejects any other); an edge without a condition is the fallback. For deterministic branching use rule edges (harness or API), which the server evaluates in priority order.</p>
           <p style="font-size:0.82rem;color:var(--muted)">Example: <em>"intent == 'bug'"</em>, <em>"the agent determines it needs more context"</em>, <em>"there are modified files in /src/security"</em>.</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> branch between agents (bug-resolver vs. new-fix), skip optional steps, choose a tool based on task type.</p>
         </div>
 
         <div class="info-block">
-          <h4><span class="info-block-glyph glyph-gate">⛔</span> Gate — mandatory verdict</h4>
+          <h4><span class="info-block-glyph glyph-gate"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.8h6l4.2 4.2v6L13 17.2H7L2.8 13V7z"/><path d="M7 10h6"/></svg></span> Gate — mandatory verdict</h4>
           <p><em>Pattern:</em> the agent emits a literal verdict (PASS / FAIL / score ≥ X) and its outgoing edges carry conditions matching that verdict. Same structure as a branch — the verdict text is the condition.</p>
           <p style="font-size:0.82rem;color:var(--muted)">Gate conditions are defined on the outgoing edges (literal verdict text).</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> after code-reviewer, security-qa, quality-gate, or any agent that returns a structured verdict.</p>
@@ -677,13 +683,13 @@ workflow.start({
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-loop">↻</span> Loop — iteration with cap</h4>
-          <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent carries <code>max_invocations</code> (default 10, max 50) which caps the repetition.</p>
-          <p style="font-size:0.82rem;color:var(--muted)">In compiled mode the target model keeps the count; in verified mode the server counts and enforces the cap itself.</p>
-          <p style="font-size:0.82rem"><strong>When to use:</strong> review→fix→review until it passes, iterative refactor, retry tests with backoff, generate variants until a valid one is found.</p>
+          <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent node carries <code>max_invocations</code> (default 10, max 50) which caps the repetition.</p>
+          <p style="font-size:0.82rem;color:var(--muted)">In server-orchestrated mode the server counts invocations per node and stops the run (status capped) when a node would exceed its cap.</p>
+          <p style="font-size:0.82rem"><strong>When to use:</strong> review→fix→review until it passes, iterative refactor, retry tests up to the node's cap, generate variants until a valid one is found.</p>
         </div>
 
         <div class="info-note">
-          The patterns combine freely (loops inside branches, gates after forks). In compiled mode the target model honors conditions and caps from the instructions; in verified mode (<code>workflow.start</code> / <code>workflow.next</code>) the server validates every transition against the graph and enforces the caps itself.
+          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides rule-based transitions and checks every other one against the graph, and enforces the per-node caps.
         </div>
       </div>
 
@@ -702,20 +708,21 @@ workflow.start({
 
       <div style="font-size:0.88rem;line-height:1.7;color:var(--text)">
         <p style="margin-bottom:12px">
-          Hi — I'm Diego. I built AIOrc to solve two problems I got tired of suffering while
+          Hi — I'm Diego. I built AIOrc to solve three problems I got tired of suffering while
           working with AI agents — and chances are you know them too.
         </p>
         <p style="margin-bottom:10px">
           <strong>The first: sharing flows meant copy and pray.</strong> If you wanted to use the flow
           a teammate built, you had to ask for the files, copy them by hand into your repo and hope your
           Claude followed them the same way. Here that disappears: agents, skills and flows live in one
-          place, your AI connects with a token, and if someone improves a crew, everyone gets the
-          improvement instantly.
+          place, your AI connects with a token, and if someone improves a crew, everyone running that project gets
+          the improvement on their next run (forks are independent copies).
         </p>
         <p style="margin-bottom:10px">
           <strong>The second: agents don't follow the flows.</strong> They skip steps, invent their own
-          agents, take the easy path. In verified mode, the server hands your AI one step at a time and
-          rejects any deviation — skipping an agent becomes impossible.
+          agents, take the easy path. In server-orchestrated mode (the default), the server hands your AI one step at a time and
+          rejects any deviation — skipping an agent becomes impossible. When speed matters more than
+          guarantees, a project can switch to model-orchestrated mode: the whole flow in one prompt, self-declared.
         </p>
         <p style="margin-bottom:16px">
           <strong>And the third, which nobody had: the registry.</strong> Every agent on the team is
@@ -820,6 +827,11 @@ workflow.start({
       return res;
     }
 
+    // A project key is returned in plaintext only once (create / fork / reset).
+    // Hand it to the project page, which shows it once and forgets it.
+    function stashNewProjectKey(p) {
+      try { if (p && p.id && p.api_key) sessionStorage.setItem('aiorc-new-key-' + p.id, p.api_key); } catch { /* storage unavailable */ }
+    }
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -895,6 +907,9 @@ workflow.start({
       const visBadge = p.is_public
         ? '<span class="pc-visibility public">● Public</span>'
         : '<span class="pc-visibility private">● Private</span>';
+      const modeBadge = p.execution_mode === 'compiled'
+        ? '<span class="mode-pill fast" title="Model-orchestrated mode: the whole flow in one prompt, self-declared">Model-orchestrated</span>'
+        : '<span class="mode-pill" title="Server-orchestrated: the server drives and checks every step">Server-orchestrated</span>';
       const adminBadge = userRole === 'admin' ? '<span class="role-badge role-admin">admin</span>' : '';
       const ownerLine = (userRole === 'admin' && p.owner_email)
         ? `<div class="owner-label">${p.owner_nickname
@@ -906,8 +921,7 @@ workflow.start({
       const skillsBlock = skills.length
         ? `<div class="pc-badges">${skills.map(s => `<span class="pc-badge skill">${escHtml(s.name)}</span>`).join('')}${sMore ? `<span class="pc-badge more">+${sMore}</span>` : ''}</div>`
         : '<div class="pc-empty-row">No skills associated</div>';
-      const apiKeyEsc = escHtml(p.api_key).replace(/'/g, "\\'");
-      const nameEsc = escHtml(p.name).replace(/'/g, "\\'");
+      const nameEsc = escHtml(JSON.stringify(String(p.name ?? '')));
       const tagList = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
       const tagsBlock = tagList.length
         ? `<div class="tag-chips" style="margin-top:8px">${tagList.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>`
@@ -919,6 +933,7 @@ workflow.start({
               <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span style="word-break:break-word">${escHtml(p.name)}</span>
                 ${visBadge}
+                ${modeBadge}
               </div>
               ${ownerLine}
             </div>
@@ -939,14 +954,13 @@ workflow.start({
             <div class="pc-flow-preview">${renderFlowPreview(p.flow)}</div>
           </div>
           <div class="api-key-row" style="margin-top:4px">
-            <span class="api-key-value" style="font-size:0.76rem">${escHtml(p.api_key)}</span>
-            <button class="btn btn-sm btn-ghost" onclick="copyText('${apiKeyEsc}','MCP key copied')">Copy</button>
+            <span class="api-key-value" style="font-size:0.76rem" title="Only a prefix is stored for display. Reset the key on the project page to get a new one.">${escHtml(p.api_key_hint || '')}&hellip;</span>
           </div>
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
             <span style="font-size:0.74rem;color:var(--muted)">${new Date(p.created_at).toLocaleDateString()}</span>
             <div style="display:flex;gap:6px">
               <a href="project.html?id=${encodeURIComponent(p.id)}" class="btn btn-primary btn-sm">Open →</a>
-              <button class="btn btn-sm btn-ghost" onclick="deleteProject('${p.id}','${nameEsc}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteProject('${p.id}',${nameEsc})">Delete</button>
             </div>
           </div>
         </div>`;
@@ -984,7 +998,14 @@ workflow.start({
     function renderProjectsGrid() {
       const grid = document.getElementById('projects-grid');
       if (!allProjectsCache.length) {
-        grid.innerHTML = '<p style="color:var(--muted)">No projects yet. Create one to get started.</p>';
+        grid.innerHTML = `<div class="sys-empty">
+          <h3>No projects yet</h3>
+          <p>A project holds a crew of agents, the skills they use and the flow that connects them. Your AI client connects to it over MCP with one token.</p>
+          <div class="sys-empty-actions">
+            <button class="btn btn-primary" onclick="openNewProjectModal()">Create a project</button>
+            <a class="btn btn-ghost" href="repository.html">Fork one from the public repository</a>
+          </div>
+        </div>`;
         return;
       }
       const projects = filterBySearch(allProjectsCache, 'search-projects', true);
@@ -1004,6 +1025,7 @@ workflow.start({
       document.getElementById('new-project-name').value = '';
       document.getElementById('new-project-description').value = '';
       document.getElementById('new-project-tags').value = '';
+      document.getElementById('new-project-fast').checked = false;
       document.getElementById('new-project-error').classList.add('hidden');
       document.getElementById('new-project-modal').classList.add('open');
       setTimeout(() => document.getElementById('new-project-name').focus(), 50);
@@ -1020,9 +1042,11 @@ workflow.start({
       errEl.classList.add('hidden');
       btn.disabled = true; btn.textContent = 'Creating...';
       try {
-        const res = await authFetch('/projects', { method: 'POST', body: JSON.stringify({ name, description, tags }) });
+        const execution_mode = document.getElementById('new-project-fast').checked ? 'compiled' : 'verified';
+        const res = await authFetch('/projects', { method: 'POST', body: JSON.stringify({ name, description, tags, execution_mode }) });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not create.'; errEl.classList.remove('hidden'); return; }
+        stashNewProjectKey(data);
         availableProjects = []; // invalidate cache so the new project appears in modals
         closeNewProjectModal();
         loadProjects();
@@ -1067,7 +1091,7 @@ workflow.start({
             ${skillBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
-              <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}','${escHtml(a.name).replace(/'/g,"\\'")}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}',${escHtml(JSON.stringify(String(a.name ?? '')))})">Delete</button>
             </div>
           </div>`;
         }).join('');
@@ -1179,7 +1203,7 @@ workflow.start({
           document.getElementById('agent-name').value = a.name || '';
           document.getElementById('agent-desc').value = a.description || '';
           document.getElementById('agent-tags').value = a.tags || '';
-          document.getElementById('agent-output-format').value = a.expected_output_format || '';
+          document.getElementById('agent-output-format').value = a.output_schema ? JSON.stringify(a.output_schema, null, 2) : '';
           agentFiles = Array.isArray(a.files) ? a.files : null;
           agentContent = a.content || '';
           selectedSkillIds = (a.skills || []).map(s => s.id);
@@ -1264,8 +1288,13 @@ workflow.start({
       const name = document.getElementById('agent-name').value.trim();
       const description = document.getElementById('agent-desc').value.trim();
       const tags = document.getElementById('agent-tags').value.trim();
-      const expected_output_format = document.getElementById('agent-output-format').value.trim();
+      const schemaText = document.getElementById('agent-output-format').value.trim();
       const errEl = document.getElementById('agent-modal-error');
+      let output_schema = null;
+      if (schemaText) {
+        try { output_schema = JSON.parse(schemaText); }
+        catch { errEl.textContent = 'Output schema must be valid JSON.'; errEl.classList.remove('hidden'); return; }
+      }
       const btn = document.getElementById('agent-save-btn');
       if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
       if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
@@ -1279,7 +1308,7 @@ workflow.start({
         const method = currentAgentId ? 'PUT' : 'POST';
         const res = await authFetch(url, {
           method,
-          body: JSON.stringify({ name, description, tags, files: agentFiles, expected_output_format, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
+          body: JSON.stringify({ name, description, tags, files: agentFiles, output_schema, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
         });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }
@@ -1322,7 +1351,7 @@ workflow.start({
           // Only show the multi-file badge when the author actually split the skill.
           // Single-file skills (the default) get no badge to avoid noise.
           const filesBadge = fc > 1
-            ? `<span style="font-size:0.72rem;color:var(--muted);margin-top:4px;display:inline-flex;align-items:center;gap:4px">📄 ${fc} files</span>`
+            ? `<span style="font-size:0.72rem;color:var(--muted);margin-top:4px;display:inline-flex;align-items:center;gap:4px"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15"/></svg> ${fc} files</span>`
             : '';
           return `
           <div class="item-card">
@@ -1332,7 +1361,7 @@ workflow.start({
             ${filesBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
-              <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}','${escHtml(s.name).replace(/'/g,"\\'")}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}',${escHtml(JSON.stringify(String(s.name ?? '')))})">Delete</button>
             </div>
           </div>
         `;
@@ -1412,7 +1441,7 @@ workflow.start({
                 <div>
                   <span class="field-label">Content ${isEntry ? '(Markdown)' : '<span style="font-weight:400;text-transform:none;color:var(--muted)">(Markdown, script, config… any text)</span>'}</span>
                   <textarea class="skill-file-content-input" rows="9"
-                            placeholder="${isEntry ? 'Main body — injected verbatim into the compiled prompt.' : 'Supporting content: docs, a shell script, a JSON/YAML config...'}"
+                            placeholder="${isEntry ? 'Main body, in plain language: delivered to the model as written.' : 'Supporting content: docs, a shell script, a JSON/YAML config...'}"
                             oninput="FILE_EDITORS['${key}'].updateField(${idx}, 'content', this.value)">${escHtml(f.content)}</textarea>
                 </div>
               </div>
@@ -1665,7 +1694,7 @@ workflow.start({
               <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
               <div class="item-card-footer">
                 <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
-                <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}','${escHtml(c.name).replace(/'/g,"\\'")}')">Delete</button>
+                <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}',${escHtml(JSON.stringify(String(c.name ?? '')))})">Delete</button>
               </div>
             </div>
           `;
@@ -1865,7 +1894,7 @@ workflow.start({
       });
     }
     function copyInfoConfig() {
-      copyText(document.getElementById('mcp-config-snippet').textContent, '.mcp.json copiado');
+      copyText(document.getElementById('mcp-config-snippet').textContent, '.mcp.json copied');
     }
 
     // ── Escape ────────────────────────────────────────────────────────────────
@@ -2074,6 +2103,7 @@ workflow.start({
         return;
       }
       const fork = await res.json();
+      if (type === 'project') stashNewProjectKey(fork);
       window.location.href = TYPE_AFTER[type](fork.id);
     };
     window.declineInvitation = async function(type, invId) {

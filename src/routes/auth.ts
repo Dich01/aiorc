@@ -5,6 +5,15 @@ import db from '../db/client';
 import { User } from '../db/schema';
 import { JWT_SECRET } from '../middleware/auth';
 import { resolvePendingInvitations } from './invitations';
+import { asyncHandler } from '../lib/asyncHandler';
+import { validatePassword } from '../lib/passwords';
+import { loginBlockedFor, recordLoginFailure, recordLoginSuccess } from '../lib/loginThrottle';
+
+// Self-service registration is closed unless explicitly opened. Accounts are
+// otherwise created by an admin (POST /admin/users or npm run admin:create).
+export function registrationOpen(): boolean {
+  return process.env.AIORC_OPEN_REGISTRATION === '1';
+}
 
 const router = Router();
 
@@ -19,25 +28,34 @@ function userPayload(u: User) {
 }
 
 // POST /auth/login
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body as { email?: string; password?: string };
+// Hash compared when the email is unknown, so both paths cost the same.
+const DUMMY_HASH = bcrypt.hashSync('timing-equalizer-not-a-password', 10);
 
-  if (!email || !password) {
+router.post('/login', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { email, password } = req.body as { email?: unknown; password?: unknown };
+
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
     res.status(400).json({ error: 'email and password are required' });
     return;
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
-  if (!user) {
-    res.status(401).json({ error: 'Invalid credentials' });
+  const key = email.trim().toLowerCase();
+  const ip = req.ip ?? '';
+  const wait = loginBlockedFor(key, ip);
+  if (wait > 0) {
+    res.setHeader('Retry-After', String(Math.ceil(wait / 1000)));
+    res.status(429).json({ error: 'Too many failed login attempts. Try again later.' });
     return;
   }
 
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) {
+  const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(key) as User | undefined;
+  const valid = await bcrypt.compare(password, user?.password_hash ?? DUMMY_HASH);
+  if (!user || !valid) {
+    recordLoginFailure(key, ip);
     res.status(401).json({ error: 'Invalid credentials' });
     return;
   }
+  recordLoginSuccess(key);
 
   const token = jwt.sign(
     { userId: user.id, email: user.email },
@@ -49,16 +67,30 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   resolvePendingInvitations(user.email, user.id);
 
   res.json({ token, user: userPayload(user) });
+}));
+
+// GET /auth/config — what the login page needs to know before showing forms.
+router.get('/config', (_req: Request, res: Response): void => {
+  res.json({ registration_open: registrationOpen() });
 });
 
 // POST /auth/register
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
+router.post('/register', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!registrationOpen()) {
+    res.status(403).json({ error: 'Registration is closed on this server. Ask an administrator for an account.' });
+    return;
+  }
   const { email, password, name, nickname, bio } = req.body as {
     email?: string; password?: string; name?: string; nickname?: string; bio?: string;
   };
 
-  if (!email?.trim() || !password) {
+  if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
     res.status(400).json({ error: 'email and password are required' });
+    return;
+  }
+  const pwError = validatePassword(password);
+  if (pwError) {
+    res.status(400).json({ error: pwError });
     return;
   }
   if (!nickname?.trim()) {
@@ -104,6 +136,6 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
   resolvePendingInvitations(email, id);
   const token = jwt.sign({ userId: id, email }, JWT_SECRET, { expiresIn: '24h' });
   res.status(201).json({ token, user: userPayload(created) });
-});
+}));
 
 export default router;

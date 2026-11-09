@@ -5,6 +5,7 @@ dist/
 .jwt-secret
 .mail-config.json
 .audit-secret
+.audit-ed25519.key
 *.key
 *.pem
 .env

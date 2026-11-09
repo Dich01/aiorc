@@ -33,7 +33,8 @@ import {
   attachSkillToAgent, detachSkillFromAgent
 } from './api';
 import { toReactFlow, toBackend } from './conversion';
-import { validateFlowClient } from './validation';
+import { validateFlow } from '../../src/shared/flow';
+import type { AgentInfo, FlowDocument } from '../../src/shared/flow';
 import type {
   AgentSummary, SkillSummary, AnyNodeData, AgentNodeData, EndNodeData, ParallelNodeData, EdgeData
 } from './types';
@@ -348,13 +349,15 @@ function FlowEditorInner() {
   }
 
   async function handleSave() {
-    const errs = validateFlowClient(nodes, edges);
+    // Same validator as the server (src/shared/flow.ts).
+    const { nodes: backendNodes, edges: backendEdges } = toBackend(nodes, edges);
+    const agentInfo = new Map<string, AgentInfo>(agents.map(a => [a.id, { name: a.name, hasOutputSchema: !!a.output_schema }]));
+    const errs = backendNodes.length === 0 ? [] : validateFlow({ nodes: backendNodes, edges: backendEdges } as FlowDocument, agentInfo);
     if (errs.length > 0) {
       setValidationErrors(errs);
       return;
     }
     setSaving(true);
-    const { nodes: backendNodes, edges: backendEdges } = toBackend(nodes, edges);
     const result = await saveFlow(backendNodes, backendEdges);
     setSaving(false);
     if (result.validation_errors && result.validation_errors.length > 0) {
@@ -399,14 +402,14 @@ function FlowEditorInner() {
             fitView
             fitViewOptions={{ padding: 0.2 }}
           >
-            <Background gap={16} color="#334155" />
+            <Background gap={18} size={1.2} color="#c9cfdb" />
             <Controls />
             <MiniMap nodeColor={(n) => {
               const t = (n.data as AnyNodeData)?.nodeType;
-              if (t === 'start') return '#22c55e';
-              if (t === 'end') return '#ef4444';
-              if (t === 'parallel') return '#f59e0b';
-              return '#4f46e5';
+              if (t === 'start') return '#0e1530';
+              if (t === 'end') return '#0e1530';
+              if (t === 'parallel') return '#c98a00';
+              return '#4361ee';
             }} />
           </ReactFlow>
           {nodes.length === 0 && (

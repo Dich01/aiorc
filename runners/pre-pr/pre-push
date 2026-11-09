@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Optional git pre-push hook: runs an AIOrc review of the commits being pushed.
+#
+# Install:  cp runners/pre-pr/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#           (and put aiorc-review.sh on PATH or set AIORC_REVIEW_SCRIPT)
+#
+# It never blocks by default. Any failure (no server, no Claude Code, a run
+# that does not complete) prints a warning and lets the push through. It
+# blocks only when the review's final findings include a critical finding or
+# a secret, and only if AIORC_PRE_PUSH_BLOCK=1.
+# Skip it once with: AIORC_SKIP=1 git push
+set -u
+
+[ "${AIORC_SKIP:-0}" = "1" ] && exit 0
+SCRIPT="${AIORC_REVIEW_SCRIPT:-$(command -v aiorc-review.sh || echo "$(git rev-parse --show-toplevel)/runners/pre-pr/aiorc-review.sh")}"
+if [ ! -x "$SCRIPT" ] || [ -z "${AIORC_URL:-}" ] || { [ -z "${AIORC_PROJECT_KEY:-}" ] && { [ -z "${AIORC_PROJECT_ID:-}" ] || [ -z "${AIORC_TOKEN:-}" ]; }; }; then
+  echo "aiorc pre-push: not configured (AIORC_URL, AIORC_PROJECT_ID + AIORC_TOKEN or AIORC_PROJECT_KEY, aiorc-review.sh); skipping." >&2
+  exit 0
+fi
+
+OUT="$(mktemp)"
+trap 'rm -f "$OUT"' EXIT
+if ! "$SCRIPT" --out "$OUT"; then
+  echo "aiorc pre-push: the review did not complete; pushing anyway." >&2
+  exit 0
+fi
+
+# Decide from the signed export, not from the model's text.
+VERDICT="$(node -e '
+  const p = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).payload;
+  const started = (p.events || []).find(e => e.type === "run.started");
+  if (started && started.payload.mode === "compiled") { console.log("fast"); process.exit(0); }
+  const last = Math.max(0, ...p.steps.map(s => s.step));
+  const findings = p.steps.filter(s => s.step === last).flatMap(s => Array.isArray(s.output && s.output.findings) ? s.output.findings : []);
+  const severe = findings.filter(f => f.severity === "critical" || f.category === "secrets");
+  console.log(severe.length ? "block " + severe.length : "ok " + findings.length);
+' "$OUT" 2>/dev/null || echo "ok 0")"
+
+case "$VERDICT" in
+  block*)
+    echo "aiorc pre-push: ${VERDICT#block } critical finding(s) or secret(s) in this change." >&2
+    if [ "${AIORC_PRE_PUSH_BLOCK:-0}" = "1" ]; then
+      echo "aiorc pre-push: push blocked (AIORC_PRE_PUSH_BLOCK=1). Fix them or push with AIORC_SKIP=1." >&2
+      exit 1
+    fi ;;
+  fast) echo "aiorc pre-push: the project runs in model-orchestrated mode; its report is self-declared and is not used to block. Pushing." >&2 ;;
+  *) echo "aiorc pre-push: review done (${VERDICT#ok } finding(s))." >&2 ;;
+esac
+exit 0

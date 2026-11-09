@@ -10,7 +10,7 @@ export default function ValidationModal({ errors, onClose }: Props) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box validation-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <strong>⚠ The flow cannot be saved</strong>
+          <strong>The flow cannot be saved</strong>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">

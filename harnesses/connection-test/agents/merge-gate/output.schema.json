@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["ready_to_merge", "blocking_reasons", "review_hotspots", "recommendation"],
+  "properties": {
+    "ready_to_merge": { "type": "boolean" },
+    "blocking_reasons": { "type": "array", "items": { "type": "string", "maxLength": 500 }, "maxItems": 20 },
+    "review_hotspots": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["file", "lines", "why"],
+        "properties": {
+          "file": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "lines": { "type": "string", "maxLength": 50 },
+          "why": { "type": "string", "maxLength": 500 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recommendation": { "type": "string", "minLength": 1, "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

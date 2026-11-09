@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Benchmarks</title>
+  <meta name="description" content="Server-orchestrated vs model-orchestrated code review: 198 graded runs over two suites of seeded defects in a real codebase." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
+  <style>
+    /* Benchmark report. Same world as the landing: interlocking-panel ground,
+       ink type, the route blue for the default mode and signal amber for the
+       model-orchestrated one. */
+    :root {
+      --ground: #f4f5f8; --paper: #ffffff; --ink: #0e1530; --ink-2: #2b3350; --muted: #565e74;
+      --line: #dfe3ea; --line-strong: #c3cad8;
+      --server: #4361ee; --server-tint: #e8ecfd; --model: #c07a12; --model-tint: #fdf2e0;
+      --ok: #12804a; --wrap: 1180px; --gutter: 32px;
+      --display: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    }
+    body { background: var(--paper); color: var(--ink); font-family: var(--display); -webkit-font-smoothing: antialiased; }
+    ::selection { background: var(--server); color: #fff; }
+    .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
+    code { font-family: var(--mono); font-size: 0.86em; }
+
+
+    /* Hero */
+    .hero { background: var(--ground); border-bottom: 1px solid var(--line); padding: 72px 0 56px; }
+    .hero-kicker { font: 600 0.8rem var(--mono); color: var(--muted); margin: 0 0 16px; }
+    .hero h1 { font-size: clamp(2.2rem, 4.6vw, 3.8rem); font-weight: 700; font-stretch: 114%; letter-spacing: -0.03em; line-height: 1.02; margin: 0; max-width: 18ch; text-wrap: balance; }
+    .hero-lede { font-size: 1.15rem; line-height: 1.6; color: var(--ink-2); max-width: 64ch; margin: 22px 0 0; text-wrap: pretty; }
+    .hero-lede b { font-variant-numeric: tabular-nums; }
+    .hero-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0; margin-top: 40px; border-top: 1px solid var(--line-strong); }
+    .hero-fact { padding: 16px 20px 0 0; }
+    .hero-fact .n { font-size: 1.9rem; font-weight: 700; font-stretch: 108%; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .hero-fact .l { font-size: 0.84rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+    /* Sections */
+    .sec { padding: 72px 0 0; }
+    .sec-head { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 40px; align-items: end; margin-bottom: 28px; }
+    .sec h2 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); font-weight: 700; font-stretch: 110%; letter-spacing: -0.022em; line-height: 1.08; margin: 0; text-wrap: balance; }
+    .sec-note { font-size: 0.95rem; line-height: 1.6; color: var(--muted); margin: 0; max-width: 62ch; }
+    .legend { display: flex; gap: 22px; flex-wrap: wrap; font-size: 0.86rem; color: var(--ink-2); margin-bottom: 14px; }
+    .legend span { display: inline-flex; align-items: center; gap: 8px; font-weight: 550; }
+    .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+    .sw-server { background: var(--server); } .sw-model { background: var(--model); }
+
+    /* Charts */
+    .chart { position: relative; }
+    .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .chart text { font-family: var(--display); fill: var(--muted); font-size: 12px; }
+    .chart .val { fill: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; font-size: 13px; }
+    .chart .cat { fill: var(--ink); font-weight: 600; font-size: 13px; }
+    .chart .sub { fill: var(--muted); font-size: 11.5px; }
+    .tip { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--line-strong); box-shadow: 0 10px 28px -14px rgba(14,21,48,0.35); border-radius: 8px; padding: 7px 10px; font-size: 0.8rem; color: var(--ink); white-space: nowrap; z-index: 5; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+    .panel { border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px 14px; background: #fff; min-width: 0; }
+    .panel h3 { font-size: 1rem; font-weight: 650; margin: 0 0 2px; }
+    .panel .sub-h { font-size: 0.82rem; color: var(--muted); margin: 0 0 12px; }
+
+    /* Comparison table */
+    .cmp-wrap { overflow-x: auto; border-top: 2px solid var(--ink); }
+    .cmp { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .cmp th, .cmp td { padding: 13px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .cmp thead th { font-size: 0.82rem; font-weight: 650; color: var(--ink); vertical-align: bottom; }
+    .cmp thead th .mh { display: inline-flex; align-items: center; gap: 8px; }
+    .cmp td.m { width: 22%; text-align: right; font-size: 0.98rem; white-space: nowrap; }
+    .cmp td.best { font-weight: 700; }
+    .cmp .bench { font-weight: 600; font-size: 0.95rem; }
+    .cmp .bench small { display: block; font-weight: 400; color: var(--muted); font-size: 0.8rem; margin-top: 2px; line-height: 1.4; }
+    .cmp tr.group td { padding-top: 22px; font: 600 0.74rem var(--mono); color: var(--muted); border-bottom: 1px solid var(--line-strong); }
+    .cmp sup { font-size: 0.7em; color: var(--muted); margin-left: 2px; }
+    .chip { display: inline-block; font-size: 0.74rem; font-weight: 650; padding: 2px 8px; border-radius: 6px; }
+    .chip.yes { background: #e6f4ec; color: var(--ok); } .chip.no { background: var(--model-tint); color: #8a5a0b; }
+
+    /* Cases */
+    .controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.86rem; color: var(--muted); }
+    .controls select { width: auto; height: 34px; padding: 0 10px; }
+    .controls label.ck { display: inline-flex; gap: 7px; align-items: center; font-weight: 500; color: var(--muted); }
+    .controls label.ck input { width: auto; }
+    .cases-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    .cases { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+    .cases th, .cases td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .cases th { font-size: 0.76rem; font-weight: 650; color: var(--muted); background: var(--ground); white-space: nowrap; }
+    .cases td.r, .cases th.r { text-align: right; white-space: nowrap; }
+    .cases td.id { font: 500 0.78rem var(--mono); white-space: nowrap; }
+    .cases td.scope { white-space: nowrap; color: var(--muted); }
+    .cases td.seeded { min-width: 300px; max-width: 540px; line-height: 1.5; }
+    .cases tr.diff td { background: #fffaf0; }
+    .cases .dots { display: inline-flex; gap: 3px; vertical-align: middle; }
+    .cases .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--line-strong); }
+    .cases .dot.s { background: var(--server); } .cases .dot.m { background: var(--model); } .cases .dot.miss { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+    .cases tbody tr:last-child td { border-bottom: 0; }
+
+    /* Footnotes */
+    .notes { padding: 72px 0 96px; }
+    .notes ol { margin: 0; padding-left: 20px; columns: 2 380px; column-gap: 48px; }
+    .notes li { font-size: 0.88rem; line-height: 1.65; color: var(--ink-2); margin-bottom: 12px; break-inside: avoid; }
+    .notes li b { color: var(--ink); }
+    .foot { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: 0.82rem; color: var(--muted); }
+    .foot a { color: var(--muted); }
+
+    @media (max-width: 860px) {
+      :root { --gutter: 18px; }
+      .hero { padding: 48px 0 40px; }
+      .sec { padding-top: 52px; }
+      .sec-head, .grid-2 { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .cmp td.m { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="shell-mount" data-active="benchmarks"></div>
+  <div class="main-area">
+
+  <section class="hero" aria-label="Summary">
+    <div class="wrap">
+      <p class="hero-kicker">Benchmark · 9 November 2026 · engine 2.1.0</p>
+      <h1>Server-orchestrated vs model-orchestrated code review</h1>
+      <p class="hero-lede" id="hero-lede">Loading results…</p>
+      <div class="hero-facts" id="hero-facts"></div>
+    </div>
+  </section>
+
+  <main>
+    <section class="sec" id="results">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Review quality</h2>
+          <p class="sec-note">Each bar is the share over every graded run of that mode: 3 repetitions of 33 cases. Higher is better on all six.<sup>1</sup></p>
+        </div>
+        <div class="legend"><span><i class="sw sw-server"></i>Server-orchestrated (default)</span><span><i class="sw sw-model"></i>Model-orchestrated (megaprompt)</span></div>
+        <div class="chart" id="chart-quality" role="img" aria-label="Review quality by mode, six metrics"></div>
+      </div>
+    </section>
+
+    <section class="sec" id="efficiency">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Speed and cost</h2>
+          <p class="sec-note">Model-orchestrated skips one round trip per step. Most input tokens are cache reads, so fewer tokens move the bill much less than the count suggests.<sup>2</sup></p>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><h3>Time per run</h3><p class="sub-h">Every run is a dot; the dark bar is the median. Lower is faster.</p><div class="chart" id="chart-time"></div></div>
+          <div class="panel"><h3>Cost vs time, per suite</h3><p class="sub-h">Mean USD and median seconds per run. Bottom left is cheaper and faster.</p><div class="chart" id="chart-scatter"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="table">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Full comparison</h2>
+          <p class="sec-note">Bold marks the better value where the two differ beyond a single run.</p>
+        </div>
+        <div class="cmp-wrap">
+          <table class="cmp" id="cmp">
+            <thead><tr><th>Benchmark</th><th class="m" style="text-align:right"><span class="mh"><i class="sw sw-server"></i>Server-orchestrated</span></th><th class="m" style="text-align:right"><span class="mh"><i class="sw sw-model"></i>Model-orchestrated</span></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="cases">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Case by case</h2>
+          <p class="sec-note">Each dot is one repetition: filled when every seeded defect was found (or, for clean changes, when nothing was blocked). Cases are anonymised: each shows only the class of defect that was seeded.</p>
+        </div>
+        <div class="controls">
+          <label for="f-suite">Suite</label>
+          <select id="f-suite"><option value="">Both suites</option><option value="complex">Complex</option><option value="base">Base</option></select>
+          <label class="ck"><input type="checkbox" id="f-diff"> Only where the modes differ</label>
+        </div>
+        <div class="cases-wrap">
+          <table class="cases" id="cases-table">
+            <thead><tr><th>Case</th><th>Kind</th><th>Seeded defect (class)</th><th>Scope</th><th class="r">Server</th><th class="r">Model</th><th class="r">Blocked S / M</th><th class="r">Median s S / M</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="notes" id="method">
+      <div class="wrap">
+        <div class="sec-head"><h2>Methodology</h2><p class="sec-note">How the runs were set up and graded, and what they cannot tell you.</p></div>
+        <ol>
+          <li><b>Setup.</b> Each case is one commit on a throwaway copy of a private production codebase, which is not named here; the original repository was only read, never changed. Two AIOrc projects with an identical review harness reviewed the same commits at the same time, one per mode: scope, six reviewers in parallel, verifier, PR proposal and release gate. Client: Claude Code in headless mode, default model, read-only tools, 3 cases in parallel per mode, 3 repetitions.</li>
+          <li><b>Speed and cost</b> are wall-clock seconds from start to signed export, and Claude Code's own <code>total_cost_usd</code> and token counts. Both modes ran concurrently on the same machine.</li>
+          <li><b>Suites.</b> <b>Base</b>: 13 cases, a single-file defect each (10) or a clean change (3). <b>Complex</b>: 20 cases (15 defect, 5 clean) with two defects in one change, defects that only show across files, subtle domain and logic errors (limits, signed authorizations, time windows) and defects buried in large refactors; its clean changes correctly touch security-sensitive code.</li>
+          <li><b>Grading.</b> Every signed export is verified first. A server-orchestrated run is graded from its last validated step; a model-orchestrated run from its self-declared report, whose hash is checked against the chain but never against what actually ran. A defect counts as found when a final finding matches its file, category and minimum severity; a run passes when it reaches an End, every seeded defect is found and extra findings stay within 3 (defect) or 1 (clean).</li>
+          <li><b>Blocked</b> means the release gate ended the run at <code>changes-requested</code>. <b>Within schema</b> counts final findings that carry every required field of the harness finding schema; the server rejects the others in server-orchestrated mode.</li>
+          <li><b>The one miss</b> (case C09, one model-orchestrated repetition) is a grading artefact: the model reported the secret moving into the query string, at high severity in the right file, but filed it under <code>secrets</code> instead of <code>security</code>.</li>
+          <li><b>What the numbers cannot show.</b> Detection was equal, but in a model-orchestrated run nothing on the record proves the reviewers ran: the report says they did. Server-orchestrated runs carry a validated, hash-chained output for every step.</li>
+          <li><b>Limits.</b> Three repetitions per case and mode; model output is not deterministic, so differences of a few seconds or one finding are within noise. The defects were written for the benchmark, and the complex answer key was reviewed for being defensible, not by the codebase's maintainers.</li>
+          <li><b>Data.</b> The anonymised results behind this page, one row per graded run: <a href="benchmarks/code-review-2026-11-09.json">code-review-2026-11-09.json</a>. The codebase, its file paths and the exact seeded changes are not published.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot"><div class="wrap">AIOrc v0.1 · MCP contract v2.1 · <a href="faq.html">Documentation</a> · <a href="index.html">Home</a></div></footer>
+  </div>
+
+  <script>
+    SiteShell.mount();
+
+    const DATA_URL = 'benchmarks/code-review-2026-11-09.json';
+    const MODES = ['server', 'model'];
+    const NAME = { server: 'Server-orchestrated', model: 'Model-orchestrated' };
+    const COLOR = { server: 'var(--server)', model: 'var(--model)' };
+    const pct = (v) => (v == null ? '—' : (Math.round(v * 1000) / 10).toFixed(v === 1 || v === 0 ? 0 : 1) + '%');
+    const usd = (v) => '$' + v.toFixed(2);
+    const intf = (v) => v.toLocaleString('en-US');
+    const median = (xs) => { const s = xs.filter((x) => x != null).sort((a, b) => a - b); if (!s.length) return null; const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    const mean = (xs) => { const s = xs.filter((x) => x != null); return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null; };
+    const sum = (xs) => xs.reduce((a, b) => a + (b || 0), 0);
+    const NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs = {}, parent) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (parent) parent.appendChild(n); return n; };
+    const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+    function tipFor(box) { let t = box.querySelector('.tip'); if (!t) { t = document.createElement('div'); t.className = 'tip'; t.hidden = true; box.appendChild(t); } return t; }
+    function showTip(box, ev, text) { const t = tipFor(box); t.textContent = text; t.hidden = false; const b = box.getBoundingClientRect(); t.style.left = Math.max(0, Math.min(ev.clientX - b.left + 12, b.width - t.offsetWidth - 4)) + 'px'; t.style.top = (ev.clientY - b.top - 38) + 'px'; }
+    const hideTip = (box) => { const t = box.querySelector('.tip'); if (t) t.hidden = true; };
+
+    function stats(runs, mode, suite) {
+      const rs = runs.filter((r) => r.mode === mode && (!suite || r.suite === suite));
+      const d = rs.filter((r) => r.kind === 'defect'), c = rs.filter((r) => r.kind === 'clean');
+      const findings = sum(rs.map((r) => r.findings)), invalid = sum(rs.map((r) => r.schema_invalid));
+      return {
+        runs: rs.length, pass: rs.filter((r) => r.verdict === 'PASS').length,
+        detected: sum(d.map((r) => r.detected)), expected: sum(d.map((r) => r.expected)),
+        blocked: sum(d.map((r) => r.blocked)), defectRuns: d.length,
+        cleanBlocked: sum(c.map((r) => r.blocked)), cleanRuns: c.length,
+        findings, invalid, verified: sum(rs.map((r) => r.verified)),
+        steps: rs.length * 10,
+        medianS: median(rs.map((r) => r.seconds)), cost: mean(rs.map((r) => r.cost)),
+        tin: mean(rs.map((r) => r.in_tokens)), tout: mean(rs.map((r) => r.out_tokens)), turns: median(rs.map((r) => r.turns)),
+      };
+    }
+
+    function hero(runs, S, M) {
+      const faster = 1 - M.medianS / S.medianS, cheaper = 1 - M.cost / S.cost;
+      document.getElementById('hero-lede').innerHTML = '';
+      const p = document.getElementById('hero-lede');
+      const parts = [
+        'Across ', [intf(S.runs + M.runs), 1], ' graded reviews of seeded defects in a private production codebase, both modes found almost every defect: ',
+        [pct(S.detected / S.expected), 1], ' server-orchestrated and ', [pct(M.detected / M.expected), 1], ' model-orchestrated. ',
+        'Handing the model the whole flow made runs ', [pct(faster), 1], ' faster and ', [pct(cheaper), 1], ' cheaper, and left ',
+        [intf(M.findings), 1], ' findings with no server-side evidence behind them.',
+      ];
+      for (const x of parts) { if (Array.isArray(x)) { const b = document.createElement('b'); b.textContent = x[0]; p.appendChild(b); } else p.appendChild(document.createTextNode(x)); }
+      const facts = [
+        [intf(S.runs + M.runs), 'graded runs, 3 repetitions per case'],
+        ['33', 'cases: 25 with seeded defects (29 defects), 8 clean'],
+        [intf(S.verified), 'agent outputs validated by the server'],
+        [pct(faster), 'faster per run, model-orchestrated'],
+        [pct(cheaper), 'cheaper per run, model-orchestrated'],
+      ];
+      const f = document.getElementById('hero-facts'); f.replaceChildren();
+      for (const [n, l] of facts) { const d = document.createElement('div'); d.className = 'hero-fact'; d.innerHTML = '<div class="n"></div><div class="l"></div>'; d.querySelector('.n').textContent = n; d.querySelector('.l').textContent = l; f.appendChild(d); }
+    }
+
+    function qualityChart(runs) {
+      const box = document.getElementById('chart-quality');
+      const metric = (label, sub, f) => ({ label, sub, v: Object.fromEntries(MODES.map((m) => [m, f(m)])) });
+      const B = (m) => stats(runs, m, 'base'), C = (m) => stats(runs, m, 'complex'), A = (m) => stats(runs, m);
+      const metrics = [
+        metric('Defects found', 'Base suite', (m) => B(m).detected / B(m).expected),
+        metric('Defects found', 'Complex suite', (m) => C(m).detected / C(m).expected),
+        metric('Defect changes blocked', 'Both suites', (m) => A(m).blocked / A(m).defectRuns),
+        metric('Clean changes passed', 'Both suites', (m) => 1 - A(m).cleanBlocked / A(m).cleanRuns),
+        metric('Findings within schema', 'Both suites', (m) => 1 - A(m).invalid / A(m).findings),
+        metric('Steps with verified output', 'Both suites', (m) => A(m).verified / A(m).steps),
+      ];
+      const W = Math.max(320, box.clientWidth);
+      const narrow = W < 720, cols = narrow ? 2 : 6, rowsN = Math.ceil(metrics.length / cols);
+      const cellW = W / cols, plotH = 220, labelH = 58, cellH = plotH + labelH + 18;
+      box.replaceChildren();
+      const svg = el('svg', { viewBox: `0 0 ${W} ${rowsN * cellH}` }, box);
+      metrics.forEach((mt, i) => {
+        const g = el('g', { transform: `translate(${(i % cols) * cellW},${Math.floor(i / cols) * cellH})` }, svg);
+        const bw = Math.min(46, cellW * 0.26), gap = 10, x0 = cellW / 2 - bw - gap / 2, base = 24 + plotH;
+        el('line', { x1: 8, x2: cellW - 8, y1: base, y2: base, stroke: 'var(--line-strong)' }, g);
+        MODES.forEach((m, j) => {
+          const v = mt.v[m], h = Math.max(v * plotH, v > 0 ? 2 : 0), x = x0 + j * (bw + gap);
+          const r = el('rect', { x, y: base - h, width: bw, height: h, rx: 3, style: `fill:${COLOR[m]}` }, g);
+          if (v === 0) el('rect', { x, y: base - 2, width: bw, height: 2, style: `fill:${COLOR[m]}` }, g);
+          txt(g, x + bw / 2, base - h - 8, pct(v), { 'text-anchor': 'middle', class: 'val' });
+          r.addEventListener('pointerenter', (ev) => showTip(box, ev, `${NAME[m]} · ${mt.label} (${mt.sub}): ${pct(v)}`));
+          r.addEventListener('pointerleave', () => hideTip(box));
+        });
+        txt(g, cellW / 2, base + 22, mt.label, { 'text-anchor': 'middle', class: 'cat' });
+        txt(g, cellW / 2, base + 40, mt.sub, { 'text-anchor': 'middle', class: 'sub' });
+      });
+    }
+
+    function timeChart(runs) {
+      const box = document.getElementById('chart-time');
+      const W = Math.max(300, box.clientWidth), groups = [];
+      for (const suite of ['base', 'complex']) for (const m of MODES) groups.push({ suite, m, rs: runs.filter((r) => r.suite === suite && r.mode === m) });
+      const left = 118, right = 12, rowH = 42, top = 6, axisH = 26, H = top + groups.length * rowH + axisH;
+      const max = Math.ceil(Math.max(...runs.map((r) => r.seconds)) / 20) * 20;
+      const x = (v) => left + (v / max) * (W - left - right);
+      box.replaceChildren();
+      const svg = el('svg', { viewBox: `0 0 ${W} ${H}` }, box);
+      const step = W < 420 ? 40 : 20;
+      for (let t = 0; t <= max; t += step) { el('line', { x1: x(t), x2: x(t), y1: top, y2: H - axisH, stroke: 'var(--line)' }, svg); txt(svg, x(t), H - 8, t + 's', { 'text-anchor': 'middle' }); }
+      groups.forEach((g, i) => {
+        const yc = top + i * rowH + rowH / 2;
+        txt(svg, left - 12, yc + 4, (g.suite === 'base' ? 'Base' : 'Complex') + ' · ' + (g.m === 'server' ? 'server' : 'model'), { 'text-anchor': 'end', class: 'cat' });
+        g.rs.forEach((r, k) => {
+          const off = (((k * 37) % 17) / 16 - 0.5) * rowH * 0.62;
+          const c = el('circle', { cx: x(r.seconds), cy: yc + off, r: 3.3, style: `fill:${COLOR[g.m]};opacity:.5` }, svg);
+          c.addEventListener('pointerenter', (ev) => showTip(box, ev, `${r.case} · rep ${r.rep} · ${r.seconds} s · ${r.verdict}`));
+          c.addEventListener('pointerleave', () => hideTip(box));
+        });
+        const md = median(g.rs.map((r) => r.seconds));
+        el('rect', { x: x(md) - 1.6, y: yc - rowH * 0.38, width: 3.2, height: rowH * 0.76, style: 'fill:var(--ink)' }, svg);
+        txt(svg, Math.min(x(md) + 7, W - 30), yc - rowH * 0.24, Math.round(md) + ' s', { class: 'val' });
+      });
+    }
+
+    function scatterChart(runs) {
+      const box = document.getElementById('chart-scatter');
+      const W = Math.max(300, box.clientWidth), H = 300, l = 52, r = 20, t = 14, b = 40;
+      const pts = [];
+      for (const suite of ['base', 'complex']) for (const m of MODES) { const s = stats(runs, m, suite); pts.push({ suite, m, x: s.medianS, y: s.cost }); }
+      const xmin = 40, xmax = Math.ceil(Math.max(...pts.map((p) => p.x)) / 10) * 10 + 10, ymin = 0.40, ymax = 0.54;
+      const X = (v) => l + (v - xmin) / (xmax - xmin) * (W - l - r), Y = (v) => H - b - (v - ymin) / (ymax - ymin) * (H - t - b);
+      box.replaceChildren();
+      const svg = el('svg', { viewBox: `0 0 ${W} ${H}` }, box);
+      for (let v = xmin; v <= xmax; v += 10) { el('line', { x1: X(v), x2: X(v), y1: t, y2: H - b, stroke: 'var(--line)' }, svg); txt(svg, X(v), H - b + 18, v + 's', { 'text-anchor': 'middle' }); }
+      for (let v = ymin; v <= ymax + 1e-9; v += 0.02) { el('line', { x1: l, x2: W - r, y1: Y(v), y2: Y(v), stroke: 'var(--line)' }, svg); txt(svg, l - 8, Y(v) + 4, '$' + v.toFixed(2), { 'text-anchor': 'end' }); }
+      txt(svg, (l + W - r) / 2, H - 6, 'median seconds per run', { 'text-anchor': 'middle', class: 'sub' });
+      for (const suite of ['base', 'complex']) {
+        const [a, c] = MODES.map((m) => pts.find((p) => p.suite === suite && p.m === m));
+        el('line', { x1: X(a.x), y1: Y(a.y), x2: X(c.x), y2: Y(c.y), stroke: 'var(--line-strong)', 'stroke-dasharray': '4 4' }, svg);
+      }
+      for (const p of pts) {
+        const c = el('circle', { cx: X(p.x), cy: Y(p.y), r: 8, style: `fill:${COLOR[p.m]};stroke:#fff;stroke-width:2` }, svg);
+        txt(svg, X(p.x) + (p.m === 'server' ? -12 : 12), Y(p.y) + 4, p.suite === 'base' ? 'Base' : 'Complex', { 'text-anchor': p.m === 'server' ? 'end' : 'start', class: 'cat' });
+        c.addEventListener('pointerenter', (ev) => showTip(box, ev, `${p.suite === 'base' ? 'Base' : 'Complex'} · ${NAME[p.m]}: ${Math.round(p.x)} s, ${usd(p.y)} per run`));
+        c.addEventListener('pointerleave', () => hideTip(box));
+      }
+    }
+
+    function comparison(runs) {
+      const tb = document.querySelector('#cmp tbody'); tb.replaceChildren();
+      const S = (suite) => stats(runs, 'server', suite), M = (suite) => stats(runs, 'model', suite);
+      const rows = [
+        ['group', 'Detection'],
+        ['Defects found, base suite', '10 single-file defects, 3 repetitions', S('base').detected + ' / ' + S('base').expected, M('base').detected + ' / ' + M('base').expected, 0],
+        ['Defects found, complex suite', '19 defects in 15 changes, 3 repetitions', S('complex').detected + ' / ' + S('complex').expected, M('complex').detected + ' / ' + M('complex').expected, 0],
+        ['Defect changes blocked', 'Release gate said changes-requested', pct(S().blocked / S().defectRuns), pct(M().blocked / M().defectRuns), 0],
+        ['Clean changes blocked', 'False positives at the release gate', S().cleanBlocked + ' / ' + S().cleanRuns, M().cleanBlocked + ' / ' + M().cleanRuns, 0],
+        ['Cases passed', 'Every defect found, extra findings within the limit', S().pass + ' / ' + S().runs, M().pass + ' / ' + M().runs, 0],
+        ['group', 'Evidence'],
+        ['Agent outputs validated by the server', 'Schema-checked and hash-chained, per step', intf(S().verified), intf(M().verified), 1],
+        ['Findings within schema', 'Final findings with every required field', pct(1 - S().invalid / S().findings), pct(1 - M().invalid / M().findings), 1],
+        ['Transitions checked against the graph', 'Illegal moves rejected while the run happens', '<span class="chip yes">Yes</span>', '<span class="chip no">No</span>', 1],
+        ['Accepted by the CI review runners', 'publish.mjs, aiorc-review.sh', '<span class="chip yes">Yes</span>', '<span class="chip no">Opt-in only</span>', 1],
+        ['group', 'Efficiency'],
+        ['Median time per run', 'Wall clock, start to signed export', Math.round(S().medianS) + ' s', Math.round(M().medianS) + ' s', 2],
+        ['Mean cost per run', 'Claude Code total_cost_usd', usd(S().cost), usd(M().cost), 2],
+        ['Input tokens per run', 'Including cache reads', intf(Math.round(S().tin)), intf(Math.round(M().tin)), 2],
+        ['Output tokens per run', '', intf(Math.round(S().tout)), intf(Math.round(M().tout)), 2],
+        ['Median turns per run', 'Client turns in Claude Code', String(S().turns), String(M().turns), 2],
+      ];
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        if (r[0] === 'group') { tr.className = 'group'; const td = document.createElement('td'); td.colSpan = 3; td.textContent = r[1].toUpperCase(); tr.appendChild(td); tb.appendChild(tr); continue; }
+        const [label, sub, a, b, kind] = r;
+        const td0 = document.createElement('td'); td0.className = 'bench'; td0.textContent = label; if (sub) { const s = document.createElement('small'); s.textContent = sub; td0.appendChild(s); } tr.appendChild(td0);
+        const best = kind === 1 ? 0 : kind === 2 ? 1 : -1;
+        [a, b].forEach((v, i) => { const td = document.createElement('td'); td.className = 'm' + (i === best ? ' best' : ''); if (String(v).startsWith('<span')) td.innerHTML = v; else td.textContent = v; tr.appendChild(td); });
+        tb.appendChild(tr);
+      }
+    }
+
+    function casesTable(data) {
+      const tb = document.querySelector('#cases-table tbody'); tb.replaceChildren();
+      const suite = document.getElementById('f-suite').value, diffOnly = document.getElementById('f-diff').checked;
+      const order = ['complex', 'base'];
+      const cases = [...data.cases].sort((a, b) => order.indexOf(a.suite) - order.indexOf(b.suite));
+      for (const c of cases) {
+        if (suite && c.suite !== suite) continue;
+        const pick = (m) => data.runs.filter((r) => r.suite === c.suite && r.case === c.case && r.mode === m).sort((a, b) => a.rep - b.rep);
+        const s = pick('server'), m = pick('model');
+        const ok = (r) => (c.kind === 'defect' ? r.detected === r.expected : r.blocked === 0);
+        const sig = (rs) => rs.map(ok).join() + '|' + sum(rs.map((r) => r.blocked));
+        const differs = sig(s) !== sig(m);
+        if (diffOnly && !differs) continue;
+        const tr = document.createElement('tr'); if (differs) tr.className = 'diff';
+        const add = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; tr.appendChild(td); return td; };
+        add(c.case, 'id'); add(c.kind === 'defect' ? 'Defect' : 'Clean'); add(c.defect, 'seeded'); add(c.scope, 'scope');
+        for (const [rs, k] of [[s, 's'], [m, 'm']]) {
+          const td = add('', 'r'); const w = document.createElement('span'); w.className = 'dots';
+          for (const r of rs) { const d = document.createElement('i'); d.className = 'dot ' + (ok(r) ? k : 'miss'); d.title = `rep ${r.rep}: ${c.kind === 'defect' ? r.detected + '/' + r.expected + ' found' : (r.blocked ? 'blocked' : 'passed')}`; w.appendChild(d); }
+          td.appendChild(w);
+        }
+        add(sum(s.map((r) => r.blocked)) + ' / ' + sum(m.map((r) => r.blocked)), 'r');
+        add(Math.round(median(s.map((r) => r.seconds))) + ' / ' + Math.round(median(m.map((r) => r.seconds))), 'r');
+        tb.appendChild(tr);
+      }
+    }
+
+    fetch(DATA_URL).then((r) => r.json()).then((data) => {
+      const runs = data.runs;
+      const S = stats(runs, 'server'), M = stats(runs, 'model');
+      hero(runs, S, M);
+      const drawAll = () => { qualityChart(runs); timeChart(runs); scatterChart(runs); };
+      drawAll(); comparison(runs); casesTable(data);
+      let w = window.innerWidth; window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - w) > 24) { w = window.innerWidth; drawAll(); } });
+      document.getElementById('f-suite').addEventListener('change', () => casesTable(data));
+      document.getElementById('f-diff').addEventListener('change', () => casesTable(data));
+    }).catch(() => { document.getElementById('hero-lede').textContent = 'The benchmark data could not be loaded.'; });
+  </script>
+</body>
+</html>

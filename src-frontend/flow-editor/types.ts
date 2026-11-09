@@ -1,4 +1,5 @@
-// Mirror of backend schema — keep in sync with src/db/schema.ts
+// Mirror of backend schema. Flow types and validation come from src/shared/flow.ts.
+import type { Rule } from '../../src/shared/flow';
 
 export type FlowNodeType = 'start' | 'agent' | 'parallel' | 'end';
 
@@ -19,6 +20,8 @@ export interface BackendEdge {
   from: string;
   to: string;
   condition?: string;
+  when?: Rule;        // rule edge: evaluated by the server; not editable here yet
+  default?: boolean;
   priority?: number;
 }
 
@@ -31,6 +34,7 @@ export interface AgentSummary {
   id: string;
   name: string;
   description: string;
+  output_schema?: Record<string, unknown> | null;
   skills?: SkillSummary[];
 }
 
@@ -77,6 +81,8 @@ export type AnyNodeData = AgentNodeData | StartNodeData | EndNodeData | Parallel
 
 export interface EdgeData extends Record<string, unknown> {
   condition?: string;
+  when?: Rule;
+  isDefault?: boolean;
   priority?: number;
   onEditCondition?: (edgeId: string) => void;
 }

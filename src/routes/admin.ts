@@ -4,6 +4,12 @@ import path from 'path';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { sweepAbandonedRuns } from './runs';
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { asyncHandler } from '../lib/asyncHandler';
+import { validatePassword } from '../lib/passwords';
+import { NICKNAME_REGEX } from './auth';
+import { resolvePendingInvitations } from './invitations';
 
 const router = Router();
 
@@ -45,7 +51,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
   const runsTotal = count('SELECT COUNT(*) n FROM runs');
   const runs24h = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d1);
   const runs7d = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d7);
-  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE (execution_report != '' OR engine_state != '') AND status NOT IN ('cancelled','abandoned')`);
+  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE status IN ('completed','reported')`);
   const runsVerified = count(`SELECT COUNT(*) n FROM runs WHERE mode = 'stepped' AND status NOT IN ('cancelled','abandoned')`);
   const invocationsTotal = (db.prepare(
     `SELECT COALESCE(SUM(invocations), 0) s FROM agent_usage WHERE source != 'planned'`
@@ -85,7 +91,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     'SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN runs r ON r.project_id = p.id');
   const usersWithAudited = count(
     `SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN runs r ON r.project_id = p.id
-     WHERE r.execution_report != '' OR r.engine_state != ''`);
+     WHERE r.status IN ('completed','reported')`);
   const usersWithEvals = count(
     'SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN eval_cases c ON c.project_id = p.id');
 
@@ -118,7 +124,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     `SELECT p.id, p.name, p.is_public, p.paused, ow.nickname AS owner,
             COUNT(r.id) AS runs,
             SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified,
-            SUM(CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS audited,
+            SUM(CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END) AS audited,
             MAX(r.created_at) AS last_run_at
      FROM projects p
      JOIN users ow ON ow.id = p.user_id
@@ -189,5 +195,26 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     },
   });
 });
+
+// POST /admin/users — create an account. With registration closed (the
+// default), this and npm run admin:create are the only ways in.
+router.post('/users', requireAuth, requireAdmin, asyncHandler<AuthRequest>(async (req, res: Response): Promise<void> => {
+  const { email, password, nickname, name, role } = req.body as Record<string, unknown>;
+  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { res.status(400).json({ error: 'A valid email is required' }); return; }
+  const pwError = validatePassword(password);
+  if (pwError) { res.status(400).json({ error: pwError }); return; }
+  const nick = String(nickname ?? '').trim();
+  if (!NICKNAME_REGEX.test(nick)) { res.status(400).json({ error: 'nickname must be 3-30 chars, only letters, numbers, hyphens, underscores' }); return; }
+  const cleanRole = role === 'admin' ? 'admin' : 'user';
+  if (db.prepare('SELECT 1 FROM users WHERE LOWER(email) = ?').get(cleanEmail)) { res.status(409).json({ error: 'Email already registered' }); return; }
+  if (db.prepare('SELECT 1 FROM users WHERE LOWER(nickname) = LOWER(?)').get(nick)) { res.status(409).json({ error: 'Nickname already taken' }); return; }
+  const id = uuidv4();
+  db.prepare(
+    "INSERT INTO users (id, email, password_hash, name, nickname, bio, role, created_at) VALUES (?, ?, ?, ?, ?, '', ?, ?)"
+  ).run(id, cleanEmail, await bcrypt.hash(String(password), 10), String(name ?? '').trim() || nick, nick, cleanRole, Date.now());
+  resolvePendingInvitations(cleanEmail, id);
+  res.status(201).json({ id, email: cleanEmail, nickname: nick, role: cleanRole });
+}));
 
 export default router;

@@ -1,3 +1,6 @@
+import net from 'net';
+import { allowPrivateTargets, isBlockedAddress } from './outbound';
+
 // MCP server registry (Phase B1): inventory of the external MCP servers each
 // project's agents rely on. Pure validation here — unit-tested; CRUD lives in
 // routes. Phase B2 (proxying calls through AIOrc with per-agent allowlists)
@@ -40,20 +43,21 @@ export function parseExternalTool(name: string): { server: string; tool: string 
   return { server: name.slice(0, i), tool: name.slice(i + 2) };
 }
 
-// Block outbound requests to loopback, link-local and private ranges so a
-// registered "MCP server" can't be used to SSRF the host's internal network.
+// Synchronous pre-check on the literal URL, used when a server is registered.
+// It rejects obvious internal targets (localhost names, IP literals in blocked
+// ranges, including bracketed and IPv4-mapped IPv6 forms). It does NOT resolve
+// DNS: assertSafeOutbound() in lib/outbound.ts does that, at registration and
+// again on every call.
 export function isSafeOutboundUrl(url: string): boolean {
   let h: string;
   try { h = new URL(url).hostname.toLowerCase(); } catch { return false; }
-  if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0' || h === '::1' || h === '[::1]') return false;
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (m) {
-    const [a, b] = [Number(m[1]), Number(m[2])];
-    if (a === 127 || a === 10 || a === 0) return false;                 // loopback / private / this-host
-    if (a === 169 && b === 254) return false;                           // link-local (cloud metadata)
-    if (a === 192 && b === 168) return false;                           // private
-    if (a === 172 && b >= 16 && b <= 31) return false;                  // private
-  }
+  h = h.replace(/^\[|\]$/g, '');
+  if (allowPrivateTargets()) return true;
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal')) return false;
+  if (net.isIP(h)) return !isBlockedAddress(h);
+  // Single-label names ("aiorc", "db") only resolve inside a private network
+  // (Docker service names, search domains): never a public MCP server.
+  if (!h.includes('.')) return false;
   return true;
 }
 
@@ -78,4 +82,29 @@ export function validateMcpServer(input: McpServerInput): McpServerValidation {
     return { ok: false, error: 'url cannot point to localhost or a private network address' };
   }
   return { ok: true, name, url, description };
+}
+
+// ── Per-agent tool allowlist (Phase B2) ────────────────────────────────────
+// An agent lists the external tools it may call: "server__tool" for one tool
+// or "server__*" for every tool of a server. Calls are only proxied inside an
+// active run, for a tool the dispatched agent is allowed to use.
+
+export const TOOL_PATTERN_RE = /^[a-z0-9_-]{1,40}__([A-Za-z0-9_.\-]{1,100}|\*)$/;
+
+export function normalizeToolList(raw: unknown): { ok: true; value: string[] } | { ok: false; error: string } {
+  if (raw === undefined || raw === null) return { ok: true, value: [] };
+  if (!Array.isArray(raw)) return { ok: false, error: 'allowed_tools must be an array of "server__tool" or "server__*" strings' };
+  const out = new Set<string>();
+  for (const t of raw) {
+    if (typeof t !== 'string' || !TOOL_PATTERN_RE.test(t)) return { ok: false, error: `invalid allowed_tools entry ${JSON.stringify(t)}: use "server__tool" or "server__*"` };
+    out.add(t);
+  }
+  if (out.size > 100) return { ok: false, error: 'at most 100 allowed_tools entries' };
+  return { ok: true, value: [...out] };
+}
+
+export function toolAllowed(allowed: string[], namespacedTool: string): boolean {
+  const ext = parseExternalTool(namespacedTool);
+  if (!ext) return false;
+  return allowed.includes(namespacedTool) || allowed.includes(`${ext.server}__*`);
 }

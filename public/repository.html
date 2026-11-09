@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Public repository</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
   <style>
     /* ── Sidebar (cloned from dashboard.html to maintain consistency) ── */
     body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
@@ -92,7 +96,7 @@
     .repo-card:hover { border-color:var(--primary); transform:translateY(-2px); box-shadow:0 8px 20px rgba(67,97,238,0.08); }
 
     .repo-card-header { display:flex; align-items:flex-start; gap:12px; }
-    .repo-icon { width:38px; height:38px; border-radius:9px; background:linear-gradient(135deg,#4361ee,#7c3aed); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.85rem; flex-shrink:0; }
+    .repo-icon { width:38px; height:38px; border-radius:9px; background:var(--route-tint); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--primary); font-size:0.85rem; flex-shrink:0; }
     .repo-card-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .repo-card-name { font-size:1rem; font-weight:600; color:var(--text); word-break:break-word; }
     .repo-card-owner { font-size:0.78rem; color:var(--muted); margin-top:2px; }
@@ -144,7 +148,7 @@
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       font-size:0.78rem;
     }
-    .repo-id-pill { background:var(--bg); padding:3px 8px; border-radius:5px; font-family:'SFMono-Regular',Consolas,monospace; color:var(--muted); }
+    .repo-id-pill { background:var(--bg); padding:3px 8px; border-radius:5px; font-family:var(--mono); color:var(--muted); }
     .copy-id-btn { background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem; font-family:inherit; padding:2px 6px; border-radius:4px; }
     .copy-id-btn:hover { background:#eef2ff; }
 
@@ -170,7 +174,7 @@
     .has-tooltip code {
       background:rgba(251,191,36,0.18); color:#fde68a;
       padding:1px 4px; border-radius:3px;
-      font-family:'SFMono-Regular',Consolas,monospace; font-size:0.72rem;
+      font-family:var(--mono); font-size:0.72rem;
     }
 
     /* ── Empty / loading ── */
@@ -213,10 +217,9 @@
   <main class="main-area">
     <div class="main-container">
       <section class="repo-header">
-        <div class="repo-eyebrow">Public repository</div>
         <h1 class="repo-title">AIOrc Community</h1>
         <p class="repo-deck">
-          Explore projects, agents and skills that other users have made public.
+          Explore projects, agents, skills and contexts that other users have made public.
           Fork what's useful — everything is copied to your workspace so you can modify it without affecting the original.
         </p>
       </section>
@@ -243,8 +246,8 @@
         </div>
         <select id="sort-select" class="sort-select">
           <option value="recent">Most recent</option>
-          <option value="stars">Most popular (★)</option>
-          <option value="forks">Most forks (🍴)</option>
+          <option value="stars">Most popular</option>
+          <option value="forks">Most forks</option>
           <option value="usage">Most used (▶)</option>
         </select>
       </div>
@@ -280,41 +283,7 @@
     const mount = document.getElementById('shell-mount');
     if (isLoggedIn) {
       document.body.classList.add('has-sidebar');
-      mount.outerHTML = `
-        <aside class="sidebar" id="sidebar">
-          <div class="sidebar-header">
-            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
-            <button class="sidebar-collapse-btn" id="sidebar-toggle" title="Collapse/expand menu" onclick="toggleSidebar()">‹</button>
-          </div>
-          <div class="sidebar-section-title">Workspace</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="dashboard.html?tab=projects" title="Projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=agents" title="Agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=skills" title="Skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=contexts" title="Contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>
-            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team" title="Team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
-          </nav>
-          <div class="sidebar-section-title">Insights</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="analytics.html" title="Usage analytics"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
-            <a class="sidebar-item" href="audit.html" title="Audit"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>
-          </nav>
-          <div class="sidebar-section-title">Community</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item active" href="repository.html" title="Public repository"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>
-            <a class="sidebar-item" href="issues.html" title="Issues"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
-          </nav>
-          <div class="sidebar-section-title">Help</div>
-          <nav class="sidebar-nav">
-            <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>
-            <a class="sidebar-item" href="faq.html" title="Documentation"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>
-          </nav>
-          <div class="sidebar-footer">
-            <div class="sidebar-user" style="font-weight:600">${userNickname ? '@' + esc(userNickname) : esc(userEmail)}</div>
-            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(userEmail)}</div>
-            <a href="#" class="sidebar-logout" id="logout-btn">Log out</a>
-          </div>
-        </aside>`;
+      mount.outerHTML = SiteShell.sidebarHTML('repository');
       // Sidebar collapse persistence (same key as dashboard)
       const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
       const applySidebarState = () => {
@@ -346,19 +315,7 @@
         } catch {}
       })();
     } else {
-      mount.outerHTML = `
-        <nav class="anon-nav">
-          <a href="index.html" class="logo">AI<span>Orc</span></a>
-          <div style="display:flex;gap:32px;align-items:center">
-            <a href="faq.html" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">Documentation</a>
-            <a href="repository.html" style="color:#fff;text-decoration:none;font-size:0.9rem;font-weight:600">Public repository</a>
-            <a href="index.html#origen" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">About</a>
-          </div>
-          <div class="anon-nav-cta">
-            <a href="index.html">Log in</a>
-            <a href="index.html" class="cta">Create account</a>
-          </div>
-        </nav>`;
+      mount.outerHTML = SiteShell.publicNavHTML('repository');
     }
 
     // ── Helpers ──
@@ -551,6 +508,8 @@
           return;
         }
         const fork = await res.json();
+        // Project keys are shown only once; the project page picks this up.
+        try { if (type === 'projects' && fork.api_key) sessionStorage.setItem('aiorc-new-key-' + fork.id, fork.api_key); } catch { /* storage unavailable */ }
         window.location.href = TYPE_PATHS[type].after(fork.id);
       } finally {
         btnEl.disabled = false;
@@ -603,10 +562,10 @@
         return `<button class="star-btn ${starHl} ${isStarred ? 'is-starred' : ''}" onclick="toggleStarOn('${type}', '${esc(item.id)}', this)">
                   ★ <span class="star-count">${stars}</span>
                 </button>
-                <button class="fork-btn" onclick="forkOn('${type}', '${esc(item.id)}', this)">🍴 Fork</button>`;
+                <button class="fork-btn" onclick="forkOn('${type}', '${esc(item.id)}', this)"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> Fork</button>`;
       }
       return `<span class="repo-stat ${starHl}" title="Log in to star">★ ${stars}</span>
-              <span class="repo-stat" title="Log in to fork">🍴 ${forks}</span>`;
+              <span class="repo-stat" title="Log in to fork"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ${forks}</span>`;
     }
     function statsBadges(item) {
       if (!isLoggedIn) return '';
@@ -622,7 +581,7 @@
         : '';
       return `<div class="repo-card-stats">
                 <span class="repo-stat ${starHl}" title="Stars">★ <span class="repo-stat-stars-count">${stars}</span></span>
-                <span class="repo-stat" title="Forks">🍴 ${forks}</span>
+                <span class="repo-stat" title="Forks"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ${forks}</span>
                 ${usageBadge}
               </div>`;
     }
@@ -650,7 +609,7 @@
             <div class="repo-icon">${esc(initials(p.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewProjectContent('${esc(p.id)}','${esc(p.name).replace(/'/g, "\\'")}','${esc(desc).replace(/'/g, "\\'")}')" title="Click to view description">${esc(p.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewProjectContent('${esc(p.id)}',${esc(JSON.stringify(String(p.name ?? '')))},${esc(JSON.stringify(String(desc ?? '')))})" title="Click to view description">${esc(p.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(p)}</div>
@@ -667,7 +626,7 @@
           <div class="repo-card-footer">
             <span class="repo-id-pill" title="${esc(p.id)}">${esc(p.id.slice(0,8))}…</span>
             <button class="copy-id-btn has-tooltip"
-                    data-tooltip="Paste this ID into the AIORC_PROJECT_ID variable in the MCP bridge. It replaces the MCP key when the project is public — the client sends it in the x-project-id header."
+                    data-tooltip="With a personal token, this project ID lets any AIOrc user run the project (x-project-id + Authorization: Bearer aiorc_pat_...). Without a token it only lists the eval suite."
                     onclick="copyProjectId('${esc(p.id)}')">
               Copy MCP ID
             </button>
@@ -693,7 +652,7 @@
             <div class="repo-icon">${esc(initials(a.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewAgentContent('${esc(a.id)}','${esc(a.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(a.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewAgentContent('${esc(a.id)}',${esc(JSON.stringify(String(a.name ?? '')))})" title="Click to view content">${esc(a.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(a)}</div>
@@ -715,7 +674,7 @@
             <div class="repo-icon" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">${esc(initials(s.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewSkillContent('${esc(s.id)}','${esc(s.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(s.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewSkillContent('${esc(s.id)}',${esc(JSON.stringify(String(s.name ?? '')))})" title="Click to view content">${esc(s.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(s)}</div>
@@ -739,7 +698,7 @@
             <div class="repo-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb)">${esc(initials(c.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewContextContent('${esc(c.id)}','${esc(c.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(c.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewContextContent('${esc(c.id)}',${esc(JSON.stringify(String(c.name ?? '')))})" title="Click to view content">${esc(c.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(c)}</div>

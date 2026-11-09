@@ -10,6 +10,7 @@ import {
   type Node,
 } from '@xyflow/react';
 import type { EdgeData } from '../types';
+import { describeRule } from '../../../src/shared/flow';
 
 interface Props extends EdgeProps {
   data?: EdgeData;
@@ -302,7 +303,8 @@ export default function ConditionalEdge({
     setEdges((edges) => edges.filter((edge) => edge.id !== id));
   }
 
-  const condition = data?.condition;
+  // Rule edges are shown read-only: rules are edited in the harness files.
+  const condition = data?.when ? `rule: ${describeRule(data.when)}` : data?.condition;
   const shortLabel = condition
     ? condition.length > 32
       ? condition.slice(0, 30) + '…'
@@ -317,7 +319,7 @@ export default function ConditionalEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: selected ? '#6366f1' : '#94a3b8',
+          stroke: selected ? '#4361ee' : '#8a93a8',
           strokeWidth: selected ? 2.5 : 1.8,
           fill: 'none',
         }}
@@ -336,9 +338,9 @@ export default function ConditionalEdge({
               className="edge-condition-label"
               onClick={(e) => {
                 e.stopPropagation();
-                data?.onEditCondition?.(id);
+                if (!data?.when) data?.onEditCondition?.(id);
               }}
-              title={condition + '\n\n(click to edit)'}
+              title={condition + (data?.when ? '\n\n(rule edge: evaluated by the server, read-only here)' : '\n\n(click to edit)')}
             >
               {shortLabel}
             </div>

@@ -32,7 +32,7 @@ export default function SkillsPanel({ skills, visible, onToggle, onShowContent }
         <input
           type="text"
           className="fe-search-input"
-          placeholder="🔍 Filter skills…"
+          placeholder="Filter skills…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
@@ -54,7 +54,9 @@ export default function SkillsPanel({ skills, visible, onToggle, onShowContent }
               onDragStart={(e) => onDragStart(e, s)}
               title={s.description}
             >
-              <div className="fe-palette-avatar fe-skill-avatar">⚙</div>
+              <div className="fe-palette-avatar fe-skill-avatar">
+                <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 3 6.5 10 10l7-3.5z"/><path d="m3 10 7 3.5 7-3.5"/><path d="m3 13.5 7 3.5 7-3.5"/></svg>
+              </div>
               <div className="fe-palette-info">
                 <div
                   className={`fe-palette-name${onShowContent ? ' clickable' : ''}`}

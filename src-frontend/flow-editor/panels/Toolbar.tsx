@@ -63,7 +63,7 @@ export default function Toolbar({
 
       <div className="fe-toolbar-group">
         <button className="fe-btn fe-btn-ghost fe-btn-danger" onClick={onClearFlow} title="Delete all nodes and connections">
-          🗑 Clear flow
+          Clear flow
         </button>
         <button
           className={`fe-btn fe-btn-primary${saving ? ' loading' : ''}`}
@@ -71,7 +71,7 @@ export default function Toolbar({
           disabled={saving}
           title="Save flow"
         >
-          {saving ? '⟳ Saving…' : '💾 Save'}
+          {saving ? 'Saving…' : 'Save'}
         </button>
       </div>
     </div>
