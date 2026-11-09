@@ -14,3 +14,8 @@ Body sections, in this order:
 
 Do not invent tests that were not run or results that were not reported by
 an earlier step.
+
+## No signatures, no emoji
+
+Do not add `Co-Authored-By:` lines, "Generated with ..." lines, tool or
+model names, or emoji. The server rejects outputs that contain them.

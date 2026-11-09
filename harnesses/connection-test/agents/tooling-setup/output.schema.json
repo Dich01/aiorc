@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "required": ["installed", "already_present", "files_changed", "commands", "versions", "notes"],
+  "properties": {
+    "installed": { "type": "boolean" },
+    "already_present": { "type": "boolean" },
+    "files_changed": { "type": "array", "items": { "type": "string", "maxLength": 500 }, "maxItems": 20 },
+    "commands": { "type": "array", "items": { "type": "string", "maxLength": 500 }, "maxItems": 20 },
+    "versions": {
+      "type": "object",
+      "properties": { "eslint": { "type": "string", "maxLength": 80 }, "prettier": { "type": "string", "maxLength": 80 } },
+      "additionalProperties": false
+    },
+    "notes": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

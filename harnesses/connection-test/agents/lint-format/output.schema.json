@@ -1,28 +1,72 @@
 {
   "type": "object",
-  "required": ["tools", "summary"],
+  "required": [
+    "tools",
+    "summary"
+  ],
   "properties": {
     "tools": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 5,
+      "maxItems": 8,
       "items": {
         "type": "object",
-        "required": ["tool", "ran", "command", "exit_code", "issues", "reason"],
+        "required": [
+          "tool",
+          "ran",
+          "command",
+          "exit_code",
+          "issues",
+          "reason"
+        ],
         "properties": {
-          "tool": { "enum": ["eslint", "prettier", "other"] },
-          "ran": { "type": "boolean" },
-          "version": { "type": "string", "maxLength": 80 },
-          "command": { "type": "string", "maxLength": 500 },
-          "exit_code": { "type": ["integer", "null"] },
-          "issues": { "type": "integer", "minimum": 0 },
-          "output_excerpt": { "type": "string", "maxLength": 4000 },
-          "reason": { "type": "string", "maxLength": 500 }
+          "tool": {
+            "enum": [
+              "eslint",
+              "prettier",
+              "ruff",
+              "black",
+              "djlint",
+              "other"
+            ]
+          },
+          "ran": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "command": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "exit_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "issues": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output_excerpt": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
         },
         "additionalProperties": false
       }
     },
-    "summary": { "type": "string", "maxLength": 1000 }
+    "summary": {
+      "type": "string",
+      "maxLength": 1000
+    }
   },
   "additionalProperties": false
 }

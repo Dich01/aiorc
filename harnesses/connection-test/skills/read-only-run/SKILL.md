@@ -2,7 +2,9 @@
 
 Applies to every agent of this flow.
 
-- Do not modify the repository: no editing or creating files, no
+- Do not modify the repository (the only exception: the tooling-setup agent
+  may install ESLint and Prettier, following the tooling install skill): no
+  editing or creating files, no
   `git add`, `git commit`, `git push`, `git checkout`, `git stash`, and no
   creating branches or pull requests. Everything you produce is a proposal
   returned in your output.
