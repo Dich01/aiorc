@@ -4,7 +4,7 @@
   "description": "Multi-tenant AI agent registry with MCP server support and deterministic orchestration",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "AIORC_OPEN_REGISTRATION=1 ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "ts-node --transpile-only src/tests/run.ts",
