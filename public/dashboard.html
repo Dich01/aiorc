@@ -388,7 +388,7 @@
   <div class="modal-overlay" id="agent-modal" onclick="if(event.target===this)closeAgentModal()">
     <div class="modal-box">
       <h3 id="agent-modal-title">New agent</h3>
-      <p class="modal-subtitle">The content is injected verbatim into the compiled prompt as a step of the flow.</p>
+      <p class="modal-subtitle">Its instructions are delivered to the model, as written, when the flow reaches this agent's step.</p>
       <div class="form-group">
         <label for="agent-name">Name *</label>
         <input type="text" id="agent-name" placeholder="code-reviewer" autocomplete="off" />
@@ -408,7 +408,7 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">AGENT.md holds the agent's instructions and is always loaded (injected verbatim into the compiled prompt). Add more files to attach resources the agent can use (e.g. checklist.md, deploy.sh, schema.json) — non-markdown files are passed to the agent inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">AGENT.md holds the agent's instructions in plain language and is delivered, as written, every time the flow reaches this agent. Add more files for supporting material (e.g. checklist.md, examples.md). Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="agent-files-list" class="skill-files-list"></div>
         <div id="agent-files-drop" class="files-dropzone">
           <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
@@ -470,7 +470,7 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They're hoisted together when any agent in the flow uses this skill; non-markdown files are passed to the agent verbatim inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">SKILL.md is the entry point and is always loaded. Add more files to split a larger skill into pieces — docs (e.g. domain.md, examples.md) or resources the agent can run/apply (e.g. deploy.sh, config.json). They are delivered once per run when any agent in the flow uses this skill. Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="skill-files-list" class="skill-files-list"></div>
         <div id="skill-files-drop" class="files-dropzone">
           <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
@@ -526,7 +526,7 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up or attach resources (e.g. glossary.md, data.json) — non-markdown files are passed to the model inside a code block.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up (e.g. glossary.md). Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="context-files-list" class="skill-files-list"></div>
         <div id="context-files-drop" class="files-dropzone">
           <span class="files-dropzone-inner">⬆ Drop files here or <span class="files-dropzone-link">click to upload</span></span>
@@ -1421,7 +1421,7 @@ workflow.start({
                 <div>
                   <span class="field-label">Content ${isEntry ? '(Markdown)' : '<span style="font-weight:400;text-transform:none;color:var(--muted)">(Markdown, script, config… any text)</span>'}</span>
                   <textarea class="skill-file-content-input" rows="9"
-                            placeholder="${isEntry ? 'Main body — injected verbatim into the compiled prompt.' : 'Supporting content: docs, a shell script, a JSON/YAML config...'}"
+                            placeholder="${isEntry ? 'Main body, in plain language: delivered to the model as written.' : 'Supporting content: docs, a shell script, a JSON/YAML config...'}"
                             oninput="FILE_EDITORS['${key}'].updateField(${idx}, 'content', this.value)">${escHtml(f.content)}</textarea>
                 </div>
               </div>
