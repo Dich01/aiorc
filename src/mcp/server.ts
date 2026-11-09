@@ -7,7 +7,11 @@ import { assertSafeOutbound, postJsonPinned, OutboundError } from '../lib/outbou
 import { ajv, formatAjvErrors, validateEnvelope, validateToolCallParams } from './validation';
 import { startRun, nextStep, StepResult } from '../orchestrator/engine';
 import { gateExecution } from '../lib/controlPlane';
-import { externalToolName, parseExternalTool, sanitizeServerName } from '../lib/mcpServers';
+import { externalToolName, parseExternalTool, sanitizeServerName, toolAllowed } from '../lib/mcpServers';
+import { loadSnapshot } from '../orchestrator/snapshot';
+import { appendEvent } from '../lib/runEvents';
+import { hashJson } from '../lib/canonicalJson';
+import { EngineState } from '../orchestrator/engine';
 import { parseStoredSchema } from '../lib/outputSchema';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -210,6 +214,32 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
       res.json(rpcError(id, -32602, `Unknown external server "${ext.server}". Register it in the project's Connect tab.`));
       return;
     }
+    // Only inside an active run, and only for a tool the dispatched agent is
+    // allowed to call. The client names the run in params._meta.runId.
+    const metaArg = ((params as { _meta?: Record<string, unknown> })._meta ?? {}) as Record<string, unknown>;
+    const runId = typeof metaArg['runId'] === 'string' ? metaArg['runId'] : '';
+    const wantNode = typeof metaArg['node'] === 'string' ? metaArg['node'] : '';
+    if (!runId) {
+      res.json(rpcError(id, -32001, `External tools can only be called inside a run: pass the runId in params._meta.runId.`));
+      return;
+    }
+    const runRow = db.prepare('SELECT engine_state, status FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { engine_state: string; status: string } | undefined;
+    const state = runRow?.engine_state ? JSON.parse(runRow.engine_state) as EngineState : null;
+    if (!runRow || !state || state.status !== 'active' || !['running', 'abandoned'].includes(runRow.status)) {
+      res.json(rpcError(id, -32001, `Run "${runId}" is not active in this project; external tools can only be called during an active run.`));
+      return;
+    }
+    const snap = loadSnapshot(runId);
+    const candidates = state.current.filter(n => !wantNode || n === wantNode);
+    const node = candidates.find(n => {
+      const agentId = snap?.flow.nodes.find(x => x.id === n)?.agent_id;
+      return !!agentId && toolAllowed(snap!.agents.get(agentId)?.allowed_tools ?? [], toolName);
+    });
+    if (!node) {
+      res.json(rpcError(id, -32001, `Tool "${toolName}" is not in the allowed_tools of the agent dispatched at step ${state.step}.`));
+      return;
+    }
+
     const started = Date.now();
     let ok = 0;
     try {
@@ -220,9 +250,13 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
       const reason = err instanceof OutboundError ? `blocked: ${err.message}` : `unreachable: ${(err as Error).message}`;
       res.json(rpcError(id, -32603, `External server "${server.name}" ${reason}`));
     } finally {
-      db.prepare(
-        'INSERT INTO mcp_tool_calls (id, project_id, server_id, server_name, tool, caller_user_id, caller_email, declared_caller, ok, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(uuidv4(), project.id, server.id, server.name, ext.tool, caller?.userId ?? '', caller?.email ?? '', declaredCaller, ok, Date.now() - started, Date.now());
+      const duration = Date.now() - started;
+      db.transaction(() => {
+        db.prepare(
+          'INSERT INTO mcp_tool_calls (id, project_id, server_id, server_name, tool, run_id, node_id, caller_user_id, caller_email, declared_caller, ok, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).run(uuidv4(), project.id, server.id, server.name, ext.tool, runId, node, caller?.userId ?? '', caller?.email ?? '', declaredCaller, ok, duration, Date.now());
+        appendEvent(runId, 'tool.called', { step: state.step, node, tool: toolName, server_id: server.id, ok: !!ok, duration_ms: duration, arguments_sha256: hashJson(toolArgs) });
+      })();
     }
     return;
   }

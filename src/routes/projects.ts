@@ -480,15 +480,15 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
     for (const aid of agentIdsInFlow) {
       const a = db.prepare('SELECT * FROM agents WHERE id = ?').get(aid) as {
         id: string; user_id: string; name: string; description: string;
-        tags: string; output_schema: string; created_at: number;
+        tags: string; output_schema: string; allowed_tools: string; created_at: number;
       } | undefined;
       if (!a) continue; // orphan reference, skip; the resulting flow will compile with a warning
       const newAgentId = uuidv4();
       agentIdMap.set(aid, newAgentId);
       const newName = renameIfNeeded(a.name, existingAgentNames);
       db.prepare(
-        'INSERT INTO agents (id, user_id, name, description, tags, output_schema, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.output_schema, a.id, now);
+        'INSERT INTO agents (id, user_id, name, description, tags, output_schema, allowed_tools, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.output_schema, a.allowed_tools, a.id, now);
       copyEntityFiles(a.id, newAgentId, AGENT_FILES);
       db.prepare('INSERT INTO project_agents (project_id, agent_id) VALUES (?, ?)').run(newProjectId, newAgentId);
 

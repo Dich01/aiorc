@@ -54,6 +54,11 @@ test('wrongly typed arguments are rejected', async () => {
 
 section('outbound gateway (F12)');
 
+async function callTool(key: string, name: string, runId: string) {
+  const r = await rpc('tools/call', { name, arguments: {}, _meta: { runId } }, { 'x-project-key': key });
+  return { error: r.body?.error as { code: number; message: string } | undefined, result: r.body?.result };
+}
+
 async function registerServer(token: string, projectId: string, url: string) {
   return api(`/projects/${projectId}/mcp-servers`, { token, body: { name: `s${randomUUID().slice(0, 6)}`, url } });
 }
@@ -80,9 +85,11 @@ test('a server that redirects is refused at registration and at call time', asyn
     assert.ok(/redirect/.test(reg.body.error));
 
     // Even if such a row exists (registered before it started redirecting), calls refuse to follow.
+    const lp = await linearProject(u.token, 'caller', { allowed_tools: ['redir__*'] });
     db.prepare('INSERT INTO mcp_servers (id, project_id, name, url, description, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(randomUUID(), p.id, 'redir', url, '', Date.now());
-    const call = await mcp(p.api_key, 'redir__anything', {});
+      .run(randomUUID(), lp.id, 'redir', url, '', Date.now());
+    const run = await mcp(lp.api_key, 'workflow.start', { request: 'x' });
+    const call = await callTool(lp.api_key, 'redir__anything', run.meta.runId);
     assert.ok(call.error && /redirect/.test(call.error.message), JSON.stringify(call));
   } finally {
     delete process.env.AIORC_GATEWAY_ALLOW_PRIVATE;
@@ -92,10 +99,11 @@ test('a server that redirects is refused at registration and at call time', asyn
 
 test('a stored URL that now resolves to loopback is blocked at call time', async () => {
   const u = await createUser();
-  const p = await createProject(u.token);
+  const p = await linearProject(u.token, 'caller', { allowed_tools: ['rebound__x'] });
   db.prepare('INSERT INTO mcp_servers (id, project_id, name, url, description, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(randomUUID(), p.id, 'rebound', 'http://localhost./mcp', '', Date.now());
-  const call = await mcp(p.api_key, 'rebound__x', {});
+  const run = await mcp(p.api_key, 'workflow.start', { request: 'x' });
+  const call = await callTool(p.api_key, 'rebound__x', run.meta.runId);
   assert.ok(call.error && /blocked/.test(call.error.message), JSON.stringify(call));
 });
 

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { section, test } from '../harness';
-import { gateExecution, signAudit, verifyAudit, isAbandoned } from '../../lib/controlPlane';
+import { gateExecution, isAbandoned } from '../../lib/controlPlane';
 
 section('controlPlane');
 
@@ -38,22 +38,4 @@ test('isAbandoned: 2h without activity marks abandonment, recent activity does n
   const TWO_H = 2 * 3600 * 1000;
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H + 1, TWO_H), true);
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H - 1, TWO_H), false);
-});
-
-section('auditExport');
-
-
-test('the export signature is deterministic and verifiable', () => {
-  const payload = JSON.stringify({ runId: 'r1', path: ['brain', 'security-qa'] });
-  const sig = signAudit(payload, 'secret-1');
-  assert.strictEqual(sig, signAudit(payload, 'secret-1'));
-  assert.strictEqual(verifyAudit(payload, sig, 'secret-1'), true);
-});
-
-test('altering the payload or using a different key invalidates the signature', () => {
-  const payload = JSON.stringify({ runId: 'r1', path: ['brain', 'security-qa'] });
-  const sig = signAudit(payload, 'secret-1');
-  const tampered = JSON.stringify({ runId: 'r1', path: ['brain'] });
-  assert.strictEqual(verifyAudit(tampered, sig, 'secret-1'), false);
-  assert.strictEqual(verifyAudit(payload, sig, 'another-key'), false);
 });

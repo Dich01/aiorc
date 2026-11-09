@@ -16,6 +16,7 @@ import {
   validateProjectFlow,
 } from './index';
 import { captureSnapshot, loadSnapshot, persistSnapshot, RunSnapshot } from './snapshot';
+import { appendEvent } from '../lib/runEvents';
 import {
   EngineState,
   RunStatus,
@@ -170,12 +171,13 @@ function respond(runId: string, state: EngineState, text: string, extraMeta: Rec
 }
 
 // Dispatch `nodes` as the next step. Returns false when a cap is exceeded.
-function dispatch(snap: RunSnapshot, state: EngineState, nodes: FlowNode[]): boolean {
+function dispatch(runId: string, snap: RunSnapshot, state: EngineState, nodes: FlowNode[]): boolean {
   for (const node of nodes) {
     if ((state.invocations[node.id] ?? 0) + 1 > capOf(node)) {
       state.status = 'capped';
       state.outcome = `invocation cap reached: ${snap.agents.get(node.agent_id!)?.name ?? node.id} hit its maximum of ${capOf(node)}`;
       state.current = [];
+      appendEvent(runId, 'run.capped', { node: node.id, cap: capOf(node), outcome: state.outcome });
       return false;
     }
   }
@@ -188,6 +190,10 @@ function dispatch(snap: RunSnapshot, state: EngineState, nodes: FlowNode[]): boo
     agents: nodes.map(n => snap.agents.get(n.agent_id!)?.name ?? n.agent_name ?? n.id),
     dispatched_at: Date.now(),
   });
+  appendEvent(runId, 'step.dispatched', {
+    step: state.step,
+    nodes: nodes.map(n => ({ node: n.id, agent_id: n.agent_id ?? '', agent: snap.agents.get(n.agent_id!)?.name ?? '' })),
+  });
   return true;
 }
 
@@ -199,10 +205,11 @@ function enter(runId: string, snap: RunSnapshot, state: EngineState, target: Flo
     state.outcome = end.outcome ?? 'end';
     state.end_node = end.id;
     state.current = [];
+    appendEvent(runId, 'run.completed', { end_node: end.id, outcome: state.outcome });
     lines.push(`Workflow completed: reached End "${state.outcome}". Report the result to the user.`);
     return {};
   }
-  if (!dispatch(snap, state, agents)) {
+  if (!dispatch(runId, snap, state, agents)) {
     lines.push(`Workflow stopped: ${state.outcome}. Tell the user why it stopped.`);
     return {};
   }
@@ -231,7 +238,17 @@ export function startRun(projectId: string, input: Record<string, unknown>, who:
       `INSERT INTO runs (id, project_id, input, flow_json, caller_user_id, caller_email, declared_caller, mode, engine_state, eval_case_id, status, created_at, last_activity_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'stepped', '', ?, 'running', ?, ?)`
     ).run(runId, projectId, canonicalJson(input), canonicalJson(flow), who.caller?.userId ?? '', who.caller?.email ?? '', who.declaredCaller, evalCaseId, now, now);
-    persistSnapshot(runId, snap);
+    const hashes = persistSnapshot(runId, snap);
+    appendEvent(runId, 'run.started', {
+      project_id: projectId,
+      engine_version: ENGINE_VERSION,
+      flow_sha256: hashes.find(h => h.kind === 'flow')!.sha256,
+      input_sha256: sha256(canonicalJson(input)),
+      entities: hashes.filter(h => h.kind !== 'flow').map(h => ({ kind: h.kind, id: h.entity_id, sha256: h.sha256 })),
+      caller: who.caller ? { user_id: who.caller.userId, email: who.caller.email } : null,
+      declared_caller: who.declaredCaller || null,
+      eval_case_id: evalCaseId || null,
+    }, now);
     recordPlannedUsage(runId, projectId, [...snap.agents.values()].map(a => ({ id: a.id, name: a.name })));
 
     const state: EngineState = { status: 'active', step: 0, current: [], invocations: {}, steps: [] };
@@ -294,6 +311,7 @@ export function nextStep(runId: string, args: NextArgs): StepResult {
     if (!snap) {
       state.status = 'failed';
       state.outcome = 'run snapshot missing';
+      appendEvent(runId, 'run.failed', { reason: state.outcome });
       persistState(runId, state);
       return respond(runId, state, 'This run cannot continue: its snapshot is missing.', {}, 'failed');
     }
@@ -325,6 +343,14 @@ export function nextStep(runId: string, args: NextArgs): StepResult {
     }
     current.completed_at = now;
     current.transition = choice.edge!.id;
+    appendEvent(runId, 'step.completed', { step: state.step, outputs: current.outputs }, now);
+    appendEvent(runId, 'transition.taken', {
+      step: state.step,
+      edge: choice.edge!.id,
+      from: state.current,
+      to: choice.edge!.to,
+      decided_by: state.current.length > 1 ? 'join' : args.transition !== undefined ? 'client_choice' : exitKind(outgoing(flow, state.current[0]!)) === 'rules' ? 'rule' : 'single_exit',
+    }, now);
 
     const lines: string[] = [];
     const target = flow.nodes.find(n => n.id === choice.edge!.to)!;
@@ -342,9 +368,11 @@ export function cancelRun(runId: string): void {
     const row = db.prepare('SELECT engine_state FROM runs WHERE id = ?').get(runId) as { engine_state: string } | undefined;
     if (!row?.engine_state) { db.prepare("UPDATE runs SET status = 'cancelled' WHERE id = ?").run(runId); return; }
     const state = JSON.parse(row.engine_state) as EngineState;
+    if (state.status !== 'active') return;
     state.status = 'cancelled';
     state.outcome = 'cancelled';
     state.current = [];
+    appendEvent(runId, 'run.cancelled', { at_step: state.step });
     persistState(runId, state);
   })();
 }

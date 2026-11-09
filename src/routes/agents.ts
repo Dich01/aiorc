@@ -7,6 +7,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Agent, AgentInvitation } from '../db/schema';
 import { checkOutputSchema, parseStoredSchema } from '../lib/outputSchema';
 import { flowsReferencingAgents } from '../orchestrator';
+import { normalizeToolList } from '../lib/mcpServers';
 
 // output_schema arrives as a JSON Schema object, null/'' to clear it, or a
 // JSON string. Returns the column value, or an error.
@@ -34,6 +35,7 @@ function enrichAgent(a: Agent, viewerId?: string) {
     ...a,
     content: files.find(f => f.is_entry)?.content ?? '',
     output_schema: parseStoredSchema(a.output_schema),
+    allowed_tools: JSON.parse(a.allowed_tools || '[]') as string[],
     files,
     skills: loadSkillsFor(a.id),
     project_ids: loadProjectIdsFor(a.id),
@@ -228,10 +230,10 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /agents — create agent
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, tags, content, files, output_schema, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    output_schema?: unknown; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; project_ids?: string[];
   };
 
   if (!name?.trim() || !description?.trim()) {
@@ -243,11 +245,13 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
 
   const schema = readOutputSchema(output_schema ?? null);
   if (!schema.ok) { res.status(400).json({ error: schema.error }); return; }
+  const tools = normalizeToolList(allowed_tools);
+  if (!tools.ok) { res.status(400).json({ error: tools.error }); return; }
 
   const id = uuidv4();
   db.prepare(
-    'INSERT INTO agents (id, user_id, name, description, tags, output_schema, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), schema.value, Date.now());
+    'INSERT INTO agents (id, user_id, name, description, tags, output_schema, allowed_tools, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), schema.value, JSON.stringify(tools.value), Date.now());
   writeEntityFiles(id, normalized.files, AGENT_FILES);
 
   if (Array.isArray(skill_ids) && skill_ids.length > 0) {
@@ -281,10 +285,10 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, tags, content, files, output_schema, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    output_schema?: unknown; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; project_ids?: string[];
   };
 
   let schemaValue = agent.output_schema;
@@ -292,6 +296,12 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     const schema = readOutputSchema(output_schema);
     if (!schema.ok) { res.status(400).json({ error: schema.error }); return; }
     schemaValue = schema.value;
+  }
+  let toolsValue = agent.allowed_tools;
+  if (allowed_tools !== undefined) {
+    const tools = normalizeToolList(allowed_tools);
+    if (!tools.ok) { res.status(400).json({ error: tools.error }); return; }
+    toolsValue = JSON.stringify(tools.value);
   }
 
   // Only touch files if the client sent something file-related.
@@ -303,12 +313,13 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   db.prepare(
-    'UPDATE agents SET name=?, description=?, tags=?, output_schema=? WHERE id=?'
+    'UPDATE agents SET name=?, description=?, tags=?, output_schema=?, allowed_tools=? WHERE id=?'
   ).run(
     name?.trim() || agent.name,
     description?.trim() || agent.description,
     tags !== undefined ? normalizeTags(tags) : agent.tags,
     schemaValue,
+    toolsValue,
     agent.id
   );
 
@@ -455,8 +466,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
 
   const fork = db.transaction(() => {
     db.prepare(
-      'INSERT INTO agents (id, user_id, name, description, tags, output_schema, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(newAgentId, req.userId!, candidate, source.description, source.tags, source.output_schema, 0, source.id, now);
+      'INSERT INTO agents (id, user_id, name, description, tags, output_schema, allowed_tools, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(newAgentId, req.userId!, candidate, source.description, source.tags, source.output_schema, source.allowed_tools, 0, source.id, now);
 
     // Deep-copy the agent's files (entry + supporting).
     const srcFiles = loadEntityFiles(source.id, AGENT_FILES);

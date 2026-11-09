@@ -18,6 +18,7 @@ import analyticsRouter from './routes/analytics';
 import evalsRouter from './routes/evals';
 import adminRouter from './routes/admin';
 import mcpRouter from './mcp/server';
+import auditRouter from './routes/audit';
 
 // Builds the Express app without opening a port, so tests can mount it on an
 // ephemeral port. src/index.ts is the process entry point that listens.
@@ -49,6 +50,7 @@ export function createApp(): express.Express {
   app.use('/evals', evalsRouter);
   app.use('/admin', adminRouter);
   app.use('/mcp', mcpRouter);
+  app.use('/audit', auditRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', version: '1.0.0', timestamp: Date.now() });

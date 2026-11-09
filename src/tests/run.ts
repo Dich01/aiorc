@@ -16,6 +16,7 @@ import './unit/outbound.test';
 import './integration/bootstrap.test';
 import './integration/hardening.test';
 import './integration/engine.test';
+import './integration/audit.test';
 
 runAll()
   .then(async failed => {

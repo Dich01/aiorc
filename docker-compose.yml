@@ -3,6 +3,10 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Keep the audit signing key on the persistent volume: a new key on
+      # every rebuild would leave older exports unverifiable.
+      - AUDIT_KEY_FILE=/app/data/.audit-ed25519.key
     volumes:
       - ./data:/app/data
     expose:

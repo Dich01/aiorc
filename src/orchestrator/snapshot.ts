@@ -15,6 +15,7 @@ export interface AgentSnap {
   name: string;
   description: string;
   output_schema: Record<string, unknown> | null;
+  allowed_tools: string[];   // external tools this agent may call ("server__tool" or "server__*")
   skill_ids: string[];
   files: SnapFile[];
 }
@@ -39,6 +40,10 @@ export interface RunSnapshot {
 
 export interface SnapshotHash { kind: string; entity_id: string; name: string; sha256: string }
 
+function parseToolList(raw: string): string[] {
+  try { const v = JSON.parse(raw || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
+}
+
 const files = (rows: { name: string; description: string; content: string; is_entry: number }[]): SnapFile[] =>
   rows.map(f => ({ name: f.name, description: f.description, content: f.content, is_entry: f.is_entry }));
 
@@ -57,6 +62,7 @@ export function captureSnapshot(projectId: string, flow: FlowDocument): RunSnaps
     agents.set(a.id, {
       id: a.id, name: a.name, description: a.description,
       output_schema: parseStoredSchema(a.output_schema),
+      allowed_tools: parseToolList(a.allowed_tools),
       skill_ids: ids,
       files: files(loadEntityFiles(a.id, AGENT_FILES)),
     });

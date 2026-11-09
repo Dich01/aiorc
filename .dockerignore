@@ -9,6 +9,7 @@ ssh-key-*.key
 *.pem
 .jwt-secret
 .audit-secret
+.audit-ed25519.key
 .mail-config.json
 .claude
 src-frontend

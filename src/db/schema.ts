@@ -45,6 +45,7 @@ export interface Agent {
   description: string;
   tags: string; // comma-separated labels (may be '')
   output_schema: string; // JSON Schema (as JSON text) the agent's output must satisfy, '' = any JSON object
+  allowed_tools: string; // JSON array of external tool names ("server__tool" or "server__*") this agent may call
   is_public: number;
   forked_from: string | null;
   created_at: number;
@@ -294,7 +295,7 @@ export interface AgentUsage {
 // Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
 // pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
 // a database at another version is refused at startup (see db/client.ts).
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -340,6 +341,7 @@ CREATE TABLE IF NOT EXISTS agents (
   description TEXT NOT NULL,
   tags TEXT NOT NULL DEFAULT '',
   output_schema TEXT NOT NULL DEFAULT '',
+  allowed_tools TEXT NOT NULL DEFAULT '[]',
   is_public INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
@@ -677,6 +679,26 @@ CREATE TABLE IF NOT EXISTS run_step_outputs (
   FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
 );
 
+-- Append-only, hash-chained audit log of every run. Each event's hash covers
+-- the previous hash and the canonical JSON of the event, so changing,
+-- removing or reordering any event breaks every hash after it. The triggers
+-- make the table append-only at the database level. There is deliberately no
+-- foreign key to runs: deleting a project removes its runs, not their history.
+CREATE TABLE IF NOT EXISTS run_events (
+  run_id TEXT NOT NULL,
+  seq INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  at INTEGER NOT NULL,
+  prev_hash TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  PRIMARY KEY (run_id, seq)
+);
+CREATE TRIGGER IF NOT EXISTS run_events_no_update BEFORE UPDATE ON run_events
+BEGIN SELECT RAISE(ABORT, 'run_events is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS run_events_no_delete BEFORE DELETE ON run_events
+BEGIN SELECT RAISE(ABORT, 'run_events is append-only'); END;
+
 CREATE TABLE IF NOT EXISTS mcp_servers (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
@@ -694,6 +716,8 @@ CREATE TABLE IF NOT EXISTS mcp_tool_calls (
   server_id TEXT NOT NULL,
   server_name TEXT NOT NULL,
   tool TEXT NOT NULL,
+  run_id TEXT NOT NULL DEFAULT '',
+  node_id TEXT NOT NULL DEFAULT '',
   caller_user_id TEXT NOT NULL DEFAULT '',
   caller_email TEXT NOT NULL DEFAULT '',
   declared_caller TEXT NOT NULL DEFAULT '',

@@ -2,7 +2,8 @@ import { Router, Response } from 'express';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Run } from '../db/schema';
-import { signAudit, ABANDON_THRESHOLD_MS, auditSigningKey } from '../lib/controlPlane';
+import { ABANDON_THRESHOLD_MS } from '../lib/controlPlane';
+import { buildSignedExport } from '../lib/auditBuild';
 import { cancelRun } from '../orchestrator/engine';
 import { snapshotHashes } from '../orchestrator/snapshot';
 
@@ -107,42 +108,20 @@ router.post('/:id/cancel', requireAuth, (req: AuthRequest, res: Response): void 
   res.json({ id: run.id, status: 'cancelled' });
 });
 
-// GET /runs/:id/export — signed audit export. HMAC-SHA256 over the payload so
-// the file is verifiable evidence: any alteration after export breaks the seal.
+// GET /runs/:id/export — signed audit export (aiorc.audit.v1): the full
+// hash-chained event log, the manifest of frozen entities, every accepted
+// output and the review binding, signed with Ed25519. Verify it with
+// POST /audit/verify or offline with npm run audit:verify.
 router.get('/:id/export', requireAuth, (req: AuthRequest, res: Response): void => {
-  const run = db.prepare(`
-    SELECT r.*, p.name as project_name, p.user_id
-    FROM runs r JOIN projects p ON p.id = r.project_id
-    WHERE r.id = ?
-  `).get(req.params['id']) as (Run & { project_name: string; user_id: string }) | undefined;
+  const run = db.prepare('SELECT r.id, p.user_id FROM runs r JOIN projects p ON p.id = r.project_id WHERE r.id = ?')
+    .get(req.params['id']) as { id: string; user_id: string } | undefined;
   if (!run) { res.status(404).json({ error: 'Run not found' }); return; }
-
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
   if (user?.role !== 'admin' && run.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
 
-  const parse = (s: string) => { try { return JSON.parse(s); } catch { return s || null; } };
-  const payload = {
-    run_id: run.id,
-    project: run.project_name,
-    mode: 'server-verified (stepped)',
-    status: run.status,
-    outcome: run.outcome || null,
-    caller_email: run.caller_email || null,
-    created_at: run.created_at,
-    created_at_iso: new Date(run.created_at).toISOString(),
-    input: parse(run.input),
-    verified_execution: run.engine_state ? parse(run.engine_state) : null,
-    eval: run.eval_verdict ? { verdict: run.eval_verdict, reasons: parse(run.eval_reasons) } : null,
-    exported_at_iso: new Date().toISOString(),
-  };
-  const serialized = JSON.stringify(payload);
+  const signed = buildSignedExport(run.id)!;
   res.setHeader('Content-Disposition', `attachment; filename="aiorc-audit-${run.id.slice(0, 8)}.json"`);
-  res.json({
-    payload,
-    signature: signAudit(serialized, auditSigningKey()),
-    algorithm: 'HMAC-SHA256 over JSON.stringify(payload)',
-    note: 'Verify with the audit signing key (.audit-secret / AUDIT_SIGNING_KEY): HMAC-SHA256(JSON.stringify(payload)) must equal signature. This key is independent from auth.',
-  });
+  res.json(signed);
 });
 
 export default router;

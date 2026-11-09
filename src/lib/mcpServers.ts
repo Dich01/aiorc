@@ -83,3 +83,28 @@ export function validateMcpServer(input: McpServerInput): McpServerValidation {
   }
   return { ok: true, name, url, description };
 }
+
+// ── Per-agent tool allowlist (Phase B2) ────────────────────────────────────
+// An agent lists the external tools it may call: "server__tool" for one tool
+// or "server__*" for every tool of a server. Calls are only proxied inside an
+// active run, for a tool the dispatched agent is allowed to use.
+
+export const TOOL_PATTERN_RE = /^[a-z0-9_-]{1,40}__([A-Za-z0-9_.\-]{1,100}|\*)$/;
+
+export function normalizeToolList(raw: unknown): { ok: true; value: string[] } | { ok: false; error: string } {
+  if (raw === undefined || raw === null) return { ok: true, value: [] };
+  if (!Array.isArray(raw)) return { ok: false, error: 'allowed_tools must be an array of "server__tool" or "server__*" strings' };
+  const out = new Set<string>();
+  for (const t of raw) {
+    if (typeof t !== 'string' || !TOOL_PATTERN_RE.test(t)) return { ok: false, error: `invalid allowed_tools entry ${JSON.stringify(t)}: use "server__tool" or "server__*"` };
+    out.add(t);
+  }
+  if (out.size > 100) return { ok: false, error: 'at most 100 allowed_tools entries' };
+  return { ok: true, value: [...out] };
+}
+
+export function toolAllowed(allowed: string[], namespacedTool: string): boolean {
+  const ext = parseExternalTool(namespacedTool);
+  if (!ext) return false;
+  return allowed.includes(namespacedTool) || allowed.includes(`${ext.server}__*`);
+}

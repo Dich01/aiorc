@@ -43,7 +43,7 @@ jobs:
 
       - name: Fail if a database or secret file is tracked
         run: |
-          matches=$(git ls-files | grep -Ei '\.db$|\.db-wal$|\.db-shm$|\.bak$|\.bak-wal$|\.bak-shm$|\.sqlite$|\.env$|\.pem$|\.key$|jwt-secret|audit-secret' || true)
+          matches=$(git ls-files | grep -Ei '\.db$|\.db-wal$|\.db-shm$|\.bak$|\.bak-wal$|\.bak-shm$|\.sqlite$|\.env$|\.pem$|\.key$|jwt-secret|audit-secret|audit-ed25519' || true)
           if [ -n "$matches" ]; then
             echo "These files must never be committed — they hold real user data or secrets:"
             echo "$matches"
