@@ -412,7 +412,7 @@
           <div class="issue-title ${closed?'closed':''}">${esc(i.title)}</div>
           <div class="issue-meta">
             <span class="issue-status-pill ${i.status}">${i.status === 'open' ? 'open' : 'closed'}</span>
-            <span>${TYPE_LABEL[i.type] || i.type}</span>
+            <span>${TYPE_LABEL[i.type] || esc(i.type)}</span>
             <span>· by ${author}</span>
             <span>· ${fmtAgo(i.created_at)}</span>
           </div>
@@ -473,7 +473,7 @@
             <h1 class="detail-title ${closed?'closed':''}">${esc(issue.title)}</h1>
             <div class="detail-meta">
               <span class="issue-status-pill ${issue.status}">${closed ? 'closed' : 'open'}</span>
-              <span>${TYPE_LABEL[issue.type] || issue.type}</span>
+              <span>${TYPE_LABEL[issue.type] || esc(issue.type)}</span>
               <span>· by ${author}</span>
               <span>· ${fmtAgo(issue.created_at)}</span>
             </div>

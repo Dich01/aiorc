@@ -820,6 +820,11 @@ workflow.start({
       return res;
     }
 
+    // A project key is returned in plaintext only once (create / fork / reset).
+    // Hand it to the project page, which shows it once and forgets it.
+    function stashNewProjectKey(p) {
+      try { if (p && p.id && p.api_key) sessionStorage.setItem('aiorc-new-key-' + p.id, p.api_key); } catch { /* storage unavailable */ }
+    }
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -906,8 +911,7 @@ workflow.start({
       const skillsBlock = skills.length
         ? `<div class="pc-badges">${skills.map(s => `<span class="pc-badge skill">${escHtml(s.name)}</span>`).join('')}${sMore ? `<span class="pc-badge more">+${sMore}</span>` : ''}</div>`
         : '<div class="pc-empty-row">No skills associated</div>';
-      const apiKeyEsc = escHtml(p.api_key).replace(/'/g, "\\'");
-      const nameEsc = escHtml(p.name).replace(/'/g, "\\'");
+      const nameEsc = escHtml(JSON.stringify(String(p.name ?? '')));
       const tagList = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
       const tagsBlock = tagList.length
         ? `<div class="tag-chips" style="margin-top:8px">${tagList.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>`
@@ -939,14 +943,13 @@ workflow.start({
             <div class="pc-flow-preview">${renderFlowPreview(p.flow)}</div>
           </div>
           <div class="api-key-row" style="margin-top:4px">
-            <span class="api-key-value" style="font-size:0.76rem">${escHtml(p.api_key)}</span>
-            <button class="btn btn-sm btn-ghost" onclick="copyText('${apiKeyEsc}','MCP key copied')">Copy</button>
+            <span class="api-key-value" style="font-size:0.76rem" title="Only a prefix is stored for display. Reset the key on the project page to get a new one.">${escHtml(p.api_key_hint || '')}&hellip;</span>
           </div>
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
             <span style="font-size:0.74rem;color:var(--muted)">${new Date(p.created_at).toLocaleDateString()}</span>
             <div style="display:flex;gap:6px">
               <a href="project.html?id=${encodeURIComponent(p.id)}" class="btn btn-primary btn-sm">Open →</a>
-              <button class="btn btn-sm btn-ghost" onclick="deleteProject('${p.id}','${nameEsc}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteProject('${p.id}',${nameEsc})">Delete</button>
             </div>
           </div>
         </div>`;
@@ -1023,6 +1026,7 @@ workflow.start({
         const res = await authFetch('/projects', { method: 'POST', body: JSON.stringify({ name, description, tags }) });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not create.'; errEl.classList.remove('hidden'); return; }
+        stashNewProjectKey(data);
         availableProjects = []; // invalidate cache so the new project appears in modals
         closeNewProjectModal();
         loadProjects();
@@ -1067,7 +1071,7 @@ workflow.start({
             ${skillBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
-              <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}','${escHtml(a.name).replace(/'/g,"\\'")}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}',${escHtml(JSON.stringify(String(a.name ?? '')))})">Delete</button>
             </div>
           </div>`;
         }).join('');
@@ -1332,7 +1336,7 @@ workflow.start({
             ${filesBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
-              <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}','${escHtml(s.name).replace(/'/g,"\\'")}')">Delete</button>
+              <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}',${escHtml(JSON.stringify(String(s.name ?? '')))})">Delete</button>
             </div>
           </div>
         `;
@@ -1665,7 +1669,7 @@ workflow.start({
               <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
               <div class="item-card-footer">
                 <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
-                <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}','${escHtml(c.name).replace(/'/g,"\\'")}')">Delete</button>
+                <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}',${escHtml(JSON.stringify(String(c.name ?? '')))})">Delete</button>
               </div>
             </div>
           `;
@@ -2074,6 +2078,7 @@ workflow.start({
         return;
       }
       const fork = await res.json();
+      if (type === 'project') stashNewProjectKey(fork);
       window.location.href = TYPE_AFTER[type](fork.id);
     };
     window.declineInvitation = async function(type, invId) {

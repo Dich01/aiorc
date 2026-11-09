@@ -1,10 +1,11 @@
 import db from '../db/client';
-import { Agent, EvalCase, FlowDocument, FlowNode } from '../db/schema';
+import { Agent, EvalCase, FlowDocument, FlowNode, RunCaller } from '../db/schema';
 import { gradeEval } from '../lib/evalGrading';
 import { recordExecutedUsage, recordPlannedUsage } from '../lib/usage';
 import {
   buildAgentBlock,
   normalizeFlow,
+  projectAllowsExecutable,
   renderContextsSection,
   renderSkillsSection,
   validateFlow,
@@ -91,7 +92,8 @@ function dispatchText(
   agentsById: Map<string, Agent>,
   runId: string,
   state: EngineState,
-  lines: string[]
+  lines: string[],
+  allowExec: boolean
 ): void {
   if (nodes.length > 1) {
     lines.push(`## Execute these ${nodes.length} agents NOW, IN PARALLEL (fork — every branch is mandatory)`);
@@ -104,7 +106,7 @@ function dispatchText(
   for (const node of nodes) {
     const agent = agentsById.get(node.agent_id!);
     if (!agent) continue;
-    lines.push(buildAgentBlock(agent, capOf(node)));
+    lines.push(buildAgentBlock(agent, capOf(node), allowExec));
     lines.push('');
   }
   const edges = allowedEdges(flow, state.current);
@@ -152,7 +154,7 @@ function dispatchNodes(
   return { ok: true };
 }
 
-export function startRun(projectId: string, input: Record<string, unknown>, callerEmail = '', evalCaseId = ''): StepResult {
+export function startRun(projectId: string, input: Record<string, unknown>, who: RunCaller = { caller: null, declaredCaller: '' }, evalCaseId = ''): StepResult {
   const runId = uuidv4();
   const flowRecord = db.prepare('SELECT flow_json FROM project_flows WHERE project_id = ?')
     .get(projectId) as { flow_json: string } | undefined;
@@ -185,15 +187,16 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
     lines.push('```');
     lines.push('');
   }
-  renderContextsSection(projectId, lines);
-  renderSkillsSection([...agentsById.values()], lines);
+  const allowExec = projectAllowsExecutable(projectId);
+  renderContextsSection(projectId, lines, allowExec);
+  renderSkillsSection([...agentsById.values()], lines, allowExec);
 
   const { agents: toDispatch, end } = resolveDispatch(flow, target);
 
   db.prepare(
-    `INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_email, mode, engine_state, eval_case_id, status, created_at, last_activity_at)
-     VALUES (?, ?, ?, ?, '', ?, 'stepped', '', ?, 'running', ?, ?)`
-  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), callerEmail, evalCaseId, Date.now(), Date.now());
+    `INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_user_id, caller_email, declared_caller, mode, engine_state, eval_case_id, status, created_at, last_activity_at)
+     VALUES (?, ?, ?, ?, '', ?, ?, ?, 'stepped', '', ?, 'running', ?, ?)`
+  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), who.caller?.userId ?? '', who.caller?.email ?? '', who.declaredCaller, evalCaseId, Date.now(), Date.now());
   recordPlannedUsage(runId, projectId, [...agentsById.values()].map(a => ({ id: a.id, name: a.name })));
 
   if (end || toDispatch.length === 0) {
@@ -204,7 +207,7 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
   }
 
   dispatchNodes(runId, projectId, state, toDispatch, agentsById);
-  dispatchText(flow, toDispatch, agentsById, runId, state, lines);
+  dispatchText(flow, toDispatch, agentsById, runId, state, lines, allowExec);
   persistState(runId, state);
   return { runId, text: lines.join('\n'), done: false };
 }
@@ -269,7 +272,7 @@ export function nextStep(runRow: RunRow, output: string, hint: string): StepResu
   }
 
   const lines: string[] = [];
-  dispatchText(flow, toDispatch, agentsById, runId, state, lines);
+  dispatchText(flow, toDispatch, agentsById, runId, state, lines, projectAllowsExecutable(runRow.project_id));
   persistState(runId, state);
   return { runId, text: lines.join('\n'), done: false };
 }

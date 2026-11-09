@@ -1014,7 +1014,7 @@ skip steps or modify them with your own judgment.</pre>
     }
     refreshTeamBadge();
 
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function initials(n) { return n.split('-').map(p=>p[0]).join('').toUpperCase().slice(0,2); }
     function copyText(t, label) {
       navigator.clipboard.writeText(t).then(() => {
@@ -1044,11 +1044,11 @@ skip steps or modify them with your own judgment.</pre>
       }
       host.innerHTML = servers.map(sv => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:0.85rem">
-          <span style="font-weight:600">${escHtml(sv.name)}</span>
-          <code style="font-size:0.76rem;color:var(--muted)">${escHtml(sv.url)}</code>
-          <span style="color:var(--muted);font-size:0.78rem;flex:1">${escHtml(sv.description || '')}</span>
-          <span style="font-size:0.74rem;color:var(--muted)">tools: <code>${escHtml(sanitizePrefix(sv.name))}__*</code></span>
-          <button class="btn btn-sm btn-ghost" onclick="deleteMcpServer('${escHtml(sv.id)}')">Remove</button>
+          <span style="font-weight:600">${esc(sv.name)}</span>
+          <code style="font-size:0.76rem;color:var(--muted)">${esc(sv.url)}</code>
+          <span style="color:var(--muted);font-size:0.78rem;flex:1">${esc(sv.description || '')}</span>
+          <span style="font-size:0.74rem;color:var(--muted)">tools: <code>${esc(sanitizePrefix(sv.name))}__*</code></span>
+          <button class="btn btn-sm btn-ghost" onclick="deleteMcpServer('${esc(sv.id)}')">Remove</button>
         </div>`).join('');
     }
     window.deleteMcpServer = async function(id) {
@@ -1169,13 +1169,31 @@ skip steps or modify them with your own judgment.</pre>
 
     // ── Project ───────────────────────────────────────────────────────────────
     let currentProject = null;
+    // The server stores only a hash of the project key. The plaintext arrives
+    // once (create, fork, reset) and lives here only until the page is closed.
+    let revealedKey = null;
+    function takeStashedKey(id) {
+      try {
+        const k = sessionStorage.getItem('aiorc-new-key-' + id);
+        if (k) sessionStorage.removeItem('aiorc-new-key-' + id);
+        return k;
+      } catch { return null; }
+    }
+    function copyProjectKey() {
+      if (revealedKey) { copyText(revealedKey, 'MCP key copied!'); return; }
+      uiAlert('The key is only shown once, when it is created or reset. Reset it to get a new one; the old key stops working.');
+    }
     function renderProject(p) {
       currentProject = p;
+      if (p.api_key) revealedKey = p.api_key;
       const isPublic = !!p.is_public;
       document.title = `AIOrc — ${p.name}`;
       document.getElementById('project-name').textContent    = p.name;
-      document.getElementById('project-api-key').textContent = p.api_key;
-      document.getElementById('settings-api-key').textContent = p.api_key;
+      const keyText = revealedKey
+        ? revealedKey + '  (copy it now: it will not be shown again)'
+        : (p.api_key_hint || '') + '\u2026  (hidden: reset to get a new key)';
+      document.getElementById('project-api-key').textContent = keyText;
+      document.getElementById('settings-api-key').textContent = keyText;
       if (p.owner_email || p.owner_nickname) {
         const ownerEl = document.getElementById('project-owner');
         if (p.owner_nickname) {
@@ -1184,8 +1202,8 @@ skip steps or modify them with your own judgment.</pre>
           ownerEl.textContent = p.owner_email;
         }
       }
-      document.getElementById('copy-key-btn').onclick = () => copyText(p.api_key,'MCP key copied!');
-      document.getElementById('settings-copy-key-btn').onclick = () => copyText(p.api_key,'MCP key copied!');
+      document.getElementById('copy-key-btn').onclick = copyProjectKey;
+      document.getElementById('settings-copy-key-btn').onclick = copyProjectKey;
 
       const descInput = document.getElementById('description-input');
       if (document.activeElement !== descInput) descInput.value = p.description || '';
@@ -1201,15 +1219,13 @@ skip steps or modify them with your own judgment.</pre>
       toggle.checked = isPublic;
       const status = document.getElementById('visibility-status');
       status.innerHTML = isPublic
-        ? '<span style="color:#22c55e">● Public</span> — clients only need the project ID.'
+        ? '<span style="color:#22c55e">● Public</span> — listed in the repository and readable with the project ID. Starting runs still requires the API key.'
         : '<span style="color:#f59e0b">● Private</span> — the API key is required.';
 
       // The MCP URL follows whatever origin the user is browsing from —
       // localhost in dev, the public tunnel/domain when shared with the team.
       const mcpUrl = location.origin + '/mcp';
-      const env = isPublic
-        ? { AIORC_PROJECT_ID: p.id, AIORC_URL: mcpUrl }
-        : { AIORC_PROJECT_KEY: p.api_key, AIORC_URL: mcpUrl };
+      const env = { AIORC_PROJECT_KEY: revealedKey || '<your project key>', AIORC_URL: mcpUrl };
       const cfg = JSON.stringify({ mcpServers:{ aiorc:{ type:'stdio', command:'node', args:['/path/to/mcp-bridge.js'], env } } }, null, 2);
       document.getElementById('mcp-config').textContent = cfg;
       document.getElementById('copy-mcp-btn').onclick = () => copyText(cfg,'MCP config copied!');
@@ -1217,6 +1233,8 @@ skip steps or modify them with your own judgment.</pre>
 
     async function loadProject() {
       const p = await (await authFetch(`/projects/${projectId}`)).json();
+      const stashed = takeStashedKey(projectId);
+      if (stashed) revealedKey = stashed;
       renderProject(p);
     }
 
@@ -1262,7 +1280,7 @@ skip steps or modify them with your own judgment.</pre>
       if (!res.ok) { await uiAlert('Could not reset the API key.'); return; }
       const updated = await res.json();
       renderProject(updated);
-      copyText(updated.api_key, 'New MCP key copied!');
+      copyText(updated.api_key, 'New MCP key copied. It will not be shown again.');
     }
 
     function tagsToList(str) {
@@ -1421,7 +1439,7 @@ skip steps or modify them with your own judgment.</pre>
           <div class="agent-card-body" id="ab-${esc(a.id)}">
             <div style="padding-top:12px">
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-                <button class="btn btn-sm btn-ghost" onclick="showAgentContent('${esc(a.id)}','${esc(a.name)}')">View content</button>
+                <button class="btn btn-sm btn-ghost" onclick="showAgentContent('${esc(a.id)}',${esc(JSON.stringify(String(a.name ?? '')))})">View content</button>
               </div>
               <div style="display:flex;gap:5px;flex-wrap:wrap">${skillBadges}</div>
             </div>
@@ -1452,7 +1470,7 @@ skip steps or modify them with your own judgment.</pre>
                   <div style="font-size:0.85rem;font-weight:600;color:var(--text)">${esc(s.name)}</div>
                   ${s.description ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${esc(s.description)}</div>` : ''}
                 </div>
-                <button onclick="removeSkillFromAgent('${esc(a.id)}','${esc(s.id)}','${esc(s.name).replace(/'/g, "\\'")}')"
+                <button onclick="removeSkillFromAgent('${esc(a.id)}','${esc(s.id)}',${esc(JSON.stringify(String(s.name ?? '')))})"
                         style="background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:0.75rem;cursor:pointer;color:#ef4444"
                         title="Remove this skill from the agent">× Remove</button>
               </div>`).join('');
@@ -1478,7 +1496,7 @@ skip steps or modify them with your own judgment.</pre>
       const c = document.getElementById('skills-list');
       if (!allSkills.length) { c.innerHTML='<p style="color:var(--muted)">No skills.</p>'; return; }
       c.innerHTML=`<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">${allSkills.length} skill${allSkills.length!==1?'s':''} available</p>`
-        +allSkills.map(s=>`<div class="skill-card" onclick="showSkillContent('${esc(s.id)}','${esc(s.name)}')">
+        +allSkills.map(s=>`<div class="skill-card" onclick="showSkillContent('${esc(s.id)}',${esc(JSON.stringify(String(s.name ?? '')))})">
           <div class="skill-card-header">
             <div class="skill-icon">${esc(s.name.slice(0,2).toUpperCase())}</div>
             <div><div class="skill-name">${esc(s.name)}</div><div class="skill-desc">${esc(s.description)}</div></div>
@@ -1495,7 +1513,7 @@ skip steps or modify them with your own judgment.</pre>
         <div class="skill-chip" draggable="true"
           data-sid="${esc(s.id)}" data-sname="${esc(s.name)}"
           ondragstart="skillDragStart(event)"
-          onclick="showSkillContent('${esc(s.id)}','${esc(s.name)}')">
+          onclick="showSkillContent('${esc(s.id)}',${esc(JSON.stringify(String(s.name ?? '')))})">
           <div>${esc(s.name)}</div>
           <div class="skill-chip-desc">${esc(s.description)}</div>
         </div>`).join('');
@@ -1556,7 +1574,7 @@ skip steps or modify them with your own judgment.</pre>
           const att = (ctx.project_attachments || []).find(a => a.project_id === projectId);
           const share = !!(att && att.share_on_fork);
           return `<div class="skill-card" style="position:relative">
-            <div class="skill-card-header" onclick="showContextContent('${esc(ctx.id)}','${esc(ctx.name)}')" style="cursor:pointer">
+            <div class="skill-card-header" onclick="showContextContent('${esc(ctx.id)}',${esc(JSON.stringify(String(ctx.name ?? '')))})" style="cursor:pointer">
               <div class="skill-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb)">${esc(ctx.name.slice(0,2).toUpperCase())}</div>
               <div style="flex:1;min-width:0"><div class="skill-name">${esc(ctx.name)}</div><div class="skill-desc">${esc(ctx.description)}</div></div>
             </div>
@@ -1879,9 +1897,9 @@ skip steps or modify them with your own judgment.</pre>
         <div class="node-header">
           <div class="node-icon">${nodeIconHtml(node)}</div>
           <div class="node-name" title="${esc(nodeDisplayName(node))}">${nodeDisplayName(node)}</div>
-          <button class="node-del" onclick="deleteNode('${esc(node.id)}')">×</button>
+          <button class="node-del" onclick="deleteNode(${esc(JSON.stringify(String(node.id ?? '')))})">×</button>
         </div>
-        <div class="node-body" id="nb-${esc(node.id)}" onclick="${ntype !== 'agent' ? `openNodeConfig('${esc(node.id)}')` : `showNodeAgentContent('${esc(node.id)}')`}" style="cursor:pointer">
+        <div class="node-body" id="nb-${esc(node.id)}" onclick="${ntype !== 'agent' ? `openNodeConfig(${esc(JSON.stringify(String(node.id ?? '')))})` : `showNodeAgentContent(${esc(JSON.stringify(String(node.id ?? '')))})`}" style="cursor:pointer">
           ${nodeBodyHtml(node)}
         </div>
         <div class="port port-out" id="pout-${esc(node.id)}" title="Drag to connect"></div>`;
@@ -2636,7 +2654,7 @@ skip steps or modify them with your own judgment.</pre>
           <label>Loop label</label>
           <input type="text" id="ncm-label" value="${esc(node.label||'')}"/>
           <label>Maximum iterations (1–20)</label>
-          <input type="number" id="ncm-maxiter" value="${node.config?.max_iterations??3}" min="1" max="20"/>
+          <input type="number" id="ncm-maxiter" value="${esc(node.config?.max_iterations??3)}" min="1" max="20"/>
           <label>Pair ID (readonly)</label>
           <div class="readonly-field">${esc(node.config?.loop_pair_id||'')}</div>
         `;

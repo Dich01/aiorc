@@ -551,6 +551,8 @@
           return;
         }
         const fork = await res.json();
+        // Project keys are shown only once; the project page picks this up.
+        try { if (type === 'projects' && fork.api_key) sessionStorage.setItem('aiorc-new-key-' + fork.id, fork.api_key); } catch { /* storage unavailable */ }
         window.location.href = TYPE_PATHS[type].after(fork.id);
       } finally {
         btnEl.disabled = false;
@@ -650,7 +652,7 @@
             <div class="repo-icon">${esc(initials(p.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewProjectContent('${esc(p.id)}','${esc(p.name).replace(/'/g, "\\'")}','${esc(desc).replace(/'/g, "\\'")}')" title="Click to view description">${esc(p.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewProjectContent('${esc(p.id)}',${esc(JSON.stringify(String(p.name ?? '')))},${esc(JSON.stringify(String(desc ?? '')))})" title="Click to view description">${esc(p.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(p)}</div>
@@ -693,7 +695,7 @@
             <div class="repo-icon">${esc(initials(a.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewAgentContent('${esc(a.id)}','${esc(a.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(a.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewAgentContent('${esc(a.id)}',${esc(JSON.stringify(String(a.name ?? '')))})" title="Click to view content">${esc(a.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(a)}</div>
@@ -715,7 +717,7 @@
             <div class="repo-icon" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">${esc(initials(s.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewSkillContent('${esc(s.id)}','${esc(s.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(s.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewSkillContent('${esc(s.id)}',${esc(JSON.stringify(String(s.name ?? '')))})" title="Click to view content">${esc(s.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(s)}</div>
@@ -739,7 +741,7 @@
             <div class="repo-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb)">${esc(initials(c.name))}</div>
             <div style="min-width:0;flex:1">
               <div class="repo-card-title-row">
-                <span class="repo-card-name clickable" onclick="viewContextContent('${esc(c.id)}','${esc(c.name).replace(/'/g, "\\'")}')" title="Click to view content">${esc(c.name)}</span>
+                <span class="repo-card-name clickable" onclick="viewContextContent('${esc(c.id)}',${esc(JSON.stringify(String(c.name ?? '')))})" title="Click to view content">${esc(c.name)}</span>
                 <span class="pc-visibility">● Public</span>
               </div>
               <div class="repo-card-owner">by ${ownerLink(c)}</div>

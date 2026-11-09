@@ -868,7 +868,7 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
           </div>
           <div class="form-group">
             <label for="reg-password">Password</label>
-            <input type="password" id="reg-password" placeholder="minimum 6 characters" autocomplete="new-password" minlength="6" required />
+            <input type="password" id="reg-password" placeholder="minimum 12 characters" autocomplete="new-password" minlength="12" required />
           </div>
           <button type="submit" class="btn btn-primary form-full" id="register-submit-btn">Create account</button>
         </form>
@@ -888,8 +888,22 @@ Review the implementation. Score 0–10. <span class="ok">{ verdict: 'PASS|FAIL'
       document.getElementById('login-modal').classList.add('open');
       setTimeout(() => document.getElementById('email').focus(), 200);
     }
+    // Registration is closed unless the server opts in (AIORC_OPEN_REGISTRATION=1).
+    let registrationOpen = true;
+    fetch('/auth/config').then(r => r.ok ? r.json() : null).then(cfg => {
+      if (cfg && cfg.registration_open === false) {
+        registrationOpen = false;
+        const tab = document.querySelector('.auth-tab[data-tab="register"]');
+        if (tab) tab.style.display = 'none';
+      }
+    }).catch(() => {});
     function openRegisterModal() {
       document.getElementById('login-modal').classList.add('open');
+      if (!registrationOpen) {
+        switchAuthTab('login');
+        showError('Accounts on this server are created by an administrator. Ask yours for access.');
+        return;
+      }
       switchAuthTab('register');
     }
     function closeLoginModal() {

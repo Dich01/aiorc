@@ -148,7 +148,10 @@ export function fenceLangForFile(name: string): string | null {
 
 // Render a list of entity files into prompt lines: entry content inline, then each
 // supporting file labelled, with non-markdown files wrapped in a code fence.
-export function renderFilesToLines(files: EntityFile[], lines: string[]): void {
+// Non-Markdown files (scripts, configs) are only delivered when the project
+// opted in (projects.allow_executable_files). Otherwise they are named but
+// withheld, so a skill cannot smuggle a script into the model's context.
+export function renderFilesToLines(files: EntityFile[], lines: string[], allowExecutable = false): void {
   const entry = files.find(f => f.is_entry);
   const supporting = files.filter(f => !f.is_entry);
   if (entry && entry.content.trim()) {
@@ -161,7 +164,9 @@ export function renderFilesToLines(files: EntityFile[], lines: string[]): void {
     lines.push('');
     if (f.content && f.content.trim()) {
       const lang = fenceLangForFile(f.name);
-      if (lang === null) {
+      if (lang !== null && !allowExecutable) {
+        lines.push('*(Non-Markdown file withheld: this project does not deliver executable or configuration files to the model.)*');
+      } else if (lang === null) {
         lines.push(f.content.trim());
       } else {
         lines.push('```' + lang);

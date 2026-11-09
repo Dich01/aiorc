@@ -17,11 +17,24 @@ export interface Project {
   name: string;
   description: string;
   tags: string; // comma-separated labels for identifying/filtering projects (may be '')
-  api_key: string;
-  is_public: number; // 0 = private (api key required), 1 = public (no auth)
+  api_key_hash: string; // SHA-256 of the project key; the plaintext is shown once
+  api_key_hint: string; // first characters of the key, for display only
+  is_public: number; // 1 = listed in the repository and readable with x-project-id (runs still need the key)
+  allow_executable_files: number; // 1 = non-Markdown files of agents/skills/contexts are delivered to the model
   paused: number;    // 1 = kill switch on: new runs blocked (in-flight runs may finish)
   forked_from: string | null; // source project id if this is a fork
   created_at: number;
+}
+
+export interface UserToken {
+  id: string;
+  user_id: string;
+  name: string;
+  token_hash: string;
+  token_hint: string;
+  created_at: number;
+  last_used_at: number | null;
+  revoked_at: number | null;
 }
 
 export interface Agent {
@@ -256,13 +269,22 @@ export interface IssueVote {
   created_at: number;
 }
 
+// Who started a run: `caller` is verified (personal access token), the
+// declared one comes from the x-user-email header and is never trusted.
+export interface RunCaller {
+  caller: { userId: string; email: string } | null;
+  declaredCaller: string;
+}
+
 export interface Run {
   id: string;
   project_id: string;
   input: string;              // JSON string
   flow_json: string;          // normalized flow JSON at compile time (for path-aware skip analysis)
   execution_report: string;   // post-run report JSON (required by the tool contract)
-  caller_email: string;       // x-user-email header from the MCP client, '' if not sent
+  caller_user_id: string;     // verified caller (personal access token), '' if none
+  caller_email: string;       // verified caller's email, '' if none
+  declared_caller: string;    // x-user-email header: self-declared, NOT verified
   mode: string;               // '' = compiled (whole prompt) | 'stepped' = server-driven
   engine_state: string;       // EngineState JSON for stepped runs, '' otherwise
   eval_case_id: string;       // links the run to an eval case, '' for normal runs
@@ -307,7 +329,7 @@ export interface AgentUsage {
 // Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
 // pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
 // a database at another version is refused at startup (see db/client.ts).
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -334,8 +356,10 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   tags TEXT NOT NULL DEFAULT '',
-  api_key TEXT UNIQUE NOT NULL,
+  api_key_hash TEXT UNIQUE NOT NULL,
+  api_key_hint TEXT NOT NULL DEFAULT '',
   is_public INTEGER NOT NULL DEFAULT 0,
+  allow_executable_files INTEGER NOT NULL DEFAULT 0,
   paused INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
@@ -629,7 +653,9 @@ CREATE TABLE IF NOT EXISTS runs (
   input TEXT NOT NULL,
   flow_json TEXT NOT NULL DEFAULT '',
   execution_report TEXT NOT NULL DEFAULT '',
+  caller_user_id TEXT NOT NULL DEFAULT '',
   caller_email TEXT NOT NULL DEFAULT '',
+  declared_caller TEXT NOT NULL DEFAULT '',
   mode TEXT NOT NULL DEFAULT '',
   engine_state TEXT NOT NULL DEFAULT '',
   last_activity_at INTEGER NOT NULL DEFAULT 0,
@@ -640,6 +666,21 @@ CREATE TABLE IF NOT EXISTS runs (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id)
 );
+
+-- Personal access tokens: identify WHO is calling /mcp (the project key only
+-- says which project). Stored as SHA-256 hashes; shown once at creation.
+CREATE TABLE IF NOT EXISTS user_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  token_hint TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER,
+  revoked_at INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_user_tokens_user ON user_tokens(user_id);
 
 CREATE TABLE IF NOT EXISTS mcp_servers (
   id TEXT PRIMARY KEY,
@@ -658,7 +699,9 @@ CREATE TABLE IF NOT EXISTS mcp_tool_calls (
   server_id TEXT NOT NULL,
   server_name TEXT NOT NULL,
   tool TEXT NOT NULL,
+  caller_user_id TEXT NOT NULL DEFAULT '',
   caller_email TEXT NOT NULL DEFAULT '',
+  declared_caller TEXT NOT NULL DEFAULT '',
   ok INTEGER NOT NULL DEFAULT 0,
   duration_ms INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,

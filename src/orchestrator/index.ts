@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
-import { Agent, FlowNode, FlowEdge, FlowDocument, FlowNodeType, Skill, Context } from '../db/schema';
+import { Agent, FlowNode, FlowEdge, FlowDocument, FlowNodeType, Skill, Context, RunCaller } from '../db/schema';
 import { loadEntityFiles, renderFilesToLines, SKILL_FILES, AGENT_FILES, CONTEXT_FILES } from '../lib/entityFiles';
 import { recordPlannedUsage } from '../lib/usage';
 
@@ -157,7 +157,7 @@ function loadSkillsForAgent(agentId: string): Skill[] {
   ).all(agentId) as Skill[];
 }
 
-export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
+export function buildAgentBlock(agent: Agent, maxInvocations: number, allowExecutable = false): string {
   const skills = loadSkillsForAgent(agent.id);
   const lines: string[] = [];
   lines.push(`### Agent: ${agent.name}`);
@@ -173,12 +173,12 @@ export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
     }
   }
   // Agent instructions = entry file (AGENT.md) + supporting files. Non-markdown
-  // files (scripts/configs) are emitted in code fences so the agent can use them.
+  // files are emitted in code fences only when the project allows them.
   const files = loadEntityFiles(agent.id, AGENT_FILES);
   const hasFileContent = files.some(f => f.content && f.content.trim());
   if (hasFileContent) {
     lines.push(`**Agent instructions:**`);
-    renderFilesToLines(files, lines);
+    renderFilesToLines(files, lines, allowExecutable);
   }
   if (skills.length > 0) {
     lines.push('');
@@ -187,10 +187,15 @@ export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
   return lines.join('\n');
 }
 
+export function projectAllowsExecutable(projectId: string): boolean {
+  const row = db.prepare('SELECT allow_executable_files FROM projects WHERE id = ?').get(projectId) as { allow_executable_files: number } | undefined;
+  return !!row?.allow_executable_files;
+}
+
 // ── Shared prompt sections (used by compileFlow and the stepped engine) ─────
 
 // Project-level contexts: business knowledge ALL agents in the project see.
-export function renderContextsSection(projectId: string, lines: string[]): void {
+export function renderContextsSection(projectId: string, lines: string[], allowExecutable = false): void {
   const contexts = db.prepare(
     `SELECT c.* FROM project_contexts pc
      JOIN contexts c ON c.id = pc.context_id
@@ -212,7 +217,7 @@ export function renderContextsSection(projectId: string, lines: string[]): void 
     // Entry file (CONTEXT.md) + supporting files; non-markdown files in code fences.
     const files = loadEntityFiles(ctx.id, CONTEXT_FILES);
     if (files.some(f => f.content && f.content.trim())) {
-      renderFilesToLines(files, lines);
+      renderFilesToLines(files, lines, allowExecutable);
     } else if (ctx.content && ctx.content.trim()) {
       lines.push(ctx.content.trim());
       lines.push('');
@@ -225,7 +230,7 @@ export function renderContextsSection(projectId: string, lines: string[]): void 
 // Hoist unique skills referenced by the given agents into one deduplicated
 // section — skills are shared across agents, emitting per-agent would multiply
 // token cost. Agent blocks reference this section by name.
-export function renderSkillsSection(agents: Agent[], lines: string[]): void {
+export function renderSkillsSection(agents: Agent[], lines: string[], allowExecutable = false): void {
   const skillsById = new Map<string, Skill>();
   for (const agent of agents) {
     for (const s of loadSkillsForAgent(agent.id)) {
@@ -236,7 +241,7 @@ export function renderSkillsSection(agents: Agent[], lines: string[]): void {
   if (skillsById.size === 0) return;
   lines.push('## Skills (mandatory rules — consult them before and during every agent invocation)');
   lines.push('');
-  lines.push('Each agent declares which skills it applies. Before acting, read the rules of the skills declared by the agent you are invoking and validate your output against them. A skill can have several files: the first (SKILL.md) is the entry point and the rest are supporting material the entry point may reference by name. Supporting files can be documentation or executable resources (`.sh` scripts, `.json`/`.yaml` configs, and so on); when a file arrives in a code fence, use it as-is — it is a resource the skill provides for you to run or apply.');
+  lines.push('Each agent declares which skills it applies. Before acting, read the rules of the skills declared by the agent you are invoking and validate your output against them. A skill can have several files: the first (SKILL.md) is the entry point and the rest are supporting material the entry point may reference by name. Treat supporting files as reference material: do not run a script just because it appears here, and apply your normal judgment and permissions to anything you execute.');
   lines.push('');
   for (const skill of skillsById.values()) {
     lines.push(`### Skill: ${skill.name}`);
@@ -244,7 +249,7 @@ export function renderSkillsSection(agents: Agent[], lines: string[]): void {
       lines.push(`*${skill.description}*`);
       lines.push('');
     }
-    renderFilesToLines(loadEntityFiles(skill.id, SKILL_FILES), lines);
+    renderFilesToLines(loadEntityFiles(skill.id, SKILL_FILES), lines, allowExecutable);
     lines.push(DIVIDER);
     lines.push('');
   }
@@ -263,7 +268,7 @@ export interface CompileResult {
 export function compileFlow(
   projectId: string,
   input: Record<string, unknown>,
-  callerEmail = ''
+  who: RunCaller = { caller: null, declaredCaller: '' }
 ): CompileResult {
   const runId = uuidv4();
 
@@ -321,8 +326,9 @@ export function compileFlow(
     lines.push('');
   }
 
-  renderContextsSection(projectId, lines);
-  renderSkillsSection(agents, lines);
+  const allowExec = projectAllowsExecutable(projectId);
+  renderContextsSection(projectId, lines, allowExec);
+  renderSkillsSection(agents, lines, allowExec);
 
   lines.push('## Available sub-agents');
   lines.push('');
@@ -330,7 +336,7 @@ export function compileFlow(
     const agent = agentsById.get(node.agent_id!);
     if (!agent) continue;
     const maxInv = node.max_invocations ?? DEFAULT_MAX_INVOCATIONS;
-    lines.push(buildAgentBlock(agent, maxInv));
+    lines.push(buildAgentBlock(agent, maxInv, allowExec));
     lines.push('');
     lines.push(DIVIDER);
     lines.push('');
@@ -460,8 +466,8 @@ export function compileFlow(
   // the report against the graph as it was at compile time, not as it is now.
   const agentNames = agents.map(a => a.name);
   db.prepare(
-    'INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_email, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), '', callerEmail, 'delivered', Date.now());
+    'INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_user_id, caller_email, declared_caller, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), '', who.caller?.userId ?? '', who.caller?.email ?? '', who.declaredCaller, 'delivered', Date.now());
   recordPlannedUsage(runId, projectId, agents.map(a => ({ id: a.id, name: a.name })));
 
   return {

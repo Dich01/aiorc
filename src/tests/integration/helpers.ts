@@ -115,3 +115,22 @@ export async function mcp(projectKey: string, tool: string, args: Record<string,
     result,
   };
 }
+
+// A minimal valid flow: Start → one agent → End.
+export async function linearProject(token: string, agentName = 'worker', extra: Record<string, unknown> = {}): Promise<{ id: string; api_key: string; agentId: string }> {
+  const p = await createProject(token);
+  const a = await createAgent(token, p.id, agentName, extra);
+  const r = await putFlow(token, p.id, {
+    nodes: [
+      { id: 'start', type: 'start', x: 0, y: 0 },
+      { id: 'n1', type: 'agent', agent_id: a.id, agent_name: agentName, x: 0, y: 0 },
+      { id: 'end', type: 'end', outcome: 'done', x: 0, y: 0 },
+    ],
+    edges: [
+      { id: 'e1', from: 'start', to: 'n1' },
+      { id: 'e2', from: 'n1', to: 'end' },
+    ],
+  });
+  if (r.status !== 200) throw new Error(`put flow failed: ${JSON.stringify(r.body)}`);
+  return { ...p, agentId: a.id };
+}

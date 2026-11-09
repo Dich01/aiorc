@@ -10,9 +10,11 @@ import './unit/engineCore.test';
 import './unit/evalGrading.test';
 import './unit/controlPlane.test';
 import './unit/mcpServers.test';
+import './unit/outbound.test';
 
 // Integration tests: the real app on an ephemeral port.
 import './integration/bootstrap.test';
+import './integration/hardening.test';
 
 runAll()
   .then(async failed => {

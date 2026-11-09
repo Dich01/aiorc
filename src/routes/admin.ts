@@ -4,6 +4,12 @@ import path from 'path';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { sweepAbandonedRuns } from './runs';
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { asyncHandler } from '../lib/asyncHandler';
+import { validatePassword } from '../lib/passwords';
+import { NICKNAME_REGEX } from './auth';
+import { resolvePendingInvitations } from './invitations';
 
 const router = Router();
 
@@ -189,5 +195,26 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     },
   });
 });
+
+// POST /admin/users — create an account. With registration closed (the
+// default), this and npm run admin:create are the only ways in.
+router.post('/users', requireAuth, requireAdmin, asyncHandler<AuthRequest>(async (req, res: Response): Promise<void> => {
+  const { email, password, nickname, name, role } = req.body as Record<string, unknown>;
+  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { res.status(400).json({ error: 'A valid email is required' }); return; }
+  const pwError = validatePassword(password);
+  if (pwError) { res.status(400).json({ error: pwError }); return; }
+  const nick = String(nickname ?? '').trim();
+  if (!NICKNAME_REGEX.test(nick)) { res.status(400).json({ error: 'nickname must be 3-30 chars, only letters, numbers, hyphens, underscores' }); return; }
+  const cleanRole = role === 'admin' ? 'admin' : 'user';
+  if (db.prepare('SELECT 1 FROM users WHERE LOWER(email) = ?').get(cleanEmail)) { res.status(409).json({ error: 'Email already registered' }); return; }
+  if (db.prepare('SELECT 1 FROM users WHERE LOWER(nickname) = LOWER(?)').get(nick)) { res.status(409).json({ error: 'Nickname already taken' }); return; }
+  const id = uuidv4();
+  db.prepare(
+    "INSERT INTO users (id, email, password_hash, name, nickname, bio, role, created_at) VALUES (?, ?, ?, ?, ?, '', ?, ?)"
+  ).run(id, cleanEmail, await bcrypt.hash(String(password), 10), String(name ?? '').trim() || nick, nick, cleanRole, Date.now());
+  resolvePendingInvitations(cleanEmail, id);
+  res.status(201).json({ id, email: cleanEmail, nickname: nick, role: cleanRole });
+}));
 
 export default router;

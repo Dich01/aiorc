@@ -43,6 +43,17 @@ const starredByStmt = db.prepare('SELECT 1 FROM project_stars WHERE project_id =
 import { normalizeTags } from '../lib/tags';
 import { sendInvitationEmail } from '../lib/mailer';
 import { validateMcpServer, sanitizeServerName } from '../lib/mcpServers';
+import { assertSafeOutbound, postJsonPinned, OutboundError } from '../lib/outbound';
+import { asyncHandler } from '../lib/asyncHandler';
+import { newSecret, PROJECT_KEY_PREFIX } from '../lib/secrets';
+
+// The key hash never leaves the server. The plaintext key is added to a
+// response only right after it is created or regenerated.
+function publicProject<T extends { api_key_hash?: string }>(p: T): Omit<T, 'api_key_hash'> {
+  const { api_key_hash: _h, ...rest } = p;
+  void _h;
+  return rest;
+}
 
 interface ProjectRow { id: string; user_id: string; }
 function enrichProject<T extends ProjectRow>(p: T, viewerId?: string): T & {
@@ -124,7 +135,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
     ? db.prepare('SELECT p.*, u.email as owner_email, u.nickname as owner_nickname FROM projects p JOIN users u ON u.id = p.user_id ORDER BY p.created_at DESC').all()
     : db.prepare('SELECT p.*, u.nickname as owner_nickname FROM projects p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? ORDER BY p.created_at DESC').all(req.userId!)) as (Project & { owner_email?: string; owner_nickname?: string })[];
 
-  res.json(projects.map(p => enrichProject(p, req.userId)));
+  res.json(projects.map(p => publicProject(enrichProject(p, req.userId))));
 });
 
 // GET /projects/:id — project detail
@@ -137,7 +148,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  res.json(project);
+  res.json(publicProject(project));
 });
 
 // POST /projects — create project
@@ -146,10 +157,10 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   if (!name?.trim()) { res.status(400).json({ error: 'name is required' }); return; }
 
   const id = uuidv4();
-  const apiKey = `key-${uuidv4().replace(/-/g, '').slice(0, 20)}`;
+  const key = newSecret(PROJECT_KEY_PREFIX);
 
-  db.prepare('INSERT INTO projects (id, user_id, name, description, tags, api_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-    id, req.userId!, name.trim(), (description ?? '').trim(), normalizeTags(tags), apiKey, Date.now()
+  db.prepare('INSERT INTO projects (id, user_id, name, description, tags, api_key_hash, api_key_hint, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+    id, req.userId!, name.trim(), (description ?? '').trim(), normalizeTags(tags), key.hash, key.display, Date.now()
   );
   // Create empty flow for the project
   db.prepare('INSERT INTO project_flows (project_id, flow_json, updated_at) VALUES (?, ?, ?)').run(
@@ -157,7 +168,7 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   );
 
   const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project;
-  res.status(201).json(created);
+  res.status(201).json({ ...publicProject(created), api_key: key.plaintext });
 });
 
 // PATCH /projects/:id — update editable fields (currently: description)
@@ -182,7 +193,7 @@ router.patch('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
-  res.json(updated);
+  res.json(publicProject(updated));
 });
 
 // PATCH /projects/:id/visibility — toggle public/private
@@ -200,7 +211,22 @@ router.patch('/:id/visibility', requireAuth, (req: AuthRequest, res: Response): 
 
   db.prepare('UPDATE projects SET is_public = ? WHERE id = ?').run(is_public ? 1 : 0, project.id);
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
-  res.json(updated);
+  res.json(publicProject(updated));
+});
+
+// PATCH /projects/:id/executable-files — opt in to delivering non-Markdown
+// files (scripts, configs) of this project's agents, skills and contexts to the
+// model. Off by default: those files are withheld from every prompt.
+router.patch('/:id/executable-files', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  const { allow } = req.body as { allow?: boolean };
+  if (typeof allow !== 'boolean') { res.status(400).json({ error: 'allow boolean is required' }); return; }
+  db.prepare('UPDATE projects SET allow_executable_files = ? WHERE id = ?').run(allow ? 1 : 0, project.id);
+  const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
+  res.json(publicProject(updated));
 });
 
 // POST /projects/:id/reset-key — regenerate api_key
@@ -213,10 +239,10 @@ router.post('/:id/reset-key', requireAuth, (req: AuthRequest, res: Response): vo
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const newKey = `key-${uuidv4().replace(/-/g, '').slice(0, 20)}`;
-  db.prepare('UPDATE projects SET api_key = ? WHERE id = ?').run(newKey, project.id);
+  const key = newSecret(PROJECT_KEY_PREFIX);
+  db.prepare('UPDATE projects SET api_key_hash = ?, api_key_hint = ? WHERE id = ?').run(key.hash, key.display, project.id);
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
-  res.json(updated);
+  res.json({ ...publicProject(updated), api_key: key.plaintext });
 });
 
 // POST /projects/:id/star — toggle a star on a project.
@@ -301,7 +327,7 @@ router.get('/:id/mcp-servers', requireAuth, (req: AuthRequest, res: Response): v
   res.json(db.prepare('SELECT * FROM mcp_servers WHERE project_id = ? ORDER BY created_at ASC').all(project.id));
 });
 
-router.post('/:id/mcp-servers', requireAuth, (req: AuthRequest, res: Response): void => {
+router.post('/:id/mcp-servers', requireAuth, asyncHandler<AuthRequest>(async (req, res: Response): Promise<void> => {
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
   if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
@@ -317,11 +343,23 @@ router.post('/:id/mcp-servers', requireAuth, (req: AuthRequest, res: Response): 
     res.status(400).json({ error: `A server with the tool prefix "${wantKey}__" already exists in this project. Choose a distinct name.` });
     return;
   }
+  // Resolve the host now (it is resolved again on every call) and probe it
+  // once: a server that answers with a redirect is refused outright. A server
+  // that is merely down can still be registered.
+  try {
+    const target = await assertSafeOutbound(v.url!);
+    await postJsonPinned(target, { jsonrpc: '2.0', id: 1, method: 'tools/list' }, 2500).catch(err => {
+      if (err instanceof OutboundError && /redirect/.test(err.message)) throw err;
+    });
+  } catch (err) {
+    if (err instanceof OutboundError) { res.status(400).json({ error: err.message }); return; }
+    throw err;
+  }
   const id = uuidv4();
   db.prepare('INSERT INTO mcp_servers (id, project_id, name, url, description, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(id, project.id, v.name!, v.url!, v.description!, Date.now());
   res.status(201).json(db.prepare('SELECT * FROM mcp_servers WHERE id = ?').get(id));
-});
+}));
 
 router.delete('/:id/mcp-servers/:serverId', requireAuth, (req: AuthRequest, res: Response): void => {
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
@@ -404,7 +442,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   }
 
   const newProjectId = uuidv4();
-  const newApiKey = `key-${uuidv4().replace(/-/g, '').slice(0, 20)}`;
+  const newKey = newSecret(PROJECT_KEY_PREFIX);
   const now = Date.now();
 
   // Cache existing names in caller's workspace for collision suffixes on agents/skills.
@@ -432,8 +470,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   // Run everything in a single transaction so a partial fork is impossible.
   const fork = db.transaction(() => {
     db.prepare(
-      'INSERT INTO projects (id, user_id, name, description, tags, api_key, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(newProjectId, req.userId!, candidate, source.description, (source as Project).tags ?? '', newApiKey, 0, source.id, now);
+      'INSERT INTO projects (id, user_id, name, description, tags, api_key_hash, api_key_hint, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(newProjectId, req.userId!, candidate, source.description, (source as Project).tags ?? '', newKey.hash, newKey.display, 0, source.id, now);
 
     // Map agent_id → newAgentId so we can rewrite the flow's nodes.
     const agentIdsInFlow = [...new Set(flow.nodes.filter(n => (n.type ?? 'agent') === 'agent' && n.agent_id).map(n => String(n.agent_id)))];
@@ -529,7 +567,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   }
 
   const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(newProjectId) as Project;
-  res.status(201).json(created);
+  res.status(201).json({ ...publicProject(created), api_key: newKey.plaintext });
 });
 
 // DELETE /projects/:id

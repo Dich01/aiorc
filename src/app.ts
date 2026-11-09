@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 
@@ -24,6 +24,13 @@ import mcpRouter from './mcp/server';
 export function createApp(): express.Express {
   const app = express();
 
+  // Behind Caddy (or any reverse proxy) req.ip must be the client, not the
+  // proxy, or login throttling would lock everyone out together. By default
+  // only proxies on loopback/private networks are trusted, so a client
+  // talking to the app directly cannot spoof X-Forwarded-For.
+  app.set('trust proxy', process.env.AIORC_TRUST_PROXY ?? 'loopback, linklocal, uniquelocal');
+  app.disable('x-powered-by');
+
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
   app.use(express.static(path.join(process.cwd(), 'public')));
@@ -45,6 +52,25 @@ export function createApp(): express.Express {
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', version: '1.0.0', timestamp: Date.now() });
+  });
+
+  // Last-resort error handler: malformed JSON bodies become 400 (JSON-RPC
+  // parse errors on /mcp), anything else a 500 without internals. The process
+  // never dies because of one bad request.
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction): void => {
+    const e = err as { type?: string; status?: number; message?: string };
+    const isMcp = req.originalUrl.startsWith('/mcp');
+    if (e?.type === 'entity.parse.failed') {
+      res.status(400).json(isMcp ? { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } } : { error: 'Malformed JSON body' });
+      return;
+    }
+    if (e?.type === 'entity.too.large') {
+      res.status(413).json(isMcp ? { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Request too large' } } : { error: 'Request body too large' });
+      return;
+    }
+    console.error('[AIOrc] Unhandled error on', req.method, req.originalUrl, err);
+    if (res.headersSent) return;
+    res.status(500).json(isMcp ? { jsonrpc: '2.0', id: null, error: { code: -32603, message: 'Internal error' } } : { error: 'Internal server error' });
   });
 
   return app;

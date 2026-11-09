@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
+import { ValidateFunction } from 'ajv';
 import db from '../db/client';
 import { requireProjectKey, ProjectKeyRequest } from '../middleware/projectKey';
+import { asyncHandler } from '../lib/asyncHandler';
+import { assertSafeOutbound, postJsonPinned, OutboundError } from '../lib/outbound';
+import { ajv, formatAjvErrors, validateEnvelope, validateToolCallParams } from './validation';
 import { compileFlow } from '../orchestrator';
 import { startRun, nextStep } from '../orchestrator/engine';
 import { recordReportedUsage } from '../lib/usage';
@@ -15,20 +19,14 @@ import { v4 as uuidv4 } from 'uuid';
 // tools/list and their calls are forwarded server-side with logging.
 interface McpServerRow { id: string; project_id: string; name: string; url: string; description: string }
 
+// Every call re-validates the registered URL (DNS included) and pins the
+// connection to the validated address: see lib/outbound.ts.
 async function callExternal(url: string, method: string, params?: unknown, timeoutMs = 5000): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-      signal: ctrl.signal,
-    });
-    return await r.json() as { result?: unknown; error?: { code: number; message: string } };
-  } finally {
-    clearTimeout(t);
-  }
+  const target = await assertSafeOutbound(url);
+  const resp = await postJsonPinned(target, { jsonrpc: '2.0', id: 1, method, params }, timeoutMs);
+  const body = resp.body as { result?: unknown; error?: { code: number; message: string } } | null;
+  if (!body || typeof body !== 'object') throw new OutboundError('the server answered with an empty or non-object body');
+  return body;
 }
 
 // Short-TTL cache so the MCP handshake (tools/list) never blocks on a dead
@@ -92,7 +90,8 @@ const WORKFLOW_TOOL = {
         type: 'string',
         description: 'Additional context about the codebase or environment (optional)'
       }
-    }
+    },
+    additionalProperties: false
   }
 };
 
@@ -114,7 +113,8 @@ const START_TOOL = {
       request: { type: 'string', description: 'The task, request, or prompt to process through the workflow' },
       context: { type: 'string', description: 'Additional context about the codebase or environment (optional)' },
       evalCase: { type: 'string', description: 'Eval case id (from workflow.eval). The case input replaces `request` and the run is auto-graded on completion.' }
-    }
+    },
+    additionalProperties: false
   }
 };
 
@@ -125,7 +125,7 @@ const EVAL_TOOL = {
     'To run the suite: for EACH case, call workflow.start with {"evalCase": "<case id>"} and drive the run to completion with workflow.next.',
     'The server grades each run automatically against the case\'s acceptance criteria using the verified execution path.',
   ].join(' '),
-  inputSchema: { type: 'object', properties: {} }
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false }
 };
 
 const NEXT_TOOL = {
@@ -141,7 +141,8 @@ const NEXT_TOOL = {
       runId: { type: 'string', description: 'The runId returned by workflow.start' },
       output: { type: 'string', description: 'Concise summary of the output of the agent(s) just executed' },
       next: { type: 'string', description: 'Target agent name, end outcome, or the edge condition that matched. Pass "none" if no condition matched.' }
-    }
+    },
+    additionalProperties: false
   }
 };
 
@@ -164,20 +165,30 @@ const REPORT_TOOL = {
         type: 'object',
         description: 'Free-form JSON with branches_taken, loop_iterations, verdicts, final_summary'
       }
-    }
+    },
+    additionalProperties: false
   }
 };
 
-router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res: Response): Promise<void> => {
+const OWN_TOOLS = [START_TOOL, NEXT_TOOL, WORKFLOW_TOOL, REPORT_TOOL, EVAL_TOOL];
+const argValidators = new Map<string, ValidateFunction>(OWN_TOOLS.map(t => [t.name, ajv.compile(t.inputSchema)]));
+// Tools that read nothing private and start nothing: allowed with x-project-id on a public project.
+const READ_ONLY_TOOLS = new Set(['workflow.eval']);
+
+router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(async (req, res: Response): Promise<void> => {
   const project = req.project!;
   const body = req.body as JsonRpcRequest;
 
-  if (!body || body.jsonrpc !== '2.0' || !body.method) {
-    res.status(400).json(rpcError(body?.id ?? null, -32600, 'Invalid Request'));
+  if (!validateEnvelope(body)) {
+    const rawId = (body as { id?: unknown } | null)?.id;
+    const safeId = typeof rawId === 'string' || typeof rawId === 'number' ? rawId : null;
+    res.status(400).json(rpcError(safeId, -32600, `Invalid Request: ${formatAjvErrors(validateEnvelope.errors)}`));
     return;
   }
 
   const { id, method, params } = body;
+  const caller = req.caller ?? null;
+  const declaredCaller = req.declaredCaller ?? '';
 
   // Notifications (no id) — acknowledge immediately
   if (id === undefined && method?.startsWith('notifications/')) {
@@ -207,18 +218,28 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
       return;
     }
 
-    const externalTools = await listExternalTools(project.id);
-    res.json(rpcResult(id, { tools: [START_TOOL, NEXT_TOOL, WORKFLOW_TOOL, REPORT_TOOL, EVAL_TOOL, ...externalTools] }));
+    const externalTools = req.projectAuth === 'key' ? await listExternalTools(project.id) : [];
+    const own = req.projectAuth === 'key' ? OWN_TOOLS : OWN_TOOLS.filter(t => READ_ONLY_TOOLS.has(t.name));
+    res.json(rpcResult(id, { tools: [...own, ...(req.projectAuth === 'key' ? externalTools : [])] }));
     return;
   }
 
   // tools/call
   if (method === 'tools/call') {
-    const toolName = (params as { name?: string; arguments?: Record<string, unknown> })?.name;
-    const toolArgs = (params as { name?: string; arguments?: Record<string, unknown> })?.arguments || {};
+    if (!validateToolCallParams(params)) {
+      res.json(rpcError(id, -32602, `Invalid params: ${formatAjvErrors(validateToolCallParams.errors)}`));
+      return;
+    }
+    const toolName = (params as { name: string }).name;
+    const toolArgs = { ...((params as { arguments?: Record<string, unknown> }).arguments ?? {}) };
+
+    if (req.projectAuth !== 'key' && !READ_ONLY_TOOLS.has(toolName)) {
+      res.json(rpcError(id, -32001, `Tool "${toolName}" requires the project key (x-project-key). x-project-id only allows read-only tools.`));
+      return;
+    }
 
     // External tool? Proxy it through the single AIOrc connection, with logging.
-    const ext = toolName ? parseExternalTool(toolName) : null;
+    const ext = parseExternalTool(toolName);
     if (ext) {
       const servers = db.prepare('SELECT * FROM mcp_servers WHERE project_id = ?').all(project.id) as McpServerRow[];
       const server = servers.find(s => sanitizeServerName(s.name) === ext.server);
@@ -227,25 +248,29 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
         return;
       }
       const started = Date.now();
-      const callerEmail = String(req.headers['x-user-email'] ?? '').trim().slice(0, 254);
       let ok = 0;
       try {
         const resp = await callExternal(server.url, 'tools/call', { name: ext.tool, arguments: toolArgs });
         ok = resp && !resp.error ? 1 : 0;
         res.json(resp.error ? { jsonrpc: '2.0', id, error: resp.error } : rpcResult(id, resp.result));
       } catch (err) {
-        res.json(rpcError(id, -32603, `External server "${server.name}" unreachable: ${(err as Error).message}`));
+        const reason = err instanceof OutboundError ? `blocked: ${err.message}` : `unreachable: ${(err as Error).message}`;
+        res.json(rpcError(id, -32603, `External server "${server.name}" ${reason}`));
       } finally {
         db.prepare(
-          'INSERT INTO mcp_tool_calls (id, project_id, server_id, server_name, tool, caller_email, ok, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run(uuidv4(), project.id, server.id, server.name, ext.tool, callerEmail, ok, Date.now() - started, Date.now());
+          'INSERT INTO mcp_tool_calls (id, project_id, server_id, server_name, tool, caller_user_id, caller_email, declared_caller, ok, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).run(uuidv4(), project.id, server.id, server.name, ext.tool, caller?.userId ?? '', caller?.email ?? '', declaredCaller, ok, Date.now() - started, Date.now());
       }
       return;
     }
 
-    const KNOWN_TOOLS = ['workflow', 'workflow.start', 'workflow.next', 'workflow.report', 'workflow.eval'];
-    if (!toolName || !KNOWN_TOOLS.includes(toolName)) {
-      res.json(rpcError(id, -32602, `Unknown tool: ${toolName}. Available: ${KNOWN_TOOLS.map(t => `"${t}"`).join(', ')}.`));
+    const validateArgs = argValidators.get(toolName);
+    if (!validateArgs) {
+      res.json(rpcError(id, -32602, `Unknown tool: ${toolName}. Available: ${OWN_TOOLS.map(t => `"${t.name}"`).join(', ')}.`));
+      return;
+    }
+    if (!validateArgs(toolArgs)) {
+      res.json(rpcError(id, -32602, `Invalid arguments for ${toolName}: ${formatAjvErrors(validateArgs.errors)}`));
       return;
     }
 
@@ -301,8 +326,7 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
         res.json(rpcError(id, -32602, 'Missing required field: request'));
         return;
       }
-      const callerEmail = String(req.headers['x-user-email'] ?? '').trim().slice(0, 254);
-      const result = startRun(project.id, toolArgs as Record<string, unknown>, callerEmail, evalCaseId);
+      const result = startRun(project.id, toolArgs as Record<string, unknown>, { caller, declaredCaller }, evalCaseId);
       if (result.error && ['no_flow', 'empty_flow', 'invalid_flow'].includes(result.error)) {
         res.json(rpcError(id, -32603, result.text));
         return;
@@ -384,10 +408,7 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
     }
 
     // Compile the flow into deterministic instructions for the calling LLM.
-    // x-user-email (optional, set via AIORC_USER_EMAIL in the bridge) attributes
-    // the run to the actual person behind the shared project key.
-    const callerEmail = String(req.headers['x-user-email'] ?? '').trim().slice(0, 254);
-    const result = compileFlow(project.id, toolArgs as Record<string, unknown>, callerEmail);
+    const result = compileFlow(project.id, toolArgs as Record<string, unknown>, { caller, declaredCaller });
 
     if (result.error === 'no_flow' || result.error === 'empty_flow') {
       res.json(rpcError(id, -32603, result.workflow));
@@ -416,6 +437,6 @@ router.post('/', requireProjectKey, async (req: ProjectKeyRequest & Request, res
   }
 
   res.json(rpcError(id, -32601, `Method not found: ${method}`));
-});
+}));
 
 export default router;

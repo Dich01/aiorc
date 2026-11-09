@@ -1,3 +1,6 @@
+import net from 'net';
+import { allowPrivateTargets, isBlockedAddress } from './outbound';
+
 // MCP server registry (Phase B1): inventory of the external MCP servers each
 // project's agents rely on. Pure validation here — unit-tested; CRUD lives in
 // routes. Phase B2 (proxying calls through AIOrc with per-agent allowlists)
@@ -40,20 +43,21 @@ export function parseExternalTool(name: string): { server: string; tool: string 
   return { server: name.slice(0, i), tool: name.slice(i + 2) };
 }
 
-// Block outbound requests to loopback, link-local and private ranges so a
-// registered "MCP server" can't be used to SSRF the host's internal network.
+// Synchronous pre-check on the literal URL, used when a server is registered.
+// It rejects obvious internal targets (localhost names, IP literals in blocked
+// ranges, including bracketed and IPv4-mapped IPv6 forms). It does NOT resolve
+// DNS: assertSafeOutbound() in lib/outbound.ts does that, at registration and
+// again on every call.
 export function isSafeOutboundUrl(url: string): boolean {
   let h: string;
   try { h = new URL(url).hostname.toLowerCase(); } catch { return false; }
-  if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0' || h === '::1' || h === '[::1]') return false;
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (m) {
-    const [a, b] = [Number(m[1]), Number(m[2])];
-    if (a === 127 || a === 10 || a === 0) return false;                 // loopback / private / this-host
-    if (a === 169 && b === 254) return false;                           // link-local (cloud metadata)
-    if (a === 192 && b === 168) return false;                           // private
-    if (a === 172 && b >= 16 && b <= 31) return false;                  // private
-  }
+  h = h.replace(/^\[|\]$/g, '');
+  if (allowPrivateTargets()) return true;
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal')) return false;
+  if (net.isIP(h)) return !isBlockedAddress(h);
+  // Single-label names ("aiorc", "db") only resolve inside a private network
+  // (Docker service names, search domains): never a public MCP server.
+  if (!h.includes('.')) return false;
   return true;
 }
 
