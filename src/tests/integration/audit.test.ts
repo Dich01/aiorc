@@ -86,8 +86,14 @@ test('npm run audit:verify checks an export offline with the public key', async 
   fs.writeFileSync(keyFile, auditKey().publicKeyPem);
   const script = path.join(__dirname, '..', '..', 'scripts', 'auditVerify.ts');
   const tsnode = path.join(process.cwd(), 'node_modules', '.bin', 'ts-node');
-  const ok = execFileSync(tsnode, ['--transpile-only', script, file, '--key', keyFile], { encoding: 'utf8' });
+  // Offline means offline: no AIORC_DB_PATH, an empty working directory, and
+  // no database file may be created.
+  const offlineDir = fs.mkdtempSync(path.join(TEST_DIR, 'offline-'));
+  const { AIORC_DB_PATH: _db, ...offlineEnv } = process.env;
+  void _db;
+  const ok = execFileSync(tsnode, ['--transpile-only', script, file, '--key', keyFile], { encoding: 'utf8', cwd: offlineDir, env: offlineEnv });
   assert.ok(ok.startsWith('VALID'), ok);
+  assert.deepStrictEqual(fs.readdirSync(offlineDir), [], 'the verifier must not touch a database');
 
   doc.payload.steps[0].output.summary = 'tampered';
   fs.writeFileSync(file, JSON.stringify(doc));

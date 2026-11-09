@@ -1,6 +1,7 @@
 import { KeyObject } from 'crypto';
 import { canonicalJson, sha256 } from './canonicalJson';
-import { checkChain, GENESIS_HASH, RunEvent } from './runEvents';
+import { checkChain, GENESIS_HASH } from './eventChain';
+import type { RunEvent } from './runEvents';
 import { verifyBytes } from './auditKeys';
 
 // Signed audit export (format aiorc.audit.v1) and its verification. The
