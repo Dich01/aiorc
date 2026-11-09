@@ -33,7 +33,8 @@ import {
   attachSkillToAgent, detachSkillFromAgent
 } from './api';
 import { toReactFlow, toBackend } from './conversion';
-import { validateFlowClient } from './validation';
+import { validateFlow } from '../../src/shared/flow';
+import type { AgentInfo, FlowDocument } from '../../src/shared/flow';
 import type {
   AgentSummary, SkillSummary, AnyNodeData, AgentNodeData, EndNodeData, ParallelNodeData, EdgeData
 } from './types';
@@ -348,13 +349,15 @@ function FlowEditorInner() {
   }
 
   async function handleSave() {
-    const errs = validateFlowClient(nodes, edges);
+    // Same validator as the server (src/shared/flow.ts).
+    const { nodes: backendNodes, edges: backendEdges } = toBackend(nodes, edges);
+    const agentInfo = new Map<string, AgentInfo>(agents.map(a => [a.id, { name: a.name, hasOutputSchema: !!a.output_schema }]));
+    const errs = backendNodes.length === 0 ? [] : validateFlow({ nodes: backendNodes, edges: backendEdges } as FlowDocument, agentInfo);
     if (errs.length > 0) {
       setValidationErrors(errs);
       return;
     }
     setSaving(true);
-    const { nodes: backendNodes, edges: backendEdges } = toBackend(nodes, edges);
     const result = await saveFlow(backendNodes, backendEdges);
     setSaving(false);
     if (result.validation_errors && result.validation_errors.length > 0) {

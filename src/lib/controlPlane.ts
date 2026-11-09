@@ -52,19 +52,6 @@ export function isAbandoned(lastActivityAt: number, now: number, thresholdMs: nu
   return now - lastActivityAt > thresholdMs;
 }
 
-// A run stops accepting self-declared reports once it was cancelled or marked
-// abandoned — otherwise a cancel wouldn't actually freeze the audit trail.
-export function canAcceptReport(status: string): boolean {
-  return status !== 'cancelled' && status !== 'abandoned';
-}
-
-// A run counts toward "verified" trust metrics only if it ran in stepped mode
-// AND wasn't cancelled or abandoned mid-flight (those didn't complete a
-// trustworthy path, so counting them inflates the verified rate dishonestly).
-export function countsAsVerified(mode: string, status: string): boolean {
-  return mode === 'stepped' && status !== 'cancelled' && status !== 'abandoned';
-}
-
 // ── Signed audit exports ─────────────────────────────────────────────────────
 // HMAC-SHA256 over the exact serialized payload. Anyone holding the secret can
 // re-verify that an exported audit trail was not altered after export.

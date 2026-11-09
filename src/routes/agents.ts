@@ -5,6 +5,20 @@ import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Agent, AgentInvitation } from '../db/schema';
+import { checkOutputSchema, parseStoredSchema } from '../lib/outputSchema';
+import { flowsReferencingAgents } from '../orchestrator';
+
+// output_schema arrives as a JSON Schema object, null/'' to clear it, or a
+// JSON string. Returns the column value, or an error.
+function readOutputSchema(raw: unknown): { ok: true; value: string } | { ok: false; error: string } {
+  if (raw === null || raw === '' ) return { ok: true, value: '' };
+  let schema = raw;
+  if (typeof raw === 'string') {
+    try { schema = JSON.parse(raw); } catch { return { ok: false, error: 'output_schema must be valid JSON' }; }
+  }
+  const err = checkOutputSchema(schema);
+  return err ? { ok: false, error: err } : { ok: true, value: JSON.stringify(schema) };
+}
 import { normalizeFiles, writeEntityFiles, loadEntityFiles, copyEntityFiles, AGENT_FILES, SKILL_FILES } from '../lib/entityFiles';
 
 const router = Router();
@@ -19,6 +33,7 @@ function enrichAgent(a: Agent, viewerId?: string) {
   return {
     ...a,
     content: files.find(f => f.is_entry)?.content ?? '',
+    output_schema: parseStoredSchema(a.output_schema),
     files,
     skills: loadSkillsFor(a.id),
     project_ids: loadProjectIdsFor(a.id),
@@ -143,9 +158,9 @@ router.get('/public', (req: Request, res: Response): void => {
   // Usage = reported (actually executed) invocations across all runs, any project.
   const rows = db.prepare(`
     SELECT a.*, u.email as owner_email, u.nickname as owner_nickname,
-           (SELECT COUNT(DISTINCT au.run_id) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'reported') as usage_runs,
-           (SELECT COALESCE(SUM(au.invocations), 0) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'reported') as usage_invocations,
-           (SELECT MAX(au.created_at) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'reported') as usage_last_at
+           (SELECT COUNT(DISTINCT au.run_id) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'executed') as usage_runs,
+           (SELECT COALESCE(SUM(au.invocations), 0) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'executed') as usage_invocations,
+           (SELECT MAX(au.created_at) FROM agent_usage au WHERE au.agent_id = a.id AND au.source = 'executed') as usage_last_at
     FROM agents a JOIN users u ON u.id = a.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -213,10 +228,10 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /agents — create agent
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, tags, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, skill_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    expected_output_format?: string; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; skill_ids?: string[]; project_ids?: string[];
   };
 
   if (!name?.trim() || !description?.trim()) {
@@ -226,12 +241,13 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const normalized = normalizeFiles(files as never, content, AGENT_FILES);
   if (!normalized.ok) { res.status(400).json({ error: normalized.error }); return; }
 
-  const id = uuidv4();
-  const outputFmt = expected_output_format || '';
+  const schema = readOutputSchema(output_schema ?? null);
+  if (!schema.ok) { res.status(400).json({ error: schema.error }); return; }
 
+  const id = uuidv4();
   db.prepare(
-    'INSERT INTO agents (id, user_id, name, description, tags, expected_output_format, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), outputFmt, Date.now());
+    'INSERT INTO agents (id, user_id, name, description, tags, output_schema, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.userId!, name.trim(), description.trim(), normalizeTags(tags), schema.value, Date.now());
   writeEntityFiles(id, normalized.files, AGENT_FILES);
 
   if (Array.isArray(skill_ids) && skill_ids.length > 0) {
@@ -265,11 +281,18 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, tags, content, files, expected_output_format, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, skill_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    expected_output_format?: string; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; skill_ids?: string[]; project_ids?: string[];
   };
+
+  let schemaValue = agent.output_schema;
+  if (output_schema !== undefined) {
+    const schema = readOutputSchema(output_schema);
+    if (!schema.ok) { res.status(400).json({ error: schema.error }); return; }
+    schemaValue = schema.value;
+  }
 
   // Only touch files if the client sent something file-related.
   const touchFiles = Array.isArray(files) || typeof content === 'string';
@@ -280,12 +303,12 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   db.prepare(
-    'UPDATE agents SET name=?, description=?, tags=?, expected_output_format=? WHERE id=?'
+    'UPDATE agents SET name=?, description=?, tags=?, output_schema=? WHERE id=?'
   ).run(
     name?.trim() || agent.name,
     description?.trim() || agent.description,
     tags !== undefined ? normalizeTags(tags) : agent.tags,
-    expected_output_format !== undefined ? expected_output_format : agent.expected_output_format,
+    schemaValue,
     agent.id
   );
 
@@ -432,8 +455,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
 
   const fork = db.transaction(() => {
     db.prepare(
-      'INSERT INTO agents (id, user_id, name, description, tags, expected_output_format, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(newAgentId, req.userId!, candidate, source.description, source.tags, source.expected_output_format, 0, source.id, now);
+      'INSERT INTO agents (id, user_id, name, description, tags, output_schema, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(newAgentId, req.userId!, candidate, source.description, source.tags, source.output_schema, 0, source.id, now);
 
     // Deep-copy the agent's files (entry + supporting).
     const srcFiles = loadEntityFiles(source.id, AGENT_FILES);
@@ -481,6 +504,14 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
   if (!isAdmin(req.userId!) && agent.user_id !== req.userId) {
     res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  // A saved flow that points at this agent would stop validating; running
+  // runs are unaffected either way (they execute from their snapshot).
+  const usedBy = flowsReferencingAgents([agent.id]);
+  if (usedBy.length > 0) {
+    res.status(409).json({ error: `This agent is used by the flow of ${usedBy.map(p => `"${p.name}"`).join(', ')}. Remove it from those flows first.`, projects: usedBy });
+    return;
   }
 
   db.prepare('DELETE FROM agent_skills WHERE agent_id = ?').run(agent.id);

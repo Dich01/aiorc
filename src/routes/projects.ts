@@ -106,7 +106,7 @@ router.get('/public', (req, res: Response): void => {
     SELECT p.id, p.user_id, p.name, p.description, p.tags, p.created_at,
            u.email as owner_email, u.nickname as owner_nickname,
            (SELECT COUNT(*) FROM runs r WHERE r.project_id = p.id) as usage_runs,
-           (SELECT COUNT(*) FROM runs r WHERE r.project_id = p.id AND r.execution_report != '') as usage_reported_runs
+           (SELECT COUNT(*) FROM runs r WHERE r.project_id = p.id AND r.status = 'completed') as usage_reported_runs
     FROM projects p JOIN users u ON u.id = p.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -480,15 +480,15 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
     for (const aid of agentIdsInFlow) {
       const a = db.prepare('SELECT * FROM agents WHERE id = ?').get(aid) as {
         id: string; user_id: string; name: string; description: string;
-        tags: string; expected_output_format: string; created_at: number;
+        tags: string; output_schema: string; created_at: number;
       } | undefined;
       if (!a) continue; // orphan reference, skip; the resulting flow will compile with a warning
       const newAgentId = uuidv4();
       agentIdMap.set(aid, newAgentId);
       const newName = renameIfNeeded(a.name, existingAgentNames);
       db.prepare(
-        'INSERT INTO agents (id, user_id, name, description, tags, expected_output_format, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.expected_output_format, a.id, now);
+        'INSERT INTO agents (id, user_id, name, description, tags, output_schema, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.output_schema, a.id, now);
       copyEntityFiles(a.id, newAgentId, AGENT_FILES);
       db.prepare('INSERT INTO project_agents (project_id, agent_id) VALUES (?, ?)').run(newProjectId, newAgentId);
 

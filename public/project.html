@@ -555,8 +555,8 @@
             <textarea id="ca-content" rows="10" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:ui-monospace,monospace;font-size:0.85rem;margin-top:5px;resize:vertical" placeholder="You are an agent that..."></textarea>
           </div>
           <div>
-            <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Expected output format (optional)</label>
-            <input id="ca-output" type="text" maxlength="200" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit;font-size:0.9rem;margin-top:5px" placeholder="e.g. JSON with fields verdict, reason">
+            <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Output schema (JSON Schema, optional)</label>
+            <textarea id="ca-output" rows="4" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:ui-monospace,monospace;font-size:0.82rem;margin-top:5px" placeholder='{"type":"object","required":["verdict"],"properties":{"verdict":{"enum":["PASS","FAIL"]}}}'></textarea>
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:18px;align-items:center">
@@ -2780,8 +2780,13 @@ skip steps or modify them with your own judgment.</pre>
       const name = document.getElementById('ca-name').value.trim();
       const description = document.getElementById('ca-desc').value.trim();
       const content = document.getElementById('ca-content').value;
-      const expected_output_format = document.getElementById('ca-output').value.trim();
+      const schemaText = document.getElementById('ca-output').value.trim();
       const msg = document.getElementById('ca-msg');
+      let output_schema = null;
+      if (schemaText) {
+        try { output_schema = JSON.parse(schemaText); }
+        catch { msg.textContent = 'Output schema must be valid JSON.'; return; }
+      }
       const btn = document.getElementById('ca-save');
       if (!name) { msg.textContent = 'Name is required.'; return; }
       if (!description) { msg.textContent = 'Description is required.'; return; }
@@ -2790,7 +2795,7 @@ skip steps or modify them with your own judgment.</pre>
       try {
         const res = await authFetch('/agents', {
           method: 'POST',
-          body: JSON.stringify({ name, description, content, expected_output_format, skill_ids: [], project_ids: [projectId] })
+          body: JSON.stringify({ name, description, content, output_schema, skill_ids: [], project_ids: [projectId] })
         });
         const data = await res.json();
         if (!res.ok) { msg.textContent = data.error || 'Could not save.'; return; }

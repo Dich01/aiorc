@@ -3,6 +3,8 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Run } from '../db/schema';
 import { signAudit, ABANDON_THRESHOLD_MS, auditSigningKey } from '../lib/controlPlane';
+import { cancelRun } from '../orchestrator/engine';
+import { snapshotHashes } from '../orchestrator/snapshot';
 
 const router = Router();
 
@@ -66,7 +68,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   const parseOrRaw = (s: string) => { try { return JSON.parse(s); } catch { return s; } };
-  const executionReport = run.execution_report ? parseOrRaw(run.execution_report) : null;
+  const outputs = (db.prepare('SELECT step, node_id, agent_name, output_json, sha256, created_at FROM run_step_outputs WHERE run_id = ? ORDER BY step, node_id').all(run.id) as { step: number; node_id: string; agent_name: string; output_json: string; sha256: string; created_at: number }[])
+    .map(o => ({ step: o.step, node: o.node_id, agent: o.agent_name, output: parseOrRaw(o.output_json), sha256: o.sha256, created_at: o.created_at }));
   const engineState = run.engine_state ? parseOrRaw(run.engine_state) : null;
   const evalReasons = run.eval_reasons ? parseOrRaw(run.eval_reasons) : null;
 
@@ -79,7 +82,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   res.json({
     ...run,
     input: parseOrRaw(run.input),
-    execution_report: executionReport,
+    step_outputs: outputs,
+    snapshots: snapshotHashes(run.id),
     engine_state: engineState,
     eval_reasons: evalReasons,
     eval_case: evalCase,
@@ -96,10 +100,10 @@ router.post('/:id/cancel', requireAuth, (req: AuthRequest, res: Response): void 
 
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
   if (user?.role !== 'admin' && run.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
-  if (run.status === 'completed' || run.status === 'cancelled') {
+  if (!['running', 'abandoned'].includes(run.status)) {
     res.status(400).json({ error: `Run is already ${run.status}` }); return;
   }
-  db.prepare('UPDATE runs SET status = ? WHERE id = ?').run('cancelled', run.id);
+  cancelRun(run.id);
   res.json({ id: run.id, status: 'cancelled' });
 });
 
@@ -120,14 +124,14 @@ router.get('/:id/export', requireAuth, (req: AuthRequest, res: Response): void =
   const payload = {
     run_id: run.id,
     project: run.project_name,
-    mode: run.mode === 'stepped' ? 'server-verified (stepped)' : 'compiled',
+    mode: 'server-verified (stepped)',
     status: run.status,
+    outcome: run.outcome || null,
     caller_email: run.caller_email || null,
     created_at: run.created_at,
     created_at_iso: new Date(run.created_at).toISOString(),
     input: parse(run.input),
     verified_execution: run.engine_state ? parse(run.engine_state) : null,
-    self_declared_report: run.execution_report ? parse(run.execution_report) : null,
     eval: run.eval_verdict ? { verdict: run.eval_verdict, reasons: parse(run.eval_reasons) } : null,
     exported_at_iso: new Date().toISOString(),
   };

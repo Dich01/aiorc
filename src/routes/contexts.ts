@@ -403,6 +403,17 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
+  // Refuse while the context is attached to a project that has a flow.
+  const usedBy = db.prepare(
+    `SELECT p.id AS project_id, p.name FROM project_contexts pc JOIN projects p ON p.id = pc.project_id
+     JOIN project_flows f ON f.project_id = p.id
+     WHERE pc.context_id = ? AND f.flow_json != '{"nodes":[],"edges":[]}'`
+  ).all(ctx.id) as { project_id: string; name: string }[];
+  if (usedBy.length > 0) {
+    res.status(409).json({ error: `This context is attached to ${usedBy.map(p => `"${p.name}"`).join(', ')}, which have flows. Detach it first.`, projects: usedBy });
+    return;
+  }
+
   db.prepare('DELETE FROM project_contexts WHERE context_id = ?').run(ctx.id);
   db.prepare('DELETE FROM contexts WHERE id = ?').run(ctx.id);
   res.status(204).end();

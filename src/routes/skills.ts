@@ -5,6 +5,7 @@ import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Skill, SkillFile, SkillInvitation } from '../db/schema';
+import { flowsReferencingAgents } from '../orchestrator';
 
 const router = Router();
 
@@ -186,10 +187,10 @@ router.get('/public', (req: Request, res: Response): void => {
     SELECT s.*, u.email as owner_email, u.nickname as owner_nickname,
            (SELECT COUNT(DISTINCT au.run_id) FROM agent_usage au
               JOIN agent_skills ask ON ask.agent_id = au.agent_id
-              WHERE ask.skill_id = s.id AND au.source = 'reported') as usage_runs,
+              WHERE ask.skill_id = s.id AND au.source = 'executed') as usage_runs,
            (SELECT COALESCE(SUM(au.invocations), 0) FROM agent_usage au
               JOIN agent_skills ask ON ask.agent_id = au.agent_id
-              WHERE ask.skill_id = s.id AND au.source = 'reported') as usage_invocations
+              WHERE ask.skill_id = s.id AND au.source = 'executed') as usage_invocations
     FROM skills s JOIN users u ON u.id = s.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -475,6 +476,14 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
   if (!isAdmin(req.userId!) && skill.user_id !== req.userId) {
     res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  // Refuse while an agent carrying this skill sits in a saved flow.
+  const carriers = (db.prepare('SELECT agent_id FROM agent_skills WHERE skill_id = ?').all(skill.id) as { agent_id: string }[]).map(r => r.agent_id);
+  const usedBy = flowsReferencingAgents(carriers);
+  if (usedBy.length > 0) {
+    res.status(409).json({ error: `This skill is used by agents in the flow of ${usedBy.map(p => `"${p.name}"`).join(', ')}. Detach it from those agents first.`, projects: usedBy });
+    return;
   }
 
   db.prepare('DELETE FROM agent_skills WHERE skill_id = ?').run(skill.id);

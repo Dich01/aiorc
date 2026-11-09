@@ -13,12 +13,12 @@ import { FlowDocument } from '../../db/schema';
 export const flow: FlowDocument = {
   nodes: [
     { id: 'start', type: 'start', x: 0, y: 0 },
-    { id: 'A', type: 'agent', agent_name: 'brain', x: 0, y: 0 },
-    { id: 'B', type: 'agent', agent_name: 'verify', x: 0, y: 0 },
+    { id: 'A', type: 'agent', agent_id: 'id-brain', agent_name: 'brain', x: 0, y: 0 },
+    { id: 'B', type: 'agent', agent_id: 'id-verify', agent_name: 'verify', x: 0, y: 0 },
     { id: 'P', type: 'parallel', x: 0, y: 0 },
-    { id: 'C', type: 'agent', agent_name: 'mem', x: 0, y: 0 },
-    { id: 'D', type: 'agent', agent_name: 'struct', x: 0, y: 0 },
-    { id: 'E', type: 'agent', agent_name: 'jira', x: 0, y: 0 },
+    { id: 'C', type: 'agent', agent_id: 'id-mem', agent_name: 'mem', x: 0, y: 0 },
+    { id: 'D', type: 'agent', agent_id: 'id-struct', agent_name: 'struct', x: 0, y: 0 },
+    { id: 'E', type: 'agent', agent_id: 'id-jira', agent_name: 'jira', x: 0, y: 0 },
     { id: 'end1', type: 'end', outcome: 'success', x: 0, y: 0 },
     { id: 'end2', type: 'end', outcome: 'verify done', x: 0, y: 0 },
   ],

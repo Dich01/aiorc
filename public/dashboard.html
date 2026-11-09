@@ -402,8 +402,8 @@
         <input type="text" id="agent-tags" placeholder="backend, tdd, security" autocomplete="off" />
       </div>
       <div class="form-group">
-        <label for="agent-output-format">Expected output format <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-        <input type="text" id="agent-output-format" placeholder='e.g.: JSON { "verdict": "PASS|FAIL" }' autocomplete="off" />
+        <label for="agent-output-format">Output schema <span style="color:var(--muted);font-weight:400">(JSON Schema, optional; empty = any JSON object)</span></label>
+        <textarea id="agent-output-format" rows="4" style="font-family:ui-monospace,monospace;font-size:0.82rem" placeholder='{"type":"object","required":["verdict"],"properties":{"verdict":{"enum":["PASS","FAIL"]}}}'></textarea>
         <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Useful for gates: the next node reads this output literally.</p>
       </div>
       <div class="form-group">
@@ -1183,7 +1183,7 @@ workflow.start({
           document.getElementById('agent-name').value = a.name || '';
           document.getElementById('agent-desc').value = a.description || '';
           document.getElementById('agent-tags').value = a.tags || '';
-          document.getElementById('agent-output-format').value = a.expected_output_format || '';
+          document.getElementById('agent-output-format').value = a.output_schema ? JSON.stringify(a.output_schema, null, 2) : '';
           agentFiles = Array.isArray(a.files) ? a.files : null;
           agentContent = a.content || '';
           selectedSkillIds = (a.skills || []).map(s => s.id);
@@ -1268,8 +1268,13 @@ workflow.start({
       const name = document.getElementById('agent-name').value.trim();
       const description = document.getElementById('agent-desc').value.trim();
       const tags = document.getElementById('agent-tags').value.trim();
-      const expected_output_format = document.getElementById('agent-output-format').value.trim();
+      const schemaText = document.getElementById('agent-output-format').value.trim();
       const errEl = document.getElementById('agent-modal-error');
+      let output_schema = null;
+      if (schemaText) {
+        try { output_schema = JSON.parse(schemaText); }
+        catch { errEl.textContent = 'Output schema must be valid JSON.'; errEl.classList.remove('hidden'); return; }
+      }
       const btn = document.getElementById('agent-save-btn');
       if (!name) { errEl.textContent = 'Name is required.'; errEl.classList.remove('hidden'); return; }
       if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
@@ -1283,7 +1288,7 @@ workflow.start({
         const method = currentAgentId ? 'PUT' : 'POST';
         const res = await authFetch(url, {
           method,
-          body: JSON.stringify({ name, description, tags, files: agentFiles, expected_output_format, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
+          body: JSON.stringify({ name, description, tags, files: agentFiles, output_schema, skill_ids: selectedSkillIds, project_ids: selectedAgentProjectIds })
         });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Could not save.'; errEl.classList.remove('hidden'); return; }

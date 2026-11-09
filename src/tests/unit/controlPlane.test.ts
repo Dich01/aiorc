@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { section, test } from '../harness';
-import { gateExecution, signAudit, verifyAudit, isAbandoned, canAcceptReport, countsAsVerified } from '../../lib/controlPlane';
+import { gateExecution, signAudit, verifyAudit, isAbandoned } from '../../lib/controlPlane';
 
 section('controlPlane');
 
@@ -38,32 +38,6 @@ test('isAbandoned: 2h without activity marks abandonment, recent activity does n
   const TWO_H = 2 * 3600 * 1000;
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H + 1, TWO_H), true);
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H - 1, TWO_H), false);
-});
-
-section('report gating');
-
-
-test('a cancelled run does NOT accept workflow.report', () => {
-  assert.strictEqual(canAcceptReport('cancelled'), false);
-});
-test('an abandoned run does NOT accept workflow.report', () => {
-  assert.strictEqual(canAcceptReport('abandoned'), false);
-});
-test('running, completed and delivered DO accept a report', () => {
-  assert.strictEqual(canAcceptReport('running'), true);
-  assert.strictEqual(canAcceptReport('completed'), true);
-  assert.strictEqual(canAcceptReport('delivered'), true);
-});
-
-section('verified/audited honesty');
-
-
-test('a stepped run that was cancelled or abandoned does not count as verified', () => {
-  assert.strictEqual(countsAsVerified('stepped', 'completed'), true);
-  assert.strictEqual(countsAsVerified('stepped', 'running'), true);
-  assert.strictEqual(countsAsVerified('stepped', 'cancelled'), false);
-  assert.strictEqual(countsAsVerified('stepped', 'abandoned'), false);
-  assert.strictEqual(countsAsVerified('', 'completed'), false); // compiled mode is never verified
 });
 
 section('auditExport');

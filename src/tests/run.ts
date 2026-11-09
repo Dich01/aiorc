@@ -5,8 +5,8 @@ import { runAll } from './harness';
 import { stopServer } from './integration/helpers';
 
 // Unit tests: pure functions, no server.
-import './unit/skipAnalysis.test';
 import './unit/engineCore.test';
+import './unit/flowValidation.test';
 import './unit/evalGrading.test';
 import './unit/controlPlane.test';
 import './unit/mcpServers.test';
@@ -15,6 +15,7 @@ import './unit/outbound.test';
 // Integration tests: the real app on an ephemeral port.
 import './integration/bootstrap.test';
 import './integration/hardening.test';
+import './integration/engine.test';
 
 runAll()
   .then(async failed => {

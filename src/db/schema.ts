@@ -21,6 +21,7 @@ export interface Project {
   api_key_hint: string; // first characters of the key, for display only
   is_public: number; // 1 = listed in the repository and readable with x-project-id (runs still need the key)
   allow_executable_files: number; // 1 = non-Markdown files of agents/skills/contexts are delivered to the model
+  input_schema: string; // JSON Schema (as JSON text) for workflow.start `input`, '' = none
   paused: number;    // 1 = kill switch on: new runs blocked (in-flight runs may finish)
   forked_from: string | null; // source project id if this is a fork
   created_at: number;
@@ -43,7 +44,7 @@ export interface Agent {
   name: string;
   description: string;
   tags: string; // comma-separated labels (may be '')
-  expected_output_format: string; // describes shape of this agent's output
+  output_schema: string; // JSON Schema (as JSON text) the agent's output must satisfy, '' = any JSON object
   is_public: number;
   forked_from: string | null;
   created_at: number;
@@ -131,43 +132,8 @@ export interface ProjectFlow {
   updated_at: number;
 }
 
-// A flow is a directed graph with four node types: start, agent, parallel, end.
-// - Start: exactly 1 per flow, marks the entry point. No agent reference.
-// - Agent: references a project agent. Has optional per-node max_invocations.
-// - Parallel: fork point. Has ≥2 outgoing edges, ALL taken concurrently. The
-//   consuming LLM is instructed to dispatch all branches in parallel (e.g., via
-//   parallel Agent tool calls in a single response) and wait for all to finish
-//   before continuing past the join point. Branches typically converge to the
-//   same downstream node, but convergence is not enforced by validation.
-// - End: terminal marker. No agent reference. Optional free-text `outcome` label.
-// Edges carry an optional free-text condition (natural language).
-// Cycles are allowed — a back-edge IS a loop. Per-agent max_invocations caps repetition.
-export type FlowNodeType = 'start' | 'agent' | 'parallel' | 'end';
-
-export interface FlowNode {
-  id: string;
-  type: FlowNodeType;
-  agent_id?: string;          // only for type='agent'
-  agent_name?: string;        // only for type='agent', denormalized for display
-  max_invocations?: number;   // only for type='agent', default 10, capped to 50
-  outcome?: string;           // only for type='end', free-text label
-  label?: string;             // optional display label, primarily used by 'parallel' nodes
-  x: number;
-  y: number;
-}
-
-export interface FlowEdge {
-  id: string;
-  from: string; // node id
-  to: string;   // node id
-  condition?: string; // free-text natural language; absent = unconditional fallthrough
-  priority?: number;  // ascending; lower evaluated first; default 1000
-}
-
-export interface FlowDocument {
-  nodes: FlowNode[];
-  edges: FlowEdge[];
-}
+// Flow model lives in src/shared/flow.ts (shared with the flow editor).
+export type { FlowNodeType, FlowNode, FlowEdge, FlowDocument, Rule, RuleOp } from '../shared/flow';
 
 export interface ProjectStar {
   user_id: string;
@@ -281,12 +247,13 @@ export interface Run {
   project_id: string;
   input: string;              // JSON string
   flow_json: string;          // normalized flow JSON at compile time (for path-aware skip analysis)
-  execution_report: string;   // post-run report JSON (required by the tool contract)
+  outcome: string;            // End outcome reached ('' until the run completes)
+  end_node: string;           // id of the End node reached ('' otherwise)
   caller_user_id: string;     // verified caller (personal access token), '' if none
   caller_email: string;       // verified caller's email, '' if none
   declared_caller: string;    // x-user-email header: self-declared, NOT verified
-  mode: string;               // '' = compiled (whole prompt) | 'stepped' = server-driven
-  engine_state: string;       // EngineState JSON for stepped runs, '' otherwise
+  mode: string;               // always 'stepped' (server-driven)
+  engine_state: string;       // EngineState JSON
   eval_case_id: string;       // links the run to an eval case, '' for normal runs
   eval_verdict: string;       // '' | 'pass' | 'fail' — graded by the server on completion
   eval_reasons: string;       // JSON array of failure reasons, '' otherwise
@@ -308,12 +275,10 @@ export interface EvalCase {
 }
 
 // Per-run agent usage telemetry. One row per (run, agent, source):
-// - 'planned': the agent was part of the compiled flow delivered to the LLM.
-// - 'reported': the LLM's workflow.report says the agent ran (self-declared).
-// - 'executed': the server dispatched the agent itself in stepped mode
-//   (workflow.start / workflow.next) — ground truth, not self-declared.
-// Comparing planned vs reported/executed per run surfaces skipped agents.
-export type AgentUsageSource = 'planned' | 'reported' | 'executed';
+// - 'planned':  the agent is part of the run's flow.
+// - 'executed': the agent completed a step: the server accepted an output
+//   that validates against its output schema. Dispatch alone does not count.
+export type AgentUsageSource = 'planned' | 'executed';
 
 export interface AgentUsage {
   id: string;
@@ -329,7 +294,7 @@ export interface AgentUsage {
 // Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
 // pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
 // a database at another version is refused at startup (see db/client.ts).
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -360,6 +325,7 @@ CREATE TABLE IF NOT EXISTS projects (
   api_key_hint TEXT NOT NULL DEFAULT '',
   is_public INTEGER NOT NULL DEFAULT 0,
   allow_executable_files INTEGER NOT NULL DEFAULT 0,
+  input_schema TEXT NOT NULL DEFAULT '',
   paused INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
@@ -373,7 +339,7 @@ CREATE TABLE IF NOT EXISTS agents (
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   tags TEXT NOT NULL DEFAULT '',
-  expected_output_format TEXT NOT NULL DEFAULT '',
+  output_schema TEXT NOT NULL DEFAULT '',
   is_public INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
@@ -652,7 +618,8 @@ CREATE TABLE IF NOT EXISTS runs (
   project_id TEXT NOT NULL,
   input TEXT NOT NULL,
   flow_json TEXT NOT NULL DEFAULT '',
-  execution_report TEXT NOT NULL DEFAULT '',
+  outcome TEXT NOT NULL DEFAULT '',
+  end_node TEXT NOT NULL DEFAULT '',
   caller_user_id TEXT NOT NULL DEFAULT '',
   caller_email TEXT NOT NULL DEFAULT '',
   declared_caller TEXT NOT NULL DEFAULT '',
@@ -681,6 +648,34 @@ CREATE TABLE IF NOT EXISTS user_tokens (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_user_tokens_user ON user_tokens(user_id);
+
+-- Frozen copies of everything a run's prompts are built from, taken at
+-- workflow.start. Steps are rendered from here, so editing or deleting an
+-- agent, skill or context mid-run cannot change what the run executes.
+CREATE TABLE IF NOT EXISTS run_snapshots (
+  run_id TEXT NOT NULL,
+  kind TEXT NOT NULL,          -- 'flow' | 'project' | 'agent' | 'skill' | 'context'
+  entity_id TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  content_json TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  PRIMARY KEY (run_id, kind, entity_id),
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+);
+
+-- Every accepted step output, whole (never truncated), with its hash.
+CREATE TABLE IF NOT EXISTS run_step_outputs (
+  run_id TEXT NOT NULL,
+  step INTEGER NOT NULL,
+  node_id TEXT NOT NULL,
+  agent_id TEXT NOT NULL DEFAULT '',
+  agent_name TEXT NOT NULL DEFAULT '',
+  output_json TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (run_id, step, node_id),
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS mcp_servers (
   id TEXT PRIMARY KEY,

@@ -1,9 +1,6 @@
 import { Router, Response } from 'express';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { classifySkips } from '../lib/skipAnalysis';
-import { extractReportedInvocations } from '../lib/usage';
-import { FlowDocument } from '../db/schema';
 import { sweepAbandonedRuns } from './runs';
 
 const router = Router();
@@ -13,7 +10,7 @@ interface UsageRow {
   project_id: string;
   agent_id: string | null;
   agent_name: string;
-  source: 'planned' | 'reported';
+  source: 'planned' | 'executed';
   invocations: number;
   created_at: number;
   has_report: number;
@@ -52,7 +49,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   // stepped engine (engine_state) — the latter is server-verified ground truth.
   const rows = db.prepare(
     `SELECT u.run_id, u.project_id, u.agent_id, u.agent_name, u.source, u.invocations, u.created_at,
-            CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
             p.name AS project_name, p.user_id AS owner_id, ow.nickname AS owner_nickname,
             r.caller_email
      FROM agent_usage u
@@ -62,62 +59,14 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
      ${whereSql}`
   ).all(...args) as UsageRow[];
 
-  // Per-run skip classification: replay each report against the flow graph the
-  // run was compiled from. Only agents the taken path REQUIRED count as skips;
-  // branches legitimately not taken are off-path.
-  const reportedRuns = db.prepare(
-    `SELECT r.id, r.project_id, r.flow_json, r.execution_report, r.engine_state
-     FROM runs r JOIN projects p ON p.id = r.project_id
-     ${whereSql ? whereSql + ' AND' : 'WHERE'} (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned')`
-  ).all(...args) as { id: string; project_id: string; flow_json: string; execution_report: string; engine_state: string }[];
-
-  const currentFlowStmt = db.prepare('SELECT flow_json FROM project_flows WHERE project_id = ?');
-  const plannedNamesByRun = new Map<string, Set<string>>();
-  const executedNamesByRun = new Map<string, Set<string>>();
-  for (const row of rows) {
-    const target = row.source === 'planned' ? plannedNamesByRun : executedNamesByRun;
-    let set = target.get(row.run_id);
-    if (!set) { set = new Set(); target.set(row.run_id, set); }
-    set.add(row.agent_name);
-  }
-
+  // Runs are server-driven: an agent the path required cannot be skipped, so
+  // there are no "real skips" to classify any more. A planned agent that
+  // never completed a step in a finished run was simply off the path taken.
   const realSkipsByRun = new Map<string, Set<string>>();
-  for (const run of reportedRuns) {
-    let flow: FlowDocument | null = null;
-    try {
-      // Prefer the compile-time snapshot; older runs fall back to the current flow.
-      const raw = run.flow_json || (currentFlowStmt.get(run.project_id) as { flow_json: string } | undefined)?.flow_json || '';
-      if (raw) flow = JSON.parse(raw) as FlowDocument;
-    } catch { /* unparseable flow — treat all non-executed as off-path */ }
-
-    const planned = plannedNamesByRun.get(run.id) ?? new Set<string>();
-    let executed = executedNamesByRun.get(run.id) ?? new Set<string>();
-    let orderedPath: string[] = [];
-    if (run.engine_state) {
-      // Stepped run: the engine's own path is the authoritative order.
-      try {
-        const engine = JSON.parse(run.engine_state) as { path?: { agent?: string }[] };
-        orderedPath = (engine.path ?? []).map(s => s.agent ?? '').filter(Boolean);
-      } catch { /* fall through to report */ }
-    }
-    try {
-      const report = JSON.parse(run.execution_report);
-      const fromReport = extractReportedInvocations(report);
-      if (fromReport.size > 0) executed = new Set([...executed, ...fromReport.keys()]);
-      if (orderedPath.length === 0 && Array.isArray(report?.path)) {
-        orderedPath = report.path.filter((s: unknown) => typeof s === 'string');
-      }
-    } catch { /* keep usage-row data */ }
-
-    realSkipsByRun.set(
-      run.id,
-      flow ? classifySkips(flow, planned, executed, orderedPath).realSkips : new Set()
-    );
-  }
 
   const runStats = db.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS with_report,
+            SUM(CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS with_report,
             SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified
      FROM runs r JOIN projects p ON p.id = r.project_id ${whereSql}`
   ).get(...args) as { total: number; with_report: number | null; verified: number | null };
@@ -238,7 +187,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
     if (!agg) { agg = { nickname: nick, runs: new Set(), invocations: 0, agents: new Set(), last_used: 0 }; byUser.set(nick, agg); }
     agg.runs.add(row.run_id);
     agg.last_used = Math.max(agg.last_used, row.created_at);
-    if (row.source !== 'planned') {   // 'reported' (compiled) OR 'executed' (verified)
+    if (row.source !== 'planned') {   // 'executed': completed steps
       agg.invocations += row.invocations;
       agg.agents.add(keyOf(row));
     }
@@ -250,7 +199,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const recentRuns = db.prepare(
     `SELECT r.id, r.created_at, r.status, p.name AS project_name, ow.nickname AS owner_nickname,
             r.caller_email,
-            CASE WHEN (r.execution_report != '' OR r.engine_state != '') AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
             CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS verified,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source = 'planned') AS agents_planned,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source != 'planned') AS agents_reported
@@ -314,7 +263,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const projectsStats = db.prepare(
     `SELECT p.id, p.name,
             COUNT(r.id) AS runs,
-            SUM(CASE WHEN r.execution_report != '' OR r.engine_state != '' THEN 1 ELSE 0 END) AS audited,
+            SUM(CASE WHEN r.status = 'completed' THEN 1 ELSE 0 END) AS audited,
             SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified,
             MAX(r.created_at) AS last_run_at,
             (SELECT COUNT(*) FROM eval_cases c WHERE c.project_id = p.id) AS eval_cases

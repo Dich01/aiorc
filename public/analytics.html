@@ -791,32 +791,20 @@
       }
 
       const engine = run.engine_state && typeof run.engine_state === 'object' ? run.engine_state : null;
-      if (engine && Array.isArray(engine.path) && engine.path.length > 0) {
-        parts.push(`<div class="run-section-title">Verified execution path (${engine.path.length} steps${engine.outcome ? ' — ' + escHtml(engine.outcome) : ''})</div>
-          <div>${engine.path.map((s, i) => `
+      if (engine && Array.isArray(engine.steps) && engine.steps.length > 0) {
+        const outs = Array.isArray(run.step_outputs) ? run.step_outputs : [];
+        parts.push(`<div class="run-section-title">Verified steps (${engine.steps.length}${run.outcome ? ' — ' + escHtml(run.outcome) : ''})</div>
+          <div>${engine.steps.map(s => `
             <div class="run-path-step">
-              <span class="run-path-num">${i + 1}.</span>
-              <span class="run-path-agent">${escHtml(s.agent)}</span>
-              ${s.via ? `<span class="run-path-via">via "${escHtml(s.via)}"</span>` : ''}
-              ${s.output ? `<span class="run-path-output">${escHtml(s.output)}</span>` : ''}
-            </div>`).join('')}
+              <span class="run-path-num">${escHtml(s.step)}.</span>
+              <span class="run-path-agent">${escHtml((s.agents || []).join(' + '))}</span>
+              <span class="run-path-via">${s.completed_at ? 'completed' : 'dispatched, awaiting output'}${s.transition ? ' · edge ' + escHtml(s.transition) : ''}</span>
+            </div>
+            ${outs.filter(o => o.step === s.step).map(o => `<details class="run-collapse"><summary>Output of ${escHtml(o.agent || o.node)} (sha256 ${escHtml(String(o.sha256).slice(0, 12))})</summary><pre class="run-pre">${escHtml(JSON.stringify(o.output, null, 2))}</pre></details>`).join('')}`).join('')}
           </div>`);
       }
 
-      if (run.execution_report) {
-        const reportText = typeof run.execution_report === 'object'
-          ? JSON.stringify(run.execution_report, null, 2) : String(run.execution_report);
-        parts.push(`<div class="run-section-title">Execution report (self-declared by the LLM)</div>
-          <pre class="run-pre">${escHtml(reportText)}</pre>`);
-      }
 
-      if (run.workflow_snapshot) {
-        parts.push(`<div class="run-section-title">Compiled prompt</div>
-          <details class="run-collapse">
-            <summary>Show the full compiled workflow (${Math.round(run.workflow_snapshot.length / 1000)}k chars)</summary>
-            <pre class="run-pre">${escHtml(run.workflow_snapshot)}</pre>
-          </details>`);
-      }
 
       if (parts.length === 0) parts.push('<div style="color:var(--muted);font-size:0.86rem">No details recorded for this run.</div>');
       document.getElementById('run-modal-body').innerHTML = parts.join('');
