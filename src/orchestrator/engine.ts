@@ -61,7 +61,7 @@ export interface NextArgs {
   transition?: string;
 }
 
-interface RunRow { id: string; project_id: string; engine_state: string; eval_case_id: string; status: string }
+interface RunRow { id: string; project_id: string; engine_state: string; eval_case_id: string; status: string; input: string }
 
 const FINAL_TEXT: Record<Exclude<RunStatus, 'active'>, string> = {
   completed: 'This run has already completed.',
@@ -94,6 +94,30 @@ function gradeIfEval(runId: string, evalCaseId: string): string {
   return pass
     ? `\n\n**EVAL "${evalCase.name}": PASS** (graded by the server from the run's event chain).`
     : `\n\n**EVAL "${evalCase.name}": FAIL**: ${reasons.join('; ')}.`;
+}
+
+// ── Built-in output checks ──────────────────────────────────────────────────
+// When the run input lists `changed_files`, every finding an agent reports
+// (`output.findings[].file`) must be one of them. Deterministic, server-side:
+// a review cannot cite code outside the change it was given.
+
+function changedFilesOf(rawInput: string): Set<string> | null {
+  try {
+    const input = JSON.parse(rawInput) as { changed_files?: unknown };
+    return Array.isArray(input.changed_files) ? new Set(input.changed_files.filter((f): f is string => typeof f === 'string')) : null;
+  } catch { return null; }
+}
+
+function findingsOutside(output: unknown, changed: Set<string> | null): string[] {
+  if (!changed || !output || typeof output !== 'object') return [];
+  const findings = (output as { findings?: unknown }).findings;
+  if (!Array.isArray(findings)) return [];
+  const bad = new Set<string>();
+  for (const f of findings) {
+    const file = f && typeof f === 'object' ? (f as { file?: unknown }).file : undefined;
+    if (typeof file === 'string' && !changed.has(file)) bad.add(file);
+  }
+  return [...bad];
 }
 
 // ── Prompt for one dispatched step ──────────────────────────────────────────
@@ -283,7 +307,7 @@ export function startRun(projectId: string, input: Record<string, unknown>, who:
 
 export function nextStep(runId: string, args: NextArgs): StepResult {
   return db.transaction((): StepResult => {
-    const row = db.prepare('SELECT id, project_id, engine_state, eval_case_id, status FROM runs WHERE id = ?').get(runId) as RunRow | undefined;
+    const row = db.prepare('SELECT id, project_id, engine_state, eval_case_id, status, input FROM runs WHERE id = ?').get(runId) as RunRow | undefined;
     if (!row || !row.engine_state) return { runId, text: 'Unknown run.', meta: {}, done: true, error: 'unknown_run' };
     const state = JSON.parse(row.engine_state) as EngineState;
     const requestHash = hashJson({ step: args.step, outputs: args.outputs, transition: args.transition ?? null });
@@ -319,10 +343,13 @@ export function nextStep(runId: string, args: NextArgs): StepResult {
     const flow: FlowDocument = snap.flow;
     const agentOf = (nodeId: string) => snap.agents.get(flow.nodes.find(n => n.id === nodeId)!.agent_id!);
 
+    const changedFiles = changedFilesOf(row.input);
     const outputs = new Map<string, unknown>();
     for (const o of args.outputs) {
       const err = validateOutput(agentOf(o.node)?.output_schema ?? null, o.output);
       if (err) return reject('invalid_output', `the output for node \`${o.node}\` does not match its output schema: ${err}.`);
+      const outside = findingsOutside(o.output, changedFiles);
+      if (outside.length) return reject('invalid_output', `the output for node \`${o.node}\` reports findings on files that are not in the run's changed_files: ${outside.map(f => `\`${f}\``).join(', ')}.`);
       outputs.set(o.node, o.output);
     }
 

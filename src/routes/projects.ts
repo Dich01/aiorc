@@ -45,6 +45,7 @@ import { sendInvitationEmail } from '../lib/mailer';
 import { validateMcpServer, sanitizeServerName } from '../lib/mcpServers';
 import { assertSafeOutbound, postJsonPinned, OutboundError } from '../lib/outbound';
 import { asyncHandler } from '../lib/asyncHandler';
+import { checkOutputSchema } from '../lib/outputSchema';
 import { newSecret, PROJECT_KEY_PREFIX } from '../lib/secrets';
 
 // The key hash never leaves the server. The plaintext key is added to a
@@ -210,6 +211,23 @@ router.patch('/:id/visibility', requireAuth, (req: AuthRequest, res: Response): 
   if (typeof is_public !== 'boolean') { res.status(400).json({ error: 'is_public boolean is required' }); return; }
 
   db.prepare('UPDATE projects SET is_public = ? WHERE id = ?').run(is_public ? 1 : 0, project.id);
+  const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
+  res.json(publicProject(updated));
+});
+
+// PATCH /projects/:id/input-schema — JSON Schema that workflow.start's
+// `input` must satisfy ({schema: null} clears it).
+router.patch('/:id/input-schema', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  const { schema } = req.body as { schema?: unknown };
+  if (schema !== null) {
+    const err = checkOutputSchema(schema);
+    if (err) { res.status(400).json({ error: err.replace('output_schema', 'schema') }); return; }
+  }
+  db.prepare('UPDATE projects SET input_schema = ? WHERE id = ?').run(schema === null ? '' : JSON.stringify(schema), project.id);
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
