@@ -12,37 +12,40 @@ npm run build:flow   # builds the React Flow editor bundle (required for the flo
 npm run dev          # API + UI on http://localhost:3001
 ```
 
-Open `http://localhost:3001`, register a user, create a project, then add agents and draw a flow.
-
-Sample data — three users, four projects, agents and skills — is seeded automatically the first time the server starts against an empty database. You do not need to run anything for it. Log in as `user1@aiorc.dev` / `password123`, or `admin@aiorc.dev` / `admin123` for the admin panel.
-
-One caveat: the seeded example flows predate the mandatory Start node, so `workflow.start` rejects them until you run the migration once:
+There is no seed: a new database has no users. Create an admin, and load the reference harness if you want something to run:
 
 ```bash
-./node_modules/.bin/ts-node src/migrate-add-start.ts
+AIORC_ADMIN_EMAIL=you@example.com AIORC_ADMIN_PASSWORD='at-least-12-chars' npm run admin:create
+npm run harness:apply -- harnesses/code-review
 ```
+
+Open `http://localhost:3001` and log in. If your local database was created by an older build, the server refuses to start; run it once with `AIORC_DB_RESET=1` (the old file is kept as `*.bak`). Local data is test data: there are no migrations.
 
 ## Running the checks
 
 ```bash
-npm test             # 42 tests — engine transitions, skip analysis, eval grading, audit signing
+npm test             # unit tests and integration tests against the real app
 npm run build        # tsc typecheck + emit
 npm run build:flow   # Vite build of the editor bundle
 ```
 
 All three run in CI on Node 20 and 22. Please make sure they pass locally before opening a PR.
 
-The test runner is a small custom harness in `src/tests/run.ts` — there is no Jest or Vitest. To add a test, register it in that file following the existing pattern. Tests are plain assertions against the orchestrator and library functions; they do not need a running server.
+The test runner is a small custom harness (`src/tests/harness.ts`, entry point `src/tests/run.ts`) — there is no Jest or Vitest. Unit tests live in `src/tests/unit/`, integration tests in `src/tests/integration/`; add a file there and import it from `run.ts`. Integration tests mount the real app on an ephemeral port against a throwaway database (`src/tests/env.ts`), and talk to it with `api()` and `mcp()` from `src/tests/integration/helpers.ts`. A behavior change to the engine or the MCP surface needs an integration test that drives it over MCP.
 
 ## Project layout
 
 | Path | What lives there |
 |---|---|
 | `src/routes/` | Express route handlers, one file per resource |
-| `src/orchestrator/` | The execution engine — graph transitions, step validation, invocation caps |
-| `src/mcp/` | MCP server (`workflow.start`, `workflow.next`, `workflow`, `workflow.report`, `workflow.eval`) over JSON-RPC 2.0 |
-| `src/lib/` | Control plane, skip analysis, eval grading, audit signing, tags, usage |
-| `src/db/` | Schema and SQLite client (WAL mode) |
+| `src/shared/flow.ts` | Flow model, transition rules and graph validation, imported by the server and the editor |
+| `src/orchestrator/` | The execution engine — run snapshots, step dispatch, output validation, transitions, invocation caps |
+| `src/mcp/` | MCP server (`workflow.start`, `workflow.next`, `workflow.eval`) over JSON-RPC 2.0, with ajv-validated arguments |
+| `src/lib/` | Audit chain and signing, eval grading, outbound guard, canonical JSON, usage |
+| `src/db/` | Schema (single `CREATE_TABLES_SQL`, versioned) and SQLite client (WAL mode) |
+| `src/harness/`, `harnesses/` | Harness loader/applier, and the reference `code-review` harness |
+| `src/scripts/` | `admin:create`, `harness:apply`, `audit:verify` |
+| `runners/` | Review runners for before and after a pull request |
 | `src/middleware/` | JWT auth and project-key auth |
 | `public/` | Vanilla HTML/JS/CSS pages — no build step |
 | `src-frontend/flow-editor/` | React Flow editor, bundled by Vite into `public/` |
@@ -50,6 +53,8 @@ The test runner is a small custom harness in `src/tests/run.ts` — there is no 
 ## Conventions
 
 - **TypeScript** on the backend. Keep types explicit at module boundaries.
+- **Schema changes** go into `CREATE_TABLES_SQL` and bump `SCHEMA_VERSION` in `src/db/schema.ts`. There are no in-place migrations.
+- **Harness changes** (prompts, schemas, flows, evals) are files under `harnesses/`; run `npm run harness:apply -- <dir> --dry-run` to validate them.
 - **The server never calls an LLM.** AIOrc is the contract and the auditor; the consuming model does the work. A PR that adds an LLM dependency to the server path is very unlikely to be merged.
 - **Existing code comments and test names are in Spanish.** You are welcome to write new comments in English or Spanish — please don't translate existing ones as part of an unrelated PR.
 - **No emoji in UI copy, labels or code.**
@@ -59,7 +64,7 @@ The test runner is a small custom harness in `src/tests/run.ts` — there is no 
 
 `data/` is gitignored and holds real runtime data. `*.db`, `*.db-wal`, `*.db-shm` and `*.bak` files must never enter a commit — they contain user emails, password hashes and project API keys. If you think you may have committed one, say so in the PR before it gets merged; it is far easier to fix before it lands.
 
-Likewise: `.env`, `.jwt-secret`, `.audit-secret` and any `*.key` or `*.pem` are ignored and must stay that way.
+Likewise: `.env`, `.jwt-secret`, `.audit-ed25519.key` and any `*.key` or `*.pem` are ignored and must stay that way.
 
 ## Pull requests
 

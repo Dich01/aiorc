@@ -374,7 +374,7 @@
         run.project_name,
         run.caller_email || null,
         new Date(run.created_at).toLocaleString(),
-        run.mode === 'stepped' ? 'server-verified (stepped)' : 'compiled mode',
+        'server-verified',
         run.status,
       ].filter(Boolean);
       document.getElementById('run-modal-meta').textContent = metaBits.join(' · ');

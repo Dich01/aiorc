@@ -669,7 +669,7 @@
           <div class="repo-card-footer">
             <span class="repo-id-pill" title="${esc(p.id)}">${esc(p.id.slice(0,8))}…</span>
             <button class="copy-id-btn has-tooltip"
-                    data-tooltip="Paste this ID into the AIORC_PROJECT_ID variable in the MCP bridge. It replaces the MCP key when the project is public — the client sends it in the x-project-id header."
+                    data-tooltip="The project ID of a public project lets an MCP client list its eval suite (x-project-id header). Starting runs always requires the project key."
                     onclick="copyProjectId('${esc(p.id)}')">
               Copy MCP ID
             </button>

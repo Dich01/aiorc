@@ -627,9 +627,9 @@
   <section class="section arch-section" id="arquitectura">
     <div class="section-inner">
       <div class="section-eyebrow">Architecture</div>
-      <h2 class="section-title">The compiler, under the hood</h2>
+      <h2 class="section-title">The engine, under the hood</h2>
       <p class="section-body">
-        <code>compileFlow()</code> walks the graph, emits an instruction block per node and concatenates them into an ordered payload for compiled mode. In verified mode the engine goes further: it keeps the state machine on the server, dispatches one step at a time and validates every transition against the graph's edges.
+        The engine keeps the state machine on the server. It freezes the agents a run uses, dispatches one step at a time, validates every output against the agent's schema, decides each transition from the graph, and writes every event to a signed hash chain.
       </p>
       <div class="arch-flow">
         <div class="arch-step">
@@ -640,21 +640,21 @@
         </div>
         <div class="arch-step">
           <div class="arch-step-icon">🔁</div>
-          <div class="arch-step-label">Compiler</div>
-          <div class="arch-step-title">compileFlow()</div>
-          <div class="arch-step-desc">Topo-sort · recursive walk · convergence · validation</div>
+          <div class="arch-step-label">Engine</div>
+          <div class="arch-step-title">workflow.start</div>
+          <div class="arch-step-desc">Graph validation · snapshot of every agent · step 1</div>
         </div>
         <div class="arch-step">
           <div class="arch-step-icon">📜</div>
           <div class="arch-step-label">Output</div>
-          <div class="arch-step-title">Instructions</div>
-          <div class="arch-step-desc">Context + skills + agent blocks + topology &amp; execution rules</div>
+          <div class="arch-step-title">One step</div>
+          <div class="arch-step-desc">Context + skills + the agent's instructions + its output schema</div>
         </div>
         <div class="arch-step">
           <div class="arch-step-icon">🤖</div>
           <div class="arch-step-label">Execution</div>
           <div class="arch-step-title">Target model</div>
-          <div class="arch-step-desc">Claude executes each step; in verified mode the server confirms every transition</div>
+          <div class="arch-step-desc">Claude executes the step; the server validates the output and decides the next one</div>
         </div>
       </div>
       <div class="arch-diagram" style="margin-top:32px;">

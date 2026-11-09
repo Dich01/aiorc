@@ -678,12 +678,12 @@ workflow.start({
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-loop">↻</span> Loop — iteration with cap</h4>
           <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent carries <code>max_invocations</code> (default 10, max 50) which caps the repetition.</p>
-          <p style="font-size:0.82rem;color:var(--muted)">In compiled mode the target model keeps the count; in verified mode the server counts and enforces the cap itself.</p>
+          <p style="font-size:0.82rem;color:var(--muted)">The server counts invocations and stops the run (status capped) when an agent exceeds its cap.</p>
           <p style="font-size:0.82rem"><strong>When to use:</strong> review→fix→review until it passes, iterative refactor, retry tests with backoff, generate variants until a valid one is found.</p>
         </div>
 
         <div class="info-note">
-          The patterns combine freely (loops inside branches, gates after forks). In compiled mode the target model honors conditions and caps from the instructions; in verified mode (<code>workflow.start</code> / <code>workflow.next</code>) the server validates every transition against the graph and enforces the caps itself.
+          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides or checks every transition against the graph and enforces the caps itself.
         </div>
       </div>
 

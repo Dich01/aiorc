@@ -60,7 +60,7 @@
           <li class="info-step"><div class="info-step-num">4</div><span><strong>Build the flow</strong> — Open the project → <em>Flow Builder</em>. Drag agents from the left panel and connect them. Branch with natural-language conditions on the edges; fork with <em>Parallel</em>; iterate with back-edges.</span></li>
           <li class="info-step"><div class="info-step-num">5</div><span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors, they are shown inline and saving is blocked.</span></li>
           <li class="info-step"><div class="info-step-num">6</div><span><strong>Configure the target project</strong> — Add <code>.mcp.json</code> + rule in <code>CLAUDE.md</code> (next tab).</span></li>
-          <li class="info-step"><div class="info-step-num">7</div><span><strong>Done</strong> — When Claude receives a task it calls <code>workflow.start</code> (verified mode — the server hands it one step at a time and validates every transition) or <code>workflow</code> (compiled mode — the whole flow in one prompt).</span></li>
+          <li class="info-step"><div class="info-step-num">7</div><span><strong>Done</strong> — When Claude receives a task it calls <code>workflow.start</code> and the server hands it one step at a time, validating each output and transition, until the flow reaches an End.</span></li>
         </ol>
       </div>
 
@@ -132,7 +132,7 @@ workflow.start({
         </div>
 
         <div class="info-note">
-          The patterns combine freely (loops inside branches, gates after forks). In compiled mode the target model honors conditions and caps from the instructions; in verified mode (<code>workflow.start</code> / <code>workflow.next</code>) the server validates every transition against the graph and enforces the caps itself.
+          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides or checks every transition against the graph and enforces the caps itself.
         </div>
       </div>
 

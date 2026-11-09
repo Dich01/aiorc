@@ -2975,7 +2975,7 @@ skip steps or modify them with your own judgment.</pre>
           <li class="info-step"><div class="info-step-num">2</div><span><strong>Build the flow</strong> — On this page (Flow Builder). Drag agents from the left panel and connect them. Branch with conditions on the edges; fork with Parallel; iterate with back-edges.</span></li>
           <li class="info-step"><div class="info-step-num">3</div><span><strong>Save</strong> — The flow is validated (single Start, valid agent references, well-formed Parallel forks). Cycles are legal — a back-edge is a loop. If it passes, it is persisted; if not, errors are shown inline.</span></li>
           <li class="info-step"><div class="info-step-num">4</div><span><strong>Copy the MCP key</strong> and configure the target project (see next tab).</span></li>
-          <li class="info-step"><div class="info-step-num">5</div><span><strong>Done</strong> — Claude calls <code>workflow.start</code> (verified mode — the server hands it one step at a time and validates every transition) or <code>workflow</code> (compiled mode — the whole flow in one prompt).</span></li>
+          <li class="info-step"><div class="info-step-num">5</div><span><strong>Done</strong> — Claude calls <code>workflow.start</code> and the server hands it one step at a time, validating each output and transition, until the flow reaches an End.</span></li>
         </ol>
       </div>
 
@@ -3008,18 +3008,19 @@ skip steps or modify them with your own judgment.</pre>
           </p>
           <div class="info-code" id="claude-md-snippet">## AIOrc — Mandatory rule
 
-If the AIOrc `workflow` tool is available in this context,
+If the AIOrc `workflow.start` tool is available in this context,
 ALWAYS call it before responding to any technical task
 (design, implementation, review, planning, testing).
 
-NEVER respond with a direct solution without first calling
-the `workflow` tool. Execute the steps of the compiled flow in order,
-without skipping any or using your own judgment to modify them.</div>
+Execute exactly the step the server returns, hand back each output
+with `workflow.next` in the shape its schema asks for, and repeat
+until the server says the run is over. Never run other agents of
+the flow on your own.</div>
           <button class="btn btn-sm btn-ghost" onclick="copyClaudeMd()" style="margin-top:8px">Copy CLAUDE.md</button>
         </div>
 
         <div class="info-note">
-          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path and <code>key-XX...</code> with the project API key.
+          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path and <code>aiorc_pk_...</code> with the project API key (shown once, when the project is created or its key is reset).
         </div>
       </div>
 
@@ -3043,7 +3044,7 @@ without skipping any or using your own judgment to modify them.</div>
         </div>
 
         <div class="info-note">
-          The patterns combine freely (loops inside branches, gates after forks). In compiled mode the target model honors conditions and caps from the instructions; in verified mode (<code>workflow.start</code> / <code>workflow.next</code>) the server validates every transition against the graph and enforces the caps itself.
+          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides or checks every transition against the graph and enforces the caps itself.
         </div>
       </div>
 
