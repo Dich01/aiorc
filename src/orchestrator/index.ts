@@ -179,9 +179,6 @@ export function buildAgentBlock(agent: Agent, maxInvocations: number): string {
   if (hasFileContent) {
     lines.push(`**Agent instructions:**`);
     renderFilesToLines(files, lines);
-  } else if (agent.content && agent.content.trim()) {
-    lines.push(`**Agent instructions:**`);
-    lines.push(agent.content.trim());
   }
   if (skills.length > 0) {
     lines.push('');
@@ -463,8 +460,8 @@ export function compileFlow(
   // the report against the graph as it was at compile time, not as it is now.
   const agentNames = agents.map(a => a.name);
   db.prepare(
-    'INSERT INTO runs (id, project_id, input, workflow_snapshot, flow_json, execution_report, caller_email, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(runId, projectId, JSON.stringify(input), compiled, JSON.stringify(flow), '', callerEmail, 'delivered', Date.now());
+    'INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_email, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), '', callerEmail, 'delivered', Date.now());
   recordPlannedUsage(runId, projectId, agents.map(a => ({ id: a.id, name: a.name })));
 
   return {

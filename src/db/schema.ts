@@ -30,9 +30,6 @@ export interface Agent {
   name: string;
   description: string;
   tags: string; // comma-separated labels (may be '')
-  input_schema: string; // JSON string
-  steps: string;        // JSON string
-  content: string;      // full markdown
   expected_output_format: string; // describes shape of this agent's output
   is_public: number;
   forked_from: string | null;
@@ -263,7 +260,6 @@ export interface Run {
   id: string;
   project_id: string;
   input: string;              // JSON string
-  workflow_snapshot: string;  // compiled workflow text delivered to LLM
   flow_json: string;          // normalized flow JSON at compile time (for path-aware skip analysis)
   execution_report: string;   // post-run report JSON (required by the tool contract)
   caller_email: string;       // x-user-email header from the MCP client, '' if not sent
@@ -308,17 +304,16 @@ export interface AgentUsage {
   created_at: number;
 }
 
-export interface Step {
-  id: string;
-  type: 'deterministic' | 'llm' | 'assert' | 'transform';
-  name: string;
-  description: string;
-  prompt?: string;
-  rule?: string;
-  fn?: string;
-}
+// Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
+// pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
+// a database at another version is refused at startup (see db/client.ts).
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_TABLES_SQL = `
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -326,17 +321,19 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL DEFAULT '',
   nickname TEXT NOT NULL DEFAULT '',
   bio TEXT NOT NULL DEFAULT '',
+  avatar TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL DEFAULT 'user',
+  last_login INTEGER,
   created_at INTEGER NOT NULL
 );
--- Unique index on nickname is created in client.ts AFTER the ALTER TABLE migration
--- so older DBs without the column don't fail at startup.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname) WHERE nickname != '';
 
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '',
   api_key TEXT UNIQUE NOT NULL,
   is_public INTEGER NOT NULL DEFAULT 0,
   paused INTEGER NOT NULL DEFAULT 0,
@@ -344,7 +341,7 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
--- Index on forked_from is created in client.ts AFTER the ALTER TABLE migration.
+CREATE INDEX IF NOT EXISTS idx_projects_forked_from ON projects(forked_from);
 
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,
@@ -352,16 +349,13 @@ CREATE TABLE IF NOT EXISTS agents (
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   tags TEXT NOT NULL DEFAULT '',
-  input_schema TEXT NOT NULL,
-  steps TEXT NOT NULL,
-  content TEXT NOT NULL DEFAULT '',
   expected_output_format TEXT NOT NULL DEFAULT '',
   is_public INTEGER NOT NULL DEFAULT 0,
   forked_from TEXT,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
--- Index on agents.forked_from is created in client.ts after the migration.
+CREATE INDEX IF NOT EXISTS idx_agents_forked_from ON agents(forked_from);
 
 CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
@@ -375,7 +369,7 @@ CREATE TABLE IF NOT EXISTS skills (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
--- Index on skills.forked_from is created in client.ts after the migration.
+CREATE INDEX IF NOT EXISTS idx_skills_forked_from ON skills(forked_from);
 
 CREATE TABLE IF NOT EXISTS skill_files (
   id          TEXT PRIMARY KEY,
@@ -633,13 +627,15 @@ CREATE TABLE IF NOT EXISTS runs (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
   input TEXT NOT NULL,
-  workflow_snapshot TEXT NOT NULL DEFAULT '',
   flow_json TEXT NOT NULL DEFAULT '',
   execution_report TEXT NOT NULL DEFAULT '',
   caller_email TEXT NOT NULL DEFAULT '',
   mode TEXT NOT NULL DEFAULT '',
   engine_state TEXT NOT NULL DEFAULT '',
   last_activity_at INTEGER NOT NULL DEFAULT 0,
+  eval_case_id TEXT NOT NULL DEFAULT '',
+  eval_verdict TEXT NOT NULL DEFAULT '',
+  eval_reasons TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id)

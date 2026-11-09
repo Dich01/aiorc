@@ -35,6 +35,7 @@ export interface FileConfig {
   parent: string;     // parent table, e.g. 'skills' (legacy content column updated here)
   entryName: string;  // required entry file name, e.g. 'SKILL.md'
   requireEntryContent?: boolean; // default true — entry must be non-empty
+  legacyContentColumn?: boolean; // parent still has a `content` column mirrored from the entry file
 }
 
 // Validate + normalize an incoming files array. Accepts the legacy {content}
@@ -105,9 +106,16 @@ export function writeEntityFiles(parentId: string, files: NormalizedFile[], cfg:
       ins.run(uuidv4(), parentId, f.name, f.description, f.content, f.is_entry, idx);
     });
     const entry = files.find(f => f.is_entry);
-    if (entry) db.prepare(`UPDATE ${cfg.parent} SET content = ? WHERE id = ?`).run(entry.content, parentId);
+    if (entry && cfg.legacyContentColumn) db.prepare(`UPDATE ${cfg.parent} SET content = ? WHERE id = ?`).run(entry.content, parentId);
   });
   tx();
+}
+
+// Deep-copy every file of one parent onto another (used by forks).
+export function copyEntityFiles(fromId: string, toId: string, cfg: FileConfig): void {
+  const files = loadEntityFiles(fromId, cfg);
+  if (files.length === 0) return;
+  writeEntityFiles(toId, files.map(f => ({ name: f.name, description: f.description, content: f.content, is_entry: f.is_entry })), cfg);
 }
 
 // Load a parent's files, entry first then supporting files by ordinal.
@@ -166,6 +174,6 @@ export function renderFilesToLines(files: EntityFile[], lines: string[]): void {
 }
 
 // Pre-built configs for the three entity types.
-export const SKILL_FILES: FileConfig   = { table: 'skill_files',   fk: 'skill_id',   parent: 'skills',   entryName: 'SKILL.md',   requireEntryContent: true };
+export const SKILL_FILES: FileConfig   = { table: 'skill_files',   fk: 'skill_id',   parent: 'skills',   entryName: 'SKILL.md',   requireEntryContent: true, legacyContentColumn: true };
 export const AGENT_FILES: FileConfig   = { table: 'agent_files',   fk: 'agent_id',   parent: 'agents',   entryName: 'AGENT.md',   requireEntryContent: false };
-export const CONTEXT_FILES: FileConfig = { table: 'context_files', fk: 'context_id', parent: 'contexts', entryName: 'CONTEXT.md', requireEntryContent: true };
+export const CONTEXT_FILES: FileConfig = { table: 'context_files', fk: 'context_id', parent: 'contexts', entryName: 'CONTEXT.md', requireEntryContent: true, legacyContentColumn: true };

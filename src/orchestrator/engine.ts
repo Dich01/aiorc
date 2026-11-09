@@ -191,9 +191,9 @@ export function startRun(projectId: string, input: Record<string, unknown>, call
   const { agents: toDispatch, end } = resolveDispatch(flow, target);
 
   db.prepare(
-    `INSERT INTO runs (id, project_id, input, workflow_snapshot, flow_json, execution_report, caller_email, mode, engine_state, eval_case_id, status, created_at, last_activity_at)
-     VALUES (?, ?, ?, ?, ?, '', ?, 'stepped', '', ?, 'running', ?, ?)`
-  ).run(runId, projectId, JSON.stringify(input), '', JSON.stringify(flow), callerEmail, evalCaseId, Date.now(), Date.now());
+    `INSERT INTO runs (id, project_id, input, flow_json, execution_report, caller_email, mode, engine_state, eval_case_id, status, created_at, last_activity_at)
+     VALUES (?, ?, ?, ?, '', ?, 'stepped', '', ?, 'running', ?, ?)`
+  ).run(runId, projectId, JSON.stringify(input), JSON.stringify(flow), callerEmail, evalCaseId, Date.now(), Date.now());
   recordPlannedUsage(runId, projectId, [...agentsById.values()].map(a => ({ id: a.id, name: a.name })));
 
   if (end || toDispatch.length === 0) {

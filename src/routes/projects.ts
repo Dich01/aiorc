@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Project, ProjectInvitation } from '../db/schema';
+import { copyEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES } from '../lib/entityFiles';
 
 const router = Router();
 
@@ -435,22 +436,22 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
     ).run(newProjectId, req.userId!, candidate, source.description, (source as Project).tags ?? '', newApiKey, 0, source.id, now);
 
     // Map agent_id → newAgentId so we can rewrite the flow's nodes.
-    const agentIdsInFlow = [...new Set(flow.nodes.filter(n => (n.node_type ?? 'agent') === 'agent' && n.agent_id).map(n => String(n.agent_id)))];
+    const agentIdsInFlow = [...new Set(flow.nodes.filter(n => (n.type ?? 'agent') === 'agent' && n.agent_id).map(n => String(n.agent_id)))];
     const agentIdMap = new Map<string, string>();
 
     for (const aid of agentIdsInFlow) {
       const a = db.prepare('SELECT * FROM agents WHERE id = ?').get(aid) as {
         id: string; user_id: string; name: string; description: string;
-        input_schema: string; steps: string; content: string;
-        expected_output_format: string; created_at: number;
+        tags: string; expected_output_format: string; created_at: number;
       } | undefined;
       if (!a) continue; // orphan reference, skip; the resulting flow will compile with a warning
       const newAgentId = uuidv4();
       agentIdMap.set(aid, newAgentId);
       const newName = renameIfNeeded(a.name, existingAgentNames);
       db.prepare(
-        'INSERT INTO agents (id, user_id, name, description, input_schema, steps, content, expected_output_format, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(newAgentId, req.userId!, newName, a.description, a.input_schema, a.steps, a.content, a.expected_output_format, now);
+        'INSERT INTO agents (id, user_id, name, description, tags, expected_output_format, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.expected_output_format, a.id, now);
+      copyEntityFiles(a.id, newAgentId, AGENT_FILES);
       db.prepare('INSERT INTO project_agents (project_id, agent_id) VALUES (?, ?)').run(newProjectId, newAgentId);
 
       // Clone skills attached to this agent (deduped — same skill could be on multiple agents).
@@ -472,6 +473,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
           db.prepare(
             'INSERT INTO skills (id, user_id, name, description, content, created_at) VALUES (?, ?, ?, ?, ?, ?)'
           ).run(newSkillId, req.userId!, newSkillName, s.description, s.content, now);
+          copyEntityFiles(s.id, newSkillId, SKILL_FILES);
           db.prepare('INSERT INTO project_skills (project_id, skill_id) VALUES (?, ?)').run(newProjectId, newSkillId);
         }
         db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(newAgentId, newSkillId, s._ord);
@@ -480,7 +482,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
 
     // Rewrite flow node agent_ids to the new ids.
     const rewritten = {
-      nodes: flow.nodes.map(n => (n.node_type ?? 'agent') === 'agent' && n.agent_id
+      nodes: flow.nodes.map(n => (n.type ?? 'agent') === 'agent' && n.agent_id
         ? { ...n, agent_id: agentIdMap.get(String(n.agent_id)) ?? n.agent_id }
         : n),
       edges: flow.edges,
@@ -505,6 +507,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
       db.prepare(
         'INSERT INTO contexts (id, user_id, name, description, content, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       ).run(newContextId, req.userId!, newContextName, c.description, c.content, 0, c.id, now);
+      copyEntityFiles(c.id, newContextId, CONTEXT_FILES);
       // share_on_fork defaults to 0 in the fork; the new owner re-decides whether their
       // own fork would propagate this context further.
       db.prepare('INSERT INTO project_contexts (project_id, context_id, share_on_fork) VALUES (?, ?, ?)').run(newProjectId, newContextId, 0);
