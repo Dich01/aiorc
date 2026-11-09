@@ -203,7 +203,7 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
   const toolArgs = { ...((params as { arguments?: Record<string, unknown> }).arguments ?? {}) };
 
   if (req.projectAuth !== 'key' && !READ_ONLY_TOOLS.has(toolName)) {
-    res.json(rpcError(id, -32001, `Tool "${toolName}" requires the project key (x-project-key). x-project-id only allows read-only tools.`));
+    res.json(rpcError(id, -32001, `Tool "${toolName}" needs access to the project: your personal token (Authorization: Bearer aiorc_pat_...) as a member, or the project key. Without them x-project-id only allows read-only tools.`));
     return;
   }
 

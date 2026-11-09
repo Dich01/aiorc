@@ -1219,13 +1219,16 @@ skip steps or modify them with your own judgment.</pre>
       toggle.checked = isPublic;
       const status = document.getElementById('visibility-status');
       status.innerHTML = isPublic
-        ? '<span style="color:#22c55e">● Public</span> — listed in the repository and readable with the project ID. Starting runs still requires the API key.'
-        : '<span style="color:#f59e0b">● Private</span> — the API key is required.';
+        ? '<span style="color:#22c55e">● Public</span> — listed in the repository. Running it still needs a member\'s personal token (or the project key).'
+        : '<span style="color:#f59e0b">● Private</span> — only you and the people you invite can run it, each with their own personal token.';
 
       // The MCP URL follows whatever origin the user is browsing from —
       // localhost in dev, the public tunnel/domain when shared with the team.
       const mcpUrl = location.origin + '/mcp';
-      const env = { AIORC_PROJECT_KEY: revealedKey || '<your project key>', AIORC_URL: mcpUrl };
+      // Shareable config: the project id is stable and not secret; each person
+      // adds their own personal token (profile page). The project key is only
+      // for CI and automation.
+      const env = { AIORC_PROJECT_ID: p.id, AIORC_TOKEN: '<your personal token: profile > Personal access tokens>', AIORC_URL: mcpUrl };
       const cfg = JSON.stringify({ mcpServers:{ aiorc:{ type:'stdio', command:'node', args:['/path/to/mcp-bridge.js'], env } } }, null, 2);
       document.getElementById('mcp-config').textContent = cfg;
       document.getElementById('copy-mcp-btn').onclick = () => copyText(cfg,'MCP config copied!');

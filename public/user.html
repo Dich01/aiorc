@@ -428,6 +428,63 @@
       });
   };
 
+  /* ── personal access tokens (own profile only) ──
+     A token identifies YOU to AIOrc from an MCP client or a runner. With the
+     project id it lets you run any project you own or were invited to, so the
+     project key never has to be passed around. Shown once at creation. */
+  function loadTokens(after) {
+    var box = document.getElementById('tokens-section');
+    if (!box) return;
+    apiFetch('/users/me/tokens').then(function(r){ return r.ok ? r.json() : []; }).then(function(list) {
+      var active = list.filter(function(t){ return !t.revoked_at; });
+      box.innerHTML =
+        '<p style="font-size:0.85rem;color:var(--muted);margin:0 0 10px">Use a token with a project ID (<code>AIORC_PROJECT_ID</code> + <code>AIORC_TOKEN</code>) to run any project you own or were invited to. Runs are recorded under your name. A token is shown only once.</p>' +
+        '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">' +
+          '<input id="new-token-name" placeholder="Token name, e.g. laptop or ci" maxlength="80" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">' +
+          '<button class="profile-edit-btn" id="create-token-btn" style="margin:0">Create token</button>' +
+        '</div>' +
+        '<div id="new-token-out"></div>' +
+        (active.length === 0
+          ? '<div class="empty-state"><p>No active tokens.</p></div>'
+          : '<table style="width:100%;font-size:0.85rem;border-collapse:collapse">' +
+              '<tr style="text-align:left;color:var(--muted)"><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th></th></tr>' +
+              active.map(function(t) {
+                return '<tr><td>' + esc(t.name) + '</td><td><code>' + esc(t.token_hint) + '&hellip;</code></td><td>' + fmtDate(t.created_at) +
+                  '</td><td>' + fmtDate(t.last_used_at) + '</td><td><button class="revoke-token-btn" data-id="' + esc(t.id) + '" style="background:none;border:none;color:#dc2626;cursor:pointer">Revoke</button></td></tr>';
+              }).join('') +
+            '</table>');
+      document.getElementById('create-token-btn').addEventListener('click', createToken);
+      box.querySelectorAll('.revoke-token-btn').forEach(function(b) {
+        b.addEventListener('click', function() {
+          if (!confirm('Revoke this token? Anything using it stops working immediately.')) return;
+          apiFetch('/users/me/tokens/' + encodeURIComponent(b.getAttribute('data-id')), { method: 'DELETE' }).then(function(){ loadTokens(); });
+        });
+      });
+      if (typeof after === 'function') after();
+    });
+  }
+
+  function createToken() {
+    var name = document.getElementById('new-token-name').value.trim();
+    if (!name) { toast('Give the token a name'); return; }
+    apiFetch('/users/me/tokens', { method: 'POST', body: JSON.stringify({ name: name }) })
+      .then(function(r){ return r.json().then(function(b){ return { ok: r.ok, b: b }; }); })
+      .then(function(res) {
+        if (!res.ok) { toast(res.b.error || 'Could not create the token'); return; }
+        loadTokens(function() {
+          var out = document.getElementById('new-token-out');
+          if (!out) return;
+          out.innerHTML = '<div style="padding:10px;border:1px solid var(--border);border-radius:6px;margin-bottom:12px">' +
+            '<div style="font-size:0.85rem;margin-bottom:6px">Copy it now: it will not be shown again.</div>' +
+            '<code id="new-token-value" style="word-break:break-all">' + esc(res.b.token) + '</code> ' +
+            '<button class="profile-edit-btn" id="copy-token-btn" style="margin:6px 0 0">Copy</button></div>';
+          document.getElementById('copy-token-btn').addEventListener('click', function() {
+            navigator.clipboard.writeText(res.b.token).then(function(){ toast('Token copied'); });
+          });
+        });
+      });
+  }
+
   /* ── main: load profile ── */
   function loadProfile() {
     var host = document.getElementById('profile-content');
@@ -525,7 +582,9 @@
               ? '<div class="empty-state"><p>' + (isMe ? 'You don\'t have any public skills yet.' : 'This user has not published any skills yet.') + '</p></div>'
               : '<div class="repo-grid">' + skills.map(skillCard).join('') + '</div>');
 
-          host.innerHTML = headerHtml + editHtml + statsHtml + projHtml + agentHtml + skillHtml;
+          var tokensHtml = isMe ? '<div class="section-title">Personal access tokens</div><div id="tokens-section"></div>' : '';
+          host.innerHTML = headerHtml + editHtml + statsHtml + tokensHtml + projHtml + agentHtml + skillHtml;
+          if (isMe) loadTokens();
         });
       })
       .catch(function(err) {

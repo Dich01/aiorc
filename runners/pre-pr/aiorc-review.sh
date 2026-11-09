@@ -11,9 +11,10 @@
 #
 # environment:
 #   AIORC_URL           server base URL, e.g. https://aiorc.example.com (required)
-#   AIORC_PROJECT_KEY   project key, aiorc_pk_... (required)
-#   AIORC_TOKEN         personal access token, aiorc_pat_... (optional; makes
-#                       the run's caller a verified identity)
+#   AIORC_PROJECT_ID    project id (shareable) ...together with AIORC_TOKEN, or
+#   AIORC_PROJECT_KEY   project key, aiorc_pk_... (for CI and automation)
+#   AIORC_TOKEN         personal access token, aiorc_pat_... (required with
+#                       AIORC_PROJECT_ID; with the key it makes the caller verified)
 #   AIORC_CLAUDE_BIN    Claude Code binary (default: claude)
 #   AIORC_MODEL         model passed to Claude Code (optional)
 #   AIORC_MAX_BUDGET_USD  spending cap for the Claude Code session (optional)
@@ -39,7 +40,13 @@ while [ $# -gt 0 ]; do
 done
 
 : "${AIORC_URL:?set AIORC_URL}"
-: "${AIORC_PROJECT_KEY:?set AIORC_PROJECT_KEY}"
+if [ -n "${AIORC_PROJECT_KEY:-}" ]; then
+  PROJECT_HEADER="x-project-key: $AIORC_PROJECT_KEY"
+elif [ -n "${AIORC_PROJECT_ID:-}" ] && [ -n "${AIORC_TOKEN:-}" ]; then
+  PROJECT_HEADER="x-project-id: $AIORC_PROJECT_ID"
+else
+  die "set AIORC_PROJECT_ID and AIORC_TOKEN, or AIORC_PROJECT_KEY" 2
+fi
 CLAUDE="${AIORC_CLAUDE_BIN:-claude}"
 command -v "$CLAUDE" >/dev/null || die "Claude Code not found ($CLAUDE)"
 command -v node >/dev/null || die "node is required"
@@ -81,8 +88,9 @@ trap 'rm -rf "$WORK"' EXIT
 umask 077
 AUTH_HEADER=""
 [ -n "${AIORC_TOKEN:-}" ] && AUTH_HEADER="Bearer $AIORC_TOKEN"
-AIORC_MCP_URL="$AIORC_URL/mcp" AUTH_HEADER="$AUTH_HEADER" node -e '
-  const e=process.env; const headers={"x-project-key":e.AIORC_PROJECT_KEY};
+AIORC_MCP_URL="$AIORC_URL/mcp" AUTH_HEADER="$AUTH_HEADER" PROJECT_HEADER="$PROJECT_HEADER" node -e '
+  const e=process.env; const i=e.PROJECT_HEADER.indexOf(": ");
+  const headers={[e.PROJECT_HEADER.slice(0,i)]:e.PROJECT_HEADER.slice(i+2)};
   if(e.AUTH_HEADER) headers.Authorization=e.AUTH_HEADER;
   require("fs").writeFileSync(process.argv[1], JSON.stringify({mcpServers:{aiorc:{type:"http",url:e.AIORC_MCP_URL,headers}}}));
 ' "$WORK/mcp.json"
@@ -123,11 +131,13 @@ set -e
 [ "$CLAUDE_EXIT" -eq 0 ] || echo "aiorc-review: Claude Code exited with $CLAUDE_EXIT" >&2
 
 # ── Find the run from the server, not from what the model printed ────────────
-RUNS="$(curl -fsS -H "x-project-key: $AIORC_PROJECT_KEY" "$AIORC_URL/api/runs?head_sha=$HEAD_SHA&since=$START_MS")" || die "cannot list runs on $AIORC_URL"
+CURL_AUTH=(-H "$PROJECT_HEADER")
+[ -n "$AUTH_HEADER" ] && CURL_AUTH+=(-H "Authorization: $AUTH_HEADER")
+RUNS="$(curl -fsS "${CURL_AUTH[@]}" "$AIORC_URL/api/runs?head_sha=$HEAD_SHA&since=$START_MS")" || die "cannot list runs on $AIORC_URL"
 RUN_ID="$(printf '%s' "$RUNS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s).runs||[];console.log(r.length?r[0].id:"")})')"
 [ -n "$RUN_ID" ] || die "no run for $HEAD_SHA was started on the server" 3
 
-curl -fsS -H "x-project-key: $AIORC_PROJECT_KEY" "$AIORC_URL/api/runs/$RUN_ID/export" -o "$OUT" || die "cannot download the export of run $RUN_ID"
+curl -fsS "${CURL_AUTH[@]}" "$AIORC_URL/api/runs/$RUN_ID/export" -o "$OUT" || die "cannot download the export of run $RUN_ID"
 STATUS="$(node -e 'const p=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).payload;console.log(p.run.status+" "+(p.run.outcome||"-"))' "$OUT")"
 echo "aiorc-review: run $RUN_ID $STATUS (export: $OUT)"
 case "$STATUS" in completed*) exit 0 ;; *) exit 3 ;; esac

@@ -3,12 +3,12 @@ import db from '../db/client';
 import { requireProjectKey, ProjectKeyRequest } from '../middleware/projectKey';
 import { buildSignedExport } from '../lib/auditBuild';
 
-// REST endpoints for runners (CI jobs, git hooks) authenticated with the
-// project key, so they never need a user session. Scoped to the key's project.
+// REST endpoints for runners (CI jobs, git hooks), authenticated like /mcp:
+// the project key, or x-project-id plus a member's personal token.
 const router = Router();
 
 router.use(requireProjectKey, (req: ProjectKeyRequest, res: Response, next) => {
-  if (req.projectAuth !== 'key') { res.status(401).json({ error: 'The project key is required' }); return; }
+  if (req.projectAuth !== 'key') { res.status(401).json({ error: 'The project key, or a member\'s personal token with x-project-id, is required' }); return; }
   next();
 });
 

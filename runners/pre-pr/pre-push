@@ -13,8 +13,8 @@ set -u
 
 [ "${AIORC_SKIP:-0}" = "1" ] && exit 0
 SCRIPT="${AIORC_REVIEW_SCRIPT:-$(command -v aiorc-review.sh || echo "$(git rev-parse --show-toplevel)/runners/pre-pr/aiorc-review.sh")}"
-if [ ! -x "$SCRIPT" ] || [ -z "${AIORC_URL:-}" ] || [ -z "${AIORC_PROJECT_KEY:-}" ]; then
-  echo "aiorc pre-push: not configured (AIORC_URL, AIORC_PROJECT_KEY, aiorc-review.sh); skipping." >&2
+if [ ! -x "$SCRIPT" ] || [ -z "${AIORC_URL:-}" ] || { [ -z "${AIORC_PROJECT_KEY:-}" ] && { [ -z "${AIORC_PROJECT_ID:-}" ] || [ -z "${AIORC_TOKEN:-}" ]; }; }; then
+  echo "aiorc pre-push: not configured (AIORC_URL, AIORC_PROJECT_ID + AIORC_TOKEN or AIORC_PROJECT_KEY, aiorc-review.sh); skipping." >&2
   exit 0
 fi
 

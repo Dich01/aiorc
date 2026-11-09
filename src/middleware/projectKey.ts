@@ -10,9 +10,12 @@ export interface VerifiedCaller {
 
 export interface ProjectKeyRequest extends Request {
   project?: Project;
-  // 'key': the project key was presented — may start and drive runs.
-  // 'public': only x-project-id of a public project — read-only (tools/list, workflow.eval).
+  // 'key':    may start and drive runs: either the project key, or the project
+  //           id plus the personal token of someone with access to the project.
+  // 'public':  x-project-id of a public project without such a token: read-only
+  //           (tools/list, workflow.eval).
   projectAuth?: 'key' | 'public';
+  authVia?: 'project_key' | 'member_token' | 'public_id';
   caller?: VerifiedCaller | null;   // from a personal access token, verified
   declaredCaller?: string;          // from x-user-email, NOT verified
 }
@@ -30,6 +33,18 @@ export function resolvePersonalToken(header: string | undefined): VerifiedCaller
   if (!row) return null;
   db.prepare('UPDATE user_tokens SET last_used_at = ? WHERE id = ?').run(Date.now(), row.id);
   return { userId: row.user_id, email: row.email };
+}
+
+// Who may run a project with their own token: its owner, an admin, or someone
+// with a pending or accepted invitation to it (not declined or revoked).
+export function canRunProject(userId: string, email: string, project: Project): boolean {
+  if (project.user_id === userId) return true;
+  const u = db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role: string } | undefined;
+  if (u?.role === 'admin') return true;
+  return !!db.prepare(
+    `SELECT 1 FROM project_invitations WHERE project_id = ? AND status IN ('pending', 'accepted')
+     AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+  ).get(project.id, userId, email);
 }
 
 export function requireProjectKey(req: ProjectKeyRequest, res: Response, next: NextFunction): void {
@@ -52,21 +67,37 @@ export function requireProjectKey(req: ProjectKeyRequest, res: Response, next: N
     }
     req.project = project;
     req.projectAuth = 'key';
+    req.authVia = 'project_key';
     next();
     return;
   }
 
+  // The shareable way in: a stable project id plus each person's own token.
   if (typeof projectId === 'string' && projectId) {
     const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId) as Project | undefined;
+    if (project && caller) {
+      if (canRunProject(caller.userId, caller.email, project)) {
+        req.project = project;
+        req.projectAuth = 'key';
+        req.authVia = 'member_token';
+        next();
+        return;
+      }
+      if (!project.is_public) {
+        res.status(403).json({ error: 'Your token is valid, but you have no access to this project. Ask its owner for an invitation.' });
+        return;
+      }
+    }
     if (!project || !project.is_public) {
-      res.status(401).json({ error: 'Unknown or private project: the x-project-key header is required' });
+      res.status(401).json({ error: 'Unknown or private project: send your personal token (Authorization: Bearer aiorc_pat_...) or the project key' });
       return;
     }
     req.project = project;
     req.projectAuth = 'public';
+    req.authVia = 'public_id';
     next();
     return;
   }
 
-  res.status(401).json({ error: 'Missing x-project-key header' });
+  res.status(401).json({ error: 'Send x-project-id with Authorization: Bearer <personal token>, or x-project-key' });
 }
