@@ -749,11 +749,20 @@
             </li>
           </ul>
           <p class="mcp-where-cli">
-            CLI alternative (Claude Code): <code class="mcp-path">claude mcp add aiorc -- node /path/to/mcp-bridge.js</code>
-            then add the env vars with <code class="mcp-path">claude mcp edit aiorc</code>.
+            Replace <code class="mcp-path">/path/to/mcp-bridge.js</code> with the path of
+            <code class="mcp-path">mcp-bridge.js</code> in your AIOrc checkout.
           </p>
         </div>
 
+        <p style="font-size:0.85rem;color:var(--muted);margin:14px 0 6px">
+          This entry connects the repository to this project only, as the server
+          <code class="mcp-server-name">aiorc</code>. If the file already has <code>mcpServers</code>,
+          add just this entry next to the others. The token is not written in the file:
+          <code>${AIORC_TOKEN}</code> is read from each person's environment
+          (<code>export AIORC_TOKEN=aiorc_pat_...</code> in <code>~/.zshrc</code>; create the token in
+          your profile), so the file can be committed and shared.
+        </p>
+        <p id="mcp-who" style="font-size:0.85rem;font-weight:600;margin:0 0 6px"></p>
         <pre class="mcp-config" id="mcp-config">Loading...</pre>
         <div style="margin-top:12px">
           <button class="btn btn-sm btn-ghost" id="copy-mcp-btn">Copy MCP Config</button>
@@ -764,21 +773,12 @@
             2. Rule in <code style="font-size:0.85rem">CLAUDE.md</code>
           </div>
           <p style="font-size:0.85rem;color:var(--muted);margin-bottom:4px">
-            Without this rule the model can ignore AIOrc and respond directly.
-            Paste it in <code>~/.claude/CLAUDE.md</code> so it applies in any project,
-            or in the <code>CLAUDE.md</code> of your target project.
+            Tells Claude when to use this project's server, <code class="mcp-server-name">aiorc</code>.
+            Paste it in the <code>CLAUDE.md</code> of the repository. If the repository uses
+            several AIOrc projects, paste one rule per project: each names its own server.
+            The project description is what Claude reads as "use it for", so keep it precise.
           </p>
-          <pre class="mcp-config" id="claude-md-snippet" style="margin-top:10px">## AIOrc — Mandatory rule
-
-If the AIOrc workflow tools are available in this context,
-ALWAYS start any technical task (design, implementation,
-review, planning, testing) by calling `workflow.start`
-(or `workflow` if start is not available).
-
-NEVER respond with a direct solution without going through
-the workflow. In stepped mode, execute ONLY the agent the
-server hands you and advance with `workflow.next` — never
-skip steps or modify them with your own judgment.</pre>
+          <pre class="mcp-config" id="claude-md-snippet" style="margin-top:10px">Loading...</pre>
           <div style="margin-top:12px">
             <button class="btn btn-sm btn-ghost" onclick="copyClaudeMd()">Copy CLAUDE.md</button>
           </div>
@@ -1219,19 +1219,28 @@ skip steps or modify them with your own judgment.</pre>
       toggle.checked = isPublic;
       const status = document.getElementById('visibility-status');
       status.innerHTML = isPublic
-        ? '<span style="color:#22c55e">● Public</span> — listed in the repository. Running it still needs a member\'s personal token (or the project key).'
+        ? '<span style="color:#22c55e">● Public</span> — listed in the repository. Anyone with an AIOrc personal token can connect and run it; each run is recorded under who ran it.'
         : '<span style="color:#f59e0b">● Private</span> — only you and the people you invite can run it, each with their own personal token.';
 
       // The MCP URL follows whatever origin the user is browsing from —
       // localhost in dev, the public tunnel/domain when shared with the team.
       const mcpUrl = location.origin + '/mcp';
-      // Shareable config: the project id is stable and not secret; each person
-      // adds their own personal token (profile page). The project key is only
-      // for CI and automation.
-      const env = { AIORC_PROJECT_ID: p.id, AIORC_TOKEN: '<your personal token: profile > Personal access tokens>', AIORC_URL: mcpUrl };
-      const cfg = JSON.stringify({ mcpServers:{ aiorc:{ type:'stdio', command:'node', args:['/path/to/mcp-bridge.js'], env } } }, null, 2);
+      // One entry per project. The server name is derived from the project
+      // name, and the CLAUDE.md rule below names the same server, so a repo
+      // can connect several AIOrc projects and Claude knows which to use.
+      // ${AIORC_TOKEN} is expanded by Claude Code from each person's
+      // environment, so the file can be committed without any secret.
+      const server = mcpServerName(p.name);
+      const env = { AIORC_PROJECT_ID: p.id, AIORC_TOKEN: '${AIORC_TOKEN}', AIORC_URL: mcpUrl };
+      const cfg = JSON.stringify({ mcpServers:{ [server]:{ type:'stdio', command:'node', args:['/path/to/mcp-bridge.js'], env } } }, null, 2);
       document.getElementById('mcp-config').textContent = cfg;
       document.getElementById('copy-mcp-btn').onclick = () => copyText(cfg,'MCP config copied!');
+      document.querySelectorAll('.mcp-server-name').forEach(el => { el.textContent = server; });
+      const who = document.getElementById('mcp-who');
+      if (who) who.textContent = isPublic
+        ? 'Public project: anyone with an AIOrc personal token can use this entry.'
+        : 'Private project: only you and the people you invite can use this entry; for anyone else the server answers 403.';
+      document.getElementById('claude-md-snippet').textContent = claudeMdRule(p, server);
     }
 
     async function loadProject() {
@@ -1284,6 +1293,29 @@ skip steps or modify them with your own judgment.</pre>
       const updated = await res.json();
       renderProject(updated);
       copyText(updated.api_key, 'New MCP key copied. It will not be shown again.');
+    }
+
+    // "rmillon PR review" -> "aiorc-rmillon-pr-review" (accents folded, MCP-safe charset).
+    function mcpServerName(name) {
+      const slug = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+      return 'aiorc-' + (slug || 'project');
+    }
+
+    function claudeMdRule(p, server) {
+      const purpose = (p.description || '').trim() || 'the tasks this project\'s flow is built for';
+      return [
+        `## AIOrc: ${p.name}`,
+        '',
+        `Server: \`${server}\` (AIOrc project "${p.name}").`,
+        `Use it for: ${purpose}`,
+        '',
+        `When a task fits that use, start it by calling \`workflow.start\` on the`,
+        `\`${server}\` server, not on another AIOrc server. NEVER respond with a`,
+        'direct solution for those tasks without going through the workflow.',
+        'Execute ONLY the step the server hands you and advance with',
+        '`workflow.next`: never skip steps or modify them with your own judgment.',
+      ].join('\n');
     }
 
     function tagsToList(str) {

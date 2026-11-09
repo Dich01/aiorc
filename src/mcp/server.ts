@@ -145,6 +145,14 @@ const READ_ONLY_TOOLS = new Set(['workflow.eval']);
 // Same 1 MB budget for an entire tool call's outputs as for the request body.
 const MAX_OUTPUTS_BYTES = 1024 * 1024;
 
+function projectIntro(project: { name: string; description: string; is_public: number }): string {
+  return [
+    `This connection is the AIOrc project "${project.name}" (${project.is_public ? 'public' : 'private'}).`,
+    project.description ? `Use it for: ${project.description}` : '',
+    'Start a task of this project with workflow.start, then execute only the step the server returns and advance with workflow.next.',
+  ].filter(Boolean).join(' ');
+}
+
 function stepReply(id: string | number | null, r: StepResult) {
   return rpcResult(id, { content: [{ type: 'text', text: r.text }], _meta: r.meta, ...(r.error ? { isError: true } : {}) });
 }
@@ -171,10 +179,13 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
   }
 
   if (method === 'initialize') {
+    // The connection introduces its project, so a client with several AIOrc
+    // servers (one per project) can tell them apart without guessing.
     res.json(rpcResult(id, {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {} },
       serverInfo: { name: 'AIOrc', version: '2.0.0' },
+      instructions: projectIntro(project),
     }));
     return;
   }
@@ -185,7 +196,8 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
     const hasFlow = db.prepare('SELECT 1 FROM project_flows WHERE project_id = ?').get(project.id);
     if (!hasFlow) { res.json(rpcResult(id, { tools: [] })); return; }
     const externalTools = req.projectAuth === 'key' ? await listExternalTools(project.id) : [];
-    const own = req.projectAuth === 'key' ? OWN_TOOLS : OWN_TOOLS.filter(t => READ_ONLY_TOOLS.has(t.name));
+    const own = (req.projectAuth === 'key' ? OWN_TOOLS : OWN_TOOLS.filter(t => READ_ONLY_TOOLS.has(t.name)))
+      .map(t => ({ ...t, description: `[AIOrc project "${project.name}"] ${t.description}${t.name === 'workflow.start' && project.description ? ` Use this project for: ${project.description}` : ''}` }));
     res.json(rpcResult(id, { tools: [...own, ...externalTools] }));
     return;
   }

@@ -10,12 +10,13 @@ export interface VerifiedCaller {
 
 export interface ProjectKeyRequest extends Request {
   project?: Project;
-  // 'key':    may start and drive runs: either the project key, or the project
-  //           id plus the personal token of someone with access to the project.
-  // 'public':  x-project-id of a public project without such a token: read-only
+  // 'key':    may start and drive runs: the project key; or the project id plus
+  //           a personal token of a member (private projects) or of anyone
+  //           (public projects).
+  // 'public':  x-project-id of a public project without a token: read-only
   //           (tools/list, workflow.eval).
   projectAuth?: 'key' | 'public';
-  authVia?: 'project_key' | 'member_token' | 'public_id';
+  authVia?: 'project_key' | 'member_token' | 'public_token' | 'public_id';
   caller?: VerifiedCaller | null;   // from a personal access token, verified
   declaredCaller?: string;          // from x-user-email, NOT verified
 }
@@ -73,20 +74,21 @@ export function requireProjectKey(req: ProjectKeyRequest, res: Response, next: N
   }
 
   // The shareable way in: a stable project id plus each person's own token.
+  // Private projects: owner, admins and invited people. Public projects:
+  // anyone with a valid personal token (the run is recorded under them).
   if (typeof projectId === 'string' && projectId) {
     const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId) as Project | undefined;
     if (project && caller) {
-      if (canRunProject(caller.userId, caller.email, project)) {
+      const member = canRunProject(caller.userId, caller.email, project);
+      if (member || project.is_public) {
         req.project = project;
         req.projectAuth = 'key';
-        req.authVia = 'member_token';
+        req.authVia = member ? 'member_token' : 'public_token';
         next();
         return;
       }
-      if (!project.is_public) {
-        res.status(403).json({ error: 'Your token is valid, but you have no access to this project. Ask its owner for an invitation.' });
-        return;
-      }
+      res.status(403).json({ error: 'Your token is valid, but this project is private and you have no access to it. Ask its owner for an invitation.' });
+      return;
     }
     if (!project || !project.is_public) {
       res.status(401).json({ error: 'Unknown or private project: send your personal token (Authorization: Bearer aiorc_pat_...) or the project key' });

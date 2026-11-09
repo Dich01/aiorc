@@ -65,3 +65,29 @@ test('runner endpoints accept the id and a member token too', async () => {
   const r = await api(`/api/runs?head_sha=${'a'.repeat(40)}`, { headers: { 'x-project-id': p.id, Authorization: `Bearer ${pat}` } });
   assert.strictEqual(r.status, 200);
 });
+
+test('a public project can be run by anyone with a valid token; a private one cannot', async () => {
+  const owner = await createUser();
+  const stranger = await createUser();
+  const p = await linearProject(owner.token);
+  const pat = await token(stranger.token);
+  const before = await rpc('tools/call', { name: 'workflow.start', arguments: { request: 'x' } }, { 'x-project-id': p.id, Authorization: `Bearer ${pat}` });
+  assert.strictEqual(before.status, 403, 'private: no access');
+  await api(`/projects/${p.id}/visibility`, { method: 'PATCH', token: owner.token, body: { is_public: true } });
+  const after = await rpc('tools/call', { name: 'workflow.start', arguments: { request: 'x' } }, { 'x-project-id': p.id, Authorization: `Bearer ${pat}` });
+  const runId = after.body.result?._meta?.runId;
+  assert.ok(runId, JSON.stringify(after.body));
+  const run = db.prepare('SELECT caller_email FROM runs WHERE id = ?').get(runId) as { caller_email: string };
+  assert.strictEqual(run.caller_email, stranger.email, 'recorded under who ran it');
+});
+
+test('each connection introduces its project by name and purpose', async () => {
+  const owner = await createUser();
+  const p = await linearProject(owner.token);
+  await api(`/projects/${p.id}`, { method: 'PATCH', token: owner.token, body: { description: 'Review pull requests before merging.' } });
+  const init = await rpc('initialize', {}, { 'x-project-key': p.api_key });
+  assert.ok(init.body.result.instructions.includes('Review pull requests before merging.'));
+  const list = await rpc('tools/list', {}, { 'x-project-key': p.api_key });
+  const start = list.body.result.tools.find((t: { name: string }) => t.name === 'workflow.start');
+  assert.ok(start.description.includes('Use this project for: Review pull requests before merging.'));
+});
