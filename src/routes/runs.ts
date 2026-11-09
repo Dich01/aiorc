@@ -9,12 +9,14 @@ import { snapshotHashes } from '../orchestrator/snapshot';
 
 const router = Router();
 
-// Shared abandon sweep: stepped runs idle past the threshold become 'abandoned'.
-// Soft state — workflow.next resurrects them. Called by every reader so the
+// Shared abandon sweep: runs idle past the threshold become 'abandoned':
+// stepped runs waiting for workflow.next, and compiled (model-orchestrated mode) runs
+// waiting for their report. Soft state — workflow.next or a late
+// workflow.report resurrects them. Called by every reader so the
 // audit page and analytics never disagree about the same run.
 export function sweepAbandonedRuns(): void {
   db.prepare(
-    `UPDATE runs SET status = 'abandoned' WHERE status = 'running' AND mode = 'stepped' AND last_activity_at < ?`
+    `UPDATE runs SET status = 'abandoned' WHERE status IN ('running', 'delivered') AND last_activity_at < ?`
   ).run(Date.now() - ABANDON_THRESHOLD_MS);
 }
 
@@ -74,6 +76,9 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   const engineState = run.engine_state ? parseOrRaw(run.engine_state) : null;
   const evalReasons = run.eval_reasons ? parseOrRaw(run.eval_reasons) : null;
 
+  const reportRow = db.prepare('SELECT report_json, sha256, created_at FROM run_reports WHERE run_id = ?').get(run.id) as { report_json: string; sha256: string; created_at: number } | undefined;
+  const selfDeclaredReport = reportRow ? { report: parseOrRaw(reportRow.report_json), sha256: reportRow.sha256, received_at: reportRow.created_at } : null;
+
   let evalCase = null;
   if (run.eval_case_id) {
     evalCase = db.prepare('SELECT id, name, expected_outcome, must_complete_agents, expected_findings, max_extra_findings FROM eval_cases WHERE id = ?')
@@ -88,6 +93,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     engine_state: engineState,
     eval_reasons: evalReasons,
     eval_case: evalCase,
+    self_declared_report: selfDeclaredReport,
   });
 });
 
@@ -101,14 +107,14 @@ router.post('/:id/cancel', requireAuth, (req: AuthRequest, res: Response): void 
 
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
   if (user?.role !== 'admin' && run.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
-  if (!['running', 'abandoned'].includes(run.status)) {
+  if (!['running', 'abandoned', 'delivered'].includes(run.status)) {
     res.status(400).json({ error: `Run is already ${run.status}` }); return;
   }
   cancelRun(run.id);
   res.json({ id: run.id, status: 'cancelled' });
 });
 
-// GET /runs/:id/export — signed audit export (aiorc.audit.v1): the full
+// GET /runs/:id/export — signed audit export (aiorc.audit.v2): the full
 // hash-chained event log, the manifest of frozen entities, every accepted
 // output and the review binding, signed with Ed25519. Verify it with
 // POST /audit/verify or offline with npm run audit:verify.

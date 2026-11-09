@@ -58,3 +58,28 @@ test('a database at another schema version is refused unless AIORC_DB_RESET=1', 
   const backups = fs.readdirSync(TEST_DIR).filter(f => f.startsWith('old.db.') && f.endsWith('.bak'));
   assert.strictEqual(backups.length, 1, 'the old database is renamed, not deleted');
 });
+
+test('a version 6 database is migrated in place to 7 and keeps its rows', () => {
+  const file = path.join(TEST_DIR, 'v6.db');
+  const v7 = openDatabase(file);
+  v7.prepare("INSERT INTO users (id, email, password_hash, name, nickname, bio, role, created_at) VALUES ('u1', 'u1@t', 'x', 'u1', 'u1', '', 'user', 1)").run();
+  v7.prepare("INSERT INTO projects (id, user_id, name, api_key_hash, created_at) VALUES ('p1', 'u1', 'kept', 'h1', 1)").run();
+  v7.exec('ALTER TABLE projects DROP COLUMN execution_mode');
+  v7.prepare('UPDATE schema_version SET version = 6').run();
+  v7.close();
+
+  const migrated = openDatabase(file);
+  const row = migrated.prepare("SELECT name, execution_mode FROM projects WHERE id = 'p1'").get() as { name: string; execution_mode: string };
+  assert.deepStrictEqual(row, { name: 'kept', execution_mode: 'verified' });
+  assert.strictEqual((migrated.prepare('SELECT version FROM schema_version').get() as { version: number }).version, SCHEMA_VERSION);
+  assert.ok(migrated.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'run_reports'").get(), 'new tables are created');
+  migrated.close();
+});
+
+test('a version 5 database is still refused', () => {
+  const file = path.join(TEST_DIR, 'v5.db');
+  const db5 = new Database(file);
+  db5.exec('CREATE TABLE schema_version (version INTEGER); INSERT INTO schema_version VALUES (5); CREATE TABLE projects (id TEXT);');
+  db5.close();
+  assert.throws(() => openDatabase(file), /schema version 5/);
+});

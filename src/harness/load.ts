@@ -48,6 +48,7 @@ export interface HarnessProject {
   name: string;
   description: string;
   input_schema: Record<string, unknown> | null;
+  execution_mode: 'verified' | 'compiled' | null;  // null = not declared: apply leaves the owner's setting alone
   contexts: string[];
   agents: string[];            // agents the flow uses
   flow: FlowDocument;          // node.agent_id holds the agent NAME until apply
@@ -168,6 +169,12 @@ export function loadHarness(dirArg: string): Harness {
     } else if (p.input_schema && typeof p.input_schema === 'object') input_schema = p.input_schema;
     if (input_schema) { const err = checkOutputSchema(input_schema); if (err) problems.push(`${where}: input schema: ${err.replace('output_schema', 'schema')}`); }
 
+    let execution_mode: HarnessProject['execution_mode'] = null;
+    if (p.execution_mode !== undefined) {
+      if (p.execution_mode === 'verified' || p.execution_mode === 'compiled') execution_mode = p.execution_mode;
+      else problems.push(`${where}: execution_mode must be "verified" or "compiled"`);
+    }
+
     const ctx = asStrings(p.contexts);
     for (const c of ctx) if (!contexts.has(c)) problems.push(`${where}: unknown context "${c}"`);
 
@@ -201,7 +208,7 @@ export function loadHarness(dirArg: string): Harness {
         max_extra_findings: e.max_extra_findings ?? null,
       });
     }
-    projects.push({ name, description: String(p.description ?? ''), input_schema, contexts: ctx, agents: used, flow, evals });
+    projects.push({ name, description: String(p.description ?? ''), input_schema, execution_mode, contexts: ctx, agents: used, flow, evals });
   }
 
   if (problems.length) throw new HarnessError(problems);

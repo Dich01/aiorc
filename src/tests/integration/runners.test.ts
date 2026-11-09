@@ -88,13 +88,36 @@ async function signedExport(headSha: string, findings: unknown[]) {
   return (await api(`/runs/${s.meta.runId}/export`, { token: u.token })).body;
 }
 
-function runPublish(doc: unknown, headSha: string) {
+function runPublish(doc: unknown, headSha: string, env: Record<string, string> = {}) {
   const file = path.join(TEST_DIR, `pub-${Math.random().toString(36).slice(2)}.json`);
   const pem = path.join(TEST_DIR, 'pub.pem');
   fs.writeFileSync(file, JSON.stringify(doc));
   fs.writeFileSync(pem, auditKey().publicKeyPem);
-  return spawnSync('node', [PUBLISH, '--export', file, '--repo', 'o/r', '--pr', '3', '--head-sha', headSha, '--public-key', pem, '--dry-run'], { encoding: 'utf8' });
+  return spawnSync('node', [PUBLISH, '--export', file, '--repo', 'o/r', '--pr', '3', '--head-sha', headSha, '--public-key', pem, '--dry-run'], { encoding: 'utf8', env: { ...process.env, ...env } });
 }
+
+async function compiledExport(headSha: string, findings: unknown[]) {
+  const u = await createUser();
+  const p = await linearProject(u.token);
+  await api(`/projects/${p.id}/execution-mode`, { method: 'PATCH', token: u.token, body: { mode: 'compiled' } });
+  const s = await mcp(p.api_key, 'workflow.start', { input: { repo: 'o/r', base_sha: 'a'.repeat(40), head_sha: headSha, changed_files: ['src/x.ts'] } });
+  await mcp(p.api_key, 'workflow.report', { runId: s.meta.runId, report: { path: ['worker'], ended_at: 'End: done', findings } });
+  return (await api(`/runs/${s.meta.runId}/export`, { token: u.token })).body;
+}
+
+test('publish.mjs refuses a model-orchestrated export by default and labels it when accepted', async () => {
+  const head = 'e'.repeat(40);
+  const finding = { id: 'F1', severity: 'low', category: 'style', file: 'src/x.ts', line_start: 1, title: 'nit', evidence: 'e', suggestion: 's' };
+  const doc = await compiledExport(head, [finding]);
+  const refused = runPublish(doc, head);
+  assert.strictEqual(refused.status, 1);
+  assert.ok(/model-orchestrated mode/.test(refused.stderr), refused.stderr);
+  const accepted = runPublish(doc, head, { AIORC_ACCEPT_COMPILED: '1' });
+  assert.strictEqual(accepted.status, 0, accepted.stderr);
+  const planned = JSON.parse(accepted.stdout);
+  assert.ok(/self-declared, not server-verified/.test(planned.check.output.title), planned.check.output.title);
+  assert.strictEqual(planned.review.comments.length, 1);
+});
 
 test('publish.mjs verifies the export and plans one comment, inline comments and a neutral check', async () => {
   const head = 'b'.repeat(40);

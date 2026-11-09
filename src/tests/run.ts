@@ -11,6 +11,9 @@ import './unit/evalGrading.test';
 import './unit/controlPlane.test';
 import './unit/mcpServers.test';
 import './unit/outbound.test';
+import './unit/skipAnalysis.test';
+import './unit/reportedUsage.test';
+
 
 // Integration tests: the real app on an ephemeral port.
 import './integration/bootstrap.test';
@@ -21,6 +24,8 @@ import './integration/evals.test';
 import './integration/harness.test';
 import './integration/runners.test';
 import './integration/membership.test';
+import './integration/compiled.test';
+
 
 runAll()
   .then(async failed => {

@@ -33,3 +33,11 @@ export const ABANDON_THRESHOLD_MS = 2 * 3600 * 1000;
 export function isAbandoned(lastActivityAt: number, now: number, thresholdMs: number = ABANDON_THRESHOLD_MS): boolean {
   return now - lastActivityAt > thresholdMs;
 }
+
+// A compiled (model-orchestrated mode) run accepts its self-declared report while it is
+// waiting for one: 'delivered', or 'abandoned' after the idle sweep (a late
+// report revives it, as workflow.next revives an abandoned stepped run).
+// Cancelled runs and runs that already reported never accept one.
+export function canAcceptReport(status: string): boolean {
+  return status === 'delivered' || status === 'abandoned';
+}

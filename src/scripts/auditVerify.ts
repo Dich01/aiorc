@@ -35,7 +35,8 @@ const result = verifyExport(doc, keys);
 
 if (result.ok) {
   const p = (doc as { payload: { run: { id: string; status: string; outcome: string | null }; events: unknown[] } }).payload;
-  console.log(`VALID  run ${p.run.id}  status=${p.run.status}  outcome=${p.run.outcome ?? '-'}  events=${p.events.length}  kid=${result.kid}`);
+  const how = result.mode === 'compiled' ? '  (self-declared report, not server-verified)' : '';
+  console.log(`VALID${how}  run ${p.run.id}  status=${p.run.status}  outcome=${p.run.outcome ?? '-'}  events=${p.events.length}  kid=${result.kid}`);
   process.exit(0);
 }
 console.log('INVALID');

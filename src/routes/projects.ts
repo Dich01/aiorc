@@ -5,6 +5,8 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Project, ProjectInvitation } from '../db/schema';
 import { copyEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES } from '../lib/entityFiles';
 
+
+export const EXECUTION_MODES = ['verified', 'compiled'];
 const router = Router();
 
 // Implicit-all rule: agents/skills with no project link belong to every project of the same owner.
@@ -154,14 +156,17 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /projects — create project
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, tags } = req.body as { name?: string; description?: string; tags?: unknown };
+  const { name, description, tags, execution_mode } = req.body as { name?: string; description?: string; tags?: unknown; execution_mode?: unknown };
   if (!name?.trim()) { res.status(400).json({ error: 'name is required' }); return; }
+  if (execution_mode !== undefined && !EXECUTION_MODES.includes(execution_mode as string)) {
+    res.status(400).json({ error: `execution_mode must be one of ${EXECUTION_MODES.join(', ')}` }); return;
+  }
 
   const id = uuidv4();
   const key = newSecret(PROJECT_KEY_PREFIX);
 
-  db.prepare('INSERT INTO projects (id, user_id, name, description, tags, api_key_hash, api_key_hint, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
-    id, req.userId!, name.trim(), (description ?? '').trim(), normalizeTags(tags), key.hash, key.display, Date.now()
+  db.prepare('INSERT INTO projects (id, user_id, name, description, tags, api_key_hash, api_key_hint, execution_mode, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    id, req.userId!, name.trim(), (description ?? '').trim(), normalizeTags(tags), key.hash, key.display, (execution_mode as string | undefined) ?? 'verified', Date.now()
   );
   // Create empty flow for the project
   db.prepare('INSERT INTO project_flows (project_id, flow_json, updated_at) VALUES (?, ?, ?)').run(
@@ -193,6 +198,28 @@ router.patch('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     db.prepare('UPDATE projects SET tags = ? WHERE id = ?').run(normalizeTags(tags), project.id);
   }
 
+  const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
+  res.json(publicProject(updated));
+});
+
+// PATCH /projects/:id/execution-mode — 'verified' (server-driven steps) or
+// 'compiled' (model-orchestrated mode: whole flow in one prompt, self-declared). Runs freeze
+// the mode at workflow.start, so switching never affects runs in flight.
+router.patch('/:id/execution-mode', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
+  if (user?.role !== 'admin' && project.user_id !== req.userId) {
+    res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  const { mode } = req.body as { mode?: unknown };
+  if (!EXECUTION_MODES.includes(mode as string)) {
+    res.status(400).json({ error: `mode must be one of ${EXECUTION_MODES.join(', ')}` }); return;
+  }
+
+  db.prepare('UPDATE projects SET execution_mode = ? WHERE id = ?').run(mode, project.id);
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });

@@ -4,23 +4,28 @@ import { checkChain, GENESIS_HASH } from './eventChain';
 import type { RunEvent } from './runEvents';
 import { verifyBytes } from './auditKeys';
 
-// Signed audit export (format aiorc.audit.v1) and its verification. The
+// Signed audit export (format aiorc.audit.v2) and its verification.
+// v2 adds run.mode and self_declared_report: a compiled (model-orchestrated mode) run
+// exports no verified steps, only the report the model posted, whose hash is
+// checked against the report.received event. The format bump makes an old
+// verifier (or runner) fail closed instead of treating such a run as reviewed. The
 // verifier is pure: it needs only the export and a public key, so it runs
 // the same way in the server (POST /audit/verify) and offline
 // (npm run audit:verify).
 
-export const EXPORT_FORMAT = 'aiorc.audit.v1';
+export const EXPORT_FORMAT = 'aiorc.audit.v2';
 
 export interface ExportPayload {
   format: string;
   engine_version: string;
-  run: { id: string; project_id: string; project_name: string; status: string; outcome: string | null; end_node: string | null; created_at: number };
+  run: { id: string; project_id: string; project_name: string; mode: string; status: string; outcome: string | null; end_node: string | null; created_at: number };
   identity: { verified: { user_id: string; email: string } | null; declared: string | null; declared_is_verified: false };
   review: { repo: string | null; base_sha: string | null; head_sha: string | null; pr_number: number | null; diff_sha256: string | null };
   input: unknown;
   input_sha256: string;
   manifest: { flow_sha256: string; entities: { kind: string; id: string; name: string; sha256: string }[] };
   steps: { step: number; node: string; agent: string; sha256: string; output: unknown }[];
+  self_declared_report: unknown;   // compiled runs only: the model's own report, NOT verified; null otherwise
   events: RunEvent[];
   chain_head: string;
   eval: { case_id: string; verdict: string; reasons: unknown } | null;
@@ -36,6 +41,7 @@ export interface VerifyResult {
   ok: boolean;
   errors: string[];
   kid?: string;
+  mode?: string;   // 'stepped' (server-orchestrated) | 'compiled' (self-declared report)
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
@@ -75,8 +81,10 @@ export function verifyExport(doc: unknown, keys: Map<string, KeyObject>): Verify
 
   // 3. Everything else must agree with what the chain recorded.
   const started = events.find(e => e.type === 'run.started');
+  const mode = String((started?.payload as { mode?: unknown } | undefined)?.mode ?? 'stepped');
   if (!started) errors.push('the chain has no run.started event');
   else {
+    if (p.run?.mode !== mode) errors.push(`run.mode "${String(p.run?.mode)}" differs from the mode recorded at run.started ("${mode}")`);
     const sp = started.payload as { input_sha256?: string; flow_sha256?: string; entities?: { kind: string; id: string; sha256: string }[] };
     if (sha256(canonicalJson(p.input)) !== p.input_sha256) errors.push('input_sha256 does not match the input');
     if (sp.input_sha256 !== p.input_sha256) errors.push('the input differs from the one recorded at run.started');
@@ -100,5 +108,19 @@ export function verifyExport(doc: unknown, keys: Map<string, KeyObject>): Verify
   }
   if ((p.steps ?? []).length !== completed.size) errors.push('the export lists a different set of step outputs than the chain');
 
-  return { ok: errors.length === 0, errors, kid: d.signature.kid };
+  // A self-declared report must be the one whose hash the chain recorded.
+  const received = events.find(e => e.type === 'report.received');
+  if (mode === 'compiled') {
+    if ((p.steps ?? []).length > 0) errors.push('a compiled run cannot carry verified step outputs');
+    if (received) {
+      const want = (received.payload as { report_sha256?: string }).report_sha256;
+      if (sha256(canonicalJson(p.self_declared_report ?? null)) !== want) errors.push('self_declared_report is not the report recorded in the chain');
+    } else if (p.self_declared_report !== null && p.self_declared_report !== undefined) {
+      errors.push('self_declared_report is present but the chain recorded no report');
+    }
+  } else if (received || (p.self_declared_report !== null && p.self_declared_report !== undefined)) {
+    errors.push('a server-orchestrated run cannot carry a self-declared report');
+  }
+
+  return { ok: errors.length === 0, errors, kid: d.signature.kid, mode };
 }

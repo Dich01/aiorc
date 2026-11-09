@@ -51,7 +51,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
   const runsTotal = count('SELECT COUNT(*) n FROM runs');
   const runs24h = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d1);
   const runs7d = count('SELECT COUNT(*) n FROM runs WHERE created_at >= ?', d7);
-  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE status = 'completed' AND status NOT IN ('cancelled','abandoned')`);
+  const runsAudited = count(`SELECT COUNT(*) n FROM runs WHERE status IN ('completed','reported')`);
   const runsVerified = count(`SELECT COUNT(*) n FROM runs WHERE mode = 'stepped' AND status NOT IN ('cancelled','abandoned')`);
   const invocationsTotal = (db.prepare(
     `SELECT COALESCE(SUM(invocations), 0) s FROM agent_usage WHERE source != 'planned'`
@@ -91,7 +91,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     'SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN runs r ON r.project_id = p.id');
   const usersWithAudited = count(
     `SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN runs r ON r.project_id = p.id
-     WHERE r.status = 'completed'`);
+     WHERE r.status IN ('completed','reported')`);
   const usersWithEvals = count(
     'SELECT COUNT(DISTINCT p.user_id) n FROM projects p JOIN eval_cases c ON c.project_id = p.id');
 
@@ -124,7 +124,7 @@ router.get('/overview', requireAuth, requireAdmin, (_req: AuthRequest, res: Resp
     `SELECT p.id, p.name, p.is_public, p.paused, ow.nickname AS owner,
             COUNT(r.id) AS runs,
             SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified,
-            SUM(CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS audited,
+            SUM(CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END) AS audited,
             MAX(r.created_at) AS last_run_at
      FROM projects p
      JOIN users ow ON ow.id = p.user_id

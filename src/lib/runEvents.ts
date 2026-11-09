@@ -16,7 +16,8 @@ export type RunEventType =
   | 'run.completed'
   | 'run.capped'
   | 'run.cancelled'
-  | 'run.failed';
+  | 'run.failed'
+  | 'report.received';
 
 export interface RunEvent {
   run_id: string;

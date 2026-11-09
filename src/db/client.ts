@@ -37,14 +37,28 @@ function moveAside(file: string): string {
 export function openDatabase(file: string): DatabaseType {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   let conn = new Database(file);
-  const version = readVersion(conn);
+  let version = readVersion(conn);
+
+  // The one in-place migration: version 6 -> 7 only adds a column with a
+  // default (projects.execution_mode). New tables are created below by
+  // CREATE ... IF NOT EXISTS. Every other mismatch is still refused.
+  if (version === 6) {
+    conn.transaction(() => {
+      const cols = conn.prepare("SELECT name FROM pragma_table_info('projects')").all() as { name: string }[];
+      if (!cols.some(c => c.name === 'execution_mode')) {
+        conn.exec("ALTER TABLE projects ADD COLUMN execution_mode TEXT NOT NULL DEFAULT 'verified'");
+      }
+      conn.prepare('UPDATE schema_version SET version = ?').run(7);
+    })();
+    version = 7;
+  }
 
   if (version !== null && version !== SCHEMA_VERSION) {
     if (process.env.AIORC_DB_RESET !== '1') {
       conn.close();
       throw new Error(
         `[AIOrc] The database at ${file} is at schema version ${version}, but this build needs version ${SCHEMA_VERSION}. ` +
-        'There is no in-place migration. Start once with AIORC_DB_RESET=1 to move the old file aside (renamed to *.bak) and create an empty database.'
+        'Only version 6 is migrated in place. Start once with AIORC_DB_RESET=1 to move the old file aside (renamed to *.bak) and create an empty database.'
       );
     }
     conn.close();

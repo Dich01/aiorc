@@ -5,7 +5,7 @@ import { requireProjectKey, ProjectKeyRequest } from '../middleware/projectKey';
 import { asyncHandler } from '../lib/asyncHandler';
 import { assertSafeOutbound, postJsonPinned, OutboundError } from '../lib/outbound';
 import { ajv, formatAjvErrors, validateEnvelope, validateToolCallParams } from './validation';
-import { startRun, nextStep, StepResult } from '../orchestrator/engine';
+import { startRun, nextStep, receiveReport, StepResult, RunMode, ENGINE_VERSION } from '../orchestrator/engine';
 import { gateExecution } from '../lib/controlPlane';
 import { externalToolName, parseExternalTool, sanitizeServerName, toolAllowed } from '../lib/mcpServers';
 import { loadSnapshot } from '../orchestrator/snapshot';
@@ -71,16 +71,21 @@ function rpcError(id: string | number | null, code: number, message: string) {
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
 
-// ── MCP contract v2 ─────────────────────────────────────────────────────────
-// Three tools. There is no compiled "whole prompt" mode and no self-reported
-// execution: the server drives every step and records what it accepted.
+// ── MCP contract v2.1 ───────────────────────────────────────────────────────
+// Four tools, listed the same way in both execution modes so a client's
+// cached tool list and its CLAUDE.md rule survive the owner toggling the mode:
+// - server-orchestrated projects: workflow.start returns step 1, workflow.next advances;
+//   the server drives every step and records what it accepted.
+// - compiled projects (model-orchestrated mode): workflow.start returns the whole flow and
+//   the model finishes with workflow.report, stored as self-declared.
+// Eval runs are always server-orchestrated (they are graded from the chain).
 
 const START_TOOL = {
   name: 'workflow.start',
   description: [
-    'Start the project\'s agent workflow. The server validates the flow, freezes the instructions of every agent it uses,',
-    'and returns ONLY the first step to execute, with the JSON Schema each output must satisfy.',
-    'Execute it, then call workflow.next. Do not execute any other workflow agent on your own.',
+    'Start the project\'s agent workflow. The server validates the flow and freezes the instructions of every agent it uses.',
+    'Do exactly what it returns: either ONE step at a time (server-orchestrated mode), advancing with workflow.next,',
+    'or the whole flow (model-orchestrated mode), finished with workflow.report. Do not execute workflow agents on your own.',
   ].join(' '),
   inputSchema: {
     type: 'object',
@@ -132,12 +137,35 @@ const EVAL_TOOL = {
   description: [
     'List the project\'s eval suite (test cases for the workflow).',
     'To run it: for each case, call workflow.start with {"evalCase": "<case id>"} and drive the run to the end with workflow.next.',
-    'The server grades each run itself from what it recorded.',
+    'Eval runs are always server-orchestrated, also in model-orchestrated projects. The server grades each run itself from what it recorded.',
   ].join(' '),
   inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 };
 
-const OWN_TOOLS = [START_TOOL, NEXT_TOOL, EVAL_TOOL];
+const REPORT_TOOL = {
+  name: 'workflow.report',
+  description: [
+    'Model-orchestrated mode only: after a run whose workflow.start returned the whole flow ends (at an End, a cap, or an early stop),',
+    'post your own account of what you executed. Stored as self-declared: the server does not verify it.',
+    'Server-orchestrated runs take no report.',
+  ].join(' '),
+  inputSchema: {
+    type: 'object',
+    required: ['runId', 'report'],
+    properties: {
+      runId: { type: 'string', minLength: 1, maxLength: 100, description: 'The runId returned by workflow.start.' },
+      report: { type: 'object', description: 'path, invocations_per_agent, branches_taken, ended_at, final_summary, findings (optional).' },
+    },
+    additionalProperties: false,
+  },
+};
+
+const OWN_TOOLS = [START_TOOL, NEXT_TOOL, REPORT_TOOL, EVAL_TOOL];
+
+// The project's setting maps once to the run mode frozen at workflow.start.
+function modeOf(project: { execution_mode?: string }): RunMode {
+  return project.execution_mode === 'compiled' ? 'compiled' : 'stepped';
+}
 const argValidators = new Map<string, ValidateFunction>(OWN_TOOLS.map(t => [t.name, ajv.compile(t.inputSchema)]));
 // Tools that read nothing private and start nothing: allowed with x-project-id on a public project.
 const READ_ONLY_TOOLS = new Set(['workflow.eval']);
@@ -149,8 +177,14 @@ function projectIntro(project: { name: string; description: string; is_public: n
   return [
     `This connection is the AIOrc project "${project.name}" (${project.is_public ? 'public' : 'private'}).`,
     project.description ? `Use it for: ${project.description}` : '',
-    'Start a task of this project with workflow.start, then execute only the step the server returns and advance with workflow.next.',
+    'Start a task of this project with workflow.start and do exactly what it returns: one step at a time advanced with workflow.next, or the whole flow finished with workflow.report.',
   ].filter(Boolean).join(' ');
+}
+
+// A non-member running a public project (personal token, not invited) may
+// only act on the runs they started; for them other people's runs do not exist.
+function foreignRun(req: ProjectKeyRequest, runCallerUserId: string): boolean {
+  return req.authVia === 'public_token' && runCallerUserId !== req.caller?.userId;
 }
 
 function stepReply(id: string | number | null, r: StepResult) {
@@ -184,7 +218,7 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
     res.json(rpcResult(id, {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {} },
-      serverInfo: { name: 'AIOrc', version: '2.0.0' },
+      serverInfo: { name: 'AIOrc', version: ENGINE_VERSION },
       instructions: projectIntro(project),
     }));
     return;
@@ -215,7 +249,7 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
   const toolArgs = { ...((params as { arguments?: Record<string, unknown> }).arguments ?? {}) };
 
   if (req.projectAuth !== 'key' && !READ_ONLY_TOOLS.has(toolName)) {
-    res.json(rpcError(id, -32001, `Tool "${toolName}" needs access to the project: your personal token (Authorization: Bearer aiorc_pat_...) as a member, or the project key. Without them x-project-id only allows read-only tools.`));
+    res.json(rpcError(id, -32001, `Tool "${toolName}" needs access to the project: your personal token (Authorization: Bearer aiorc_pat_...) as a member or on a public project, or the project key. Without them x-project-id only allows read-only tools.`));
     return;
   }
 
@@ -225,7 +259,7 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
     const servers = db.prepare('SELECT * FROM mcp_servers WHERE project_id = ?').all(project.id) as McpServerRow[];
     const server = servers.find(s => sanitizeServerName(s.name) === ext.server);
     if (!server) {
-      res.json(rpcError(id, -32602, `Unknown external server "${ext.server}". Register it in the project's Connect tab.`));
+      res.json(rpcError(id, -32602, `Unknown external server "${ext.server}". Register it in the project's Connect AI tab.`));
       return;
     }
     // Only inside an active run, and only for a tool the dispatched agent is
@@ -237,7 +271,12 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
       res.json(rpcError(id, -32001, `External tools can only be called inside a run: pass the runId in params._meta.runId.`));
       return;
     }
-    const runRow = db.prepare('SELECT engine_state, status FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { engine_state: string; status: string } | undefined;
+    const found = db.prepare('SELECT engine_state, status, mode, caller_user_id FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { engine_state: string; status: string; mode: string; caller_user_id: string } | undefined;
+    const runRow = found && !foreignRun(req, found.caller_user_id) ? found : undefined;
+    if (runRow?.mode === 'compiled') {
+      res.json(rpcError(id, -32001, 'External tools are only available in server-orchestrated runs: in model-orchestrated mode the server cannot know which agent is executing.'));
+      return;
+    }
     const state = runRow?.engine_state ? JSON.parse(runRow.engine_state) as EngineState : null;
     if (!runRow || !state || state.status !== 'active' || !['running', 'abandoned'].includes(runRow.status)) {
       res.json(rpcError(id, -32001, `Run "${runId}" is not active in this project; external tools can only be called during an active run.`));
@@ -346,12 +385,34 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
       return;
     }
 
-    const result = startRun(project.id, input, { caller, declaredCaller }, evalCaseId);
+    // Eval runs are graded from the event chain, so they always run verified.
+    const result = startRun(project.id, input, { caller, declaredCaller }, evalCaseId, evalCaseId ? 'stepped' : modeOf(project));
     if (result.error && ['no_flow', 'empty_flow', 'invalid_flow'].includes(result.error)) {
       res.json(rpcError(id, -32603, result.text));
       return;
     }
     res.json(stepReply(id, result));
+    return;
+  }
+
+  if (toolName === 'workflow.report') {
+    const reportRunId = String(toolArgs['runId']);
+    const report = toolArgs['report'] as Record<string, unknown>;
+    if (Buffer.byteLength(JSON.stringify(report), 'utf8') > MAX_OUTPUTS_BYTES) {
+      res.json(rpcError(id, -32602, `report exceeds ${MAX_OUTPUTS_BYTES} bytes.`));
+      return;
+    }
+    const owned = db.prepare('SELECT caller_user_id FROM runs WHERE id = ? AND project_id = ?').get(reportRunId, project.id) as { caller_user_id: string } | undefined;
+    if (!owned || foreignRun(req, owned.caller_user_id)) {
+      res.json(rpcError(id, -32602, `Unknown runId "${reportRunId}" for this project.`));
+      return;
+    }
+    const r = receiveReport(reportRunId, report);
+    if (!r.ok) {
+      res.json(rpcError(id, -32602, r.message));
+      return;
+    }
+    res.json(rpcResult(id, { content: [{ type: 'text', text: r.message }], _meta: { runId: reportRunId, mode: 'compiled', status: r.status, ...(r.replayed ? { replayed: true } : {}) } }));
     return;
   }
 
@@ -362,9 +423,13 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
     res.json(rpcError(id, -32602, `outputs exceed ${MAX_OUTPUTS_BYTES} bytes.`));
     return;
   }
-  const runRow = db.prepare('SELECT id, status FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { id: string; status: string } | undefined;
-  if (!runRow) {
+  const runRow = db.prepare('SELECT id, status, mode, caller_user_id FROM runs WHERE id = ? AND project_id = ?').get(runId, project.id) as { id: string; status: string; mode: string; caller_user_id: string } | undefined;
+  if (!runRow || foreignRun(req, runRow.caller_user_id)) {
     res.json(rpcError(id, -32602, `Unknown runId "${runId}" for this project.`));
+    return;
+  }
+  if (runRow.mode === 'compiled') {
+    res.json(rpcError(id, -32602, 'This run received the whole flow (model-orchestrated mode): it has no steps to advance. Finish it with workflow.report.'));
     return;
   }
   // Soft-abandoned runs resume when the client comes back.

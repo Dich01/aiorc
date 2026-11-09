@@ -46,7 +46,7 @@ test('an export verifies, and binds the run to the reviewed code', async () => {
   assert.strictEqual(r.body.payload.review.head_sha, 'b'.repeat(40));
   assert.strictEqual(r.body.payload.review.pr_number, 7);
   assert.ok(r.body.payload.manifest.entities.some((e: { kind: string }) => e.kind === 'agent'));
-  assert.deepStrictEqual(verifyExport(r.body, keys()), { ok: true, errors: [], kid: auditKey().kid });
+  assert.deepStrictEqual(verifyExport(r.body, keys()), { ok: true, errors: [], kid: auditKey().kid, mode: 'stepped' });
   const viaApi = await api('/audit/verify', { body: r.body });
   assert.strictEqual(viaApi.body.ok, true);
 });

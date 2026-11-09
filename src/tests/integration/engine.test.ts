@@ -277,10 +277,12 @@ test('a cancelled run accepts no further steps', async () => {
   assert.strictEqual(runStatus(s.meta.runId).status, 'cancelled');
 });
 
-test('the compiled-mode tools are gone', async () => {
+test('the legacy `workflow` tool is gone, and workflow.report refuses a server-verified run', async () => {
   const { p } = await reviewLoopProject();
-  for (const tool of ['workflow', 'workflow.report']) {
-    const r = await mcp(p.api_key, tool, { request: 'x' });
-    assert.strictEqual(r.error?.code, -32602);
-  }
+  const legacy = await mcp(p.api_key, 'workflow', { request: 'x' });
+  assert.strictEqual(legacy.error?.code, -32602);
+  const s = await mcp(p.api_key, 'workflow.start', { request: 'review this' });
+  const r = await mcp(p.api_key, 'workflow.report', { runId: s.meta.runId, report: { path: ['review'] } });
+  assert.strictEqual(r.error?.code, -32602);
+  assert.ok(/server-orchestrated/.test(r.error!.message), r.error!.message);
 });

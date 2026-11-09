@@ -92,12 +92,15 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       if (!row) {
         const key = newSecret(PROJECT_KEY_PREFIX);
         row = { id: uuidv4() };
-        db.prepare('INSERT INTO projects (id, user_id, name, description, api_key_hash, api_key_hint, input_schema, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-          .run(row.id, ownerId, p.name, p.description, key.hash, key.display, inputSchema, now);
+        db.prepare('INSERT INTO projects (id, user_id, name, description, api_key_hash, api_key_hint, input_schema, execution_mode, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(row.id, ownerId, p.name, p.description, key.hash, key.display, inputSchema, p.execution_mode ?? 'verified', now);
         report.created.push(`project ${p.name}`);
         report.newProjectKeys.push({ project: p.name, api_key: key.plaintext });
       } else {
         db.prepare('UPDATE projects SET description = ?, input_schema = ? WHERE id = ?').run(p.description, inputSchema, row.id);
+        // Only a harness that declares the mode changes it; otherwise the
+        // owner's toggle in the UI stands.
+        if (p.execution_mode) db.prepare('UPDATE projects SET execution_mode = ? WHERE id = ?').run(p.execution_mode, row.id);
       }
       const pid = row.id;
 

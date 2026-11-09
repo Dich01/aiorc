@@ -23,6 +23,7 @@ export interface Project {
   allow_executable_files: number; // 1 = non-Markdown files of agents/skills/contexts are delivered to the model
   input_schema: string; // JSON Schema (as JSON text) for workflow.start `input`, '' = none
   paused: number;    // 1 = kill switch on: new runs blocked (in-flight runs may finish)
+  execution_mode: string; // 'verified' (server-orchestrated) | 'compiled' (model-orchestrated: whole flow in one prompt, self-declared)
   forked_from: string | null; // source project id if this is a fork
   created_at: number;
 }
@@ -247,13 +248,13 @@ export interface Run {
   id: string;
   project_id: string;
   input: string;              // JSON string
-  flow_json: string;          // normalized flow JSON at compile time (for path-aware skip analysis)
+  flow_json: string;          // normalized flow JSON at start (skip analysis of compiled runs replays reports against it)
   outcome: string;            // End outcome reached ('' until the run completes)
   end_node: string;           // id of the End node reached ('' otherwise)
   caller_user_id: string;     // verified caller (personal access token), '' if none
   caller_email: string;       // verified caller's email, '' if none
   declared_caller: string;    // x-user-email header: self-declared, NOT verified
-  mode: string;               // always 'stepped' (server-driven)
+  mode: string;               // 'stepped' (server-orchestrated) | 'compiled' (model-orchestrated mode: whole flow, self-declared)
   engine_state: string;       // EngineState JSON
   eval_case_id: string;       // links the run to an eval case, '' for normal runs
   eval_verdict: string;       // '' | 'pass' | 'fail' — graded by the server on completion
@@ -280,7 +281,9 @@ export interface EvalCase {
 // - 'planned':  the agent is part of the run's flow.
 // - 'executed': the agent completed a step: the server accepted an output
 //   that validates against its output schema. Dispatch alone does not count.
-export type AgentUsageSource = 'planned' | 'executed';
+// - 'reported': a compiled (model-orchestrated mode) run's self-declared report names the
+//   agent. Never verified; never written when 'executed' rows exist.
+export type AgentUsageSource = 'planned' | 'executed' | 'reported';
 
 export interface AgentUsage {
   id: string;
@@ -294,9 +297,10 @@ export interface AgentUsage {
 }
 
 // Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
-// pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
-// a database at another version is refused at startup (see db/client.ts).
-export const SCHEMA_VERSION = 6;
+// pick up through CREATE ... IF NOT EXISTS. The only in-place migration is the
+// additive 6 -> 7 step in db/client.ts; a database at any other version is
+// refused at startup.
+export const SCHEMA_VERSION = 7;
 
 export const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -329,6 +333,7 @@ CREATE TABLE IF NOT EXISTS projects (
   allow_executable_files INTEGER NOT NULL DEFAULT 0,
   input_schema TEXT NOT NULL DEFAULT '',
   paused INTEGER NOT NULL DEFAULT 0,
+  execution_mode TEXT NOT NULL DEFAULT 'verified',
   forked_from TEXT,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
@@ -677,6 +682,17 @@ CREATE TABLE IF NOT EXISTS run_step_outputs (
   sha256 TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   PRIMARY KEY (run_id, step, node_id),
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+);
+
+-- The self-declared report of a compiled (model-orchestrated mode) run, posted by the
+-- model through workflow.report. Stored whole with its hash; the hash is also
+-- recorded in the run's event chain (report.received). Never verified.
+CREATE TABLE IF NOT EXISTS run_reports (
+  run_id TEXT PRIMARY KEY,
+  report_json TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
   FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
 );
 

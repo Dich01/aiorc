@@ -4,7 +4,14 @@ Two ways to run the `code-review` harness (`harnesses/code-review`) against an
 AIOrc server: on a developer machine before a pull request exists, and in
 GitHub Actions after it is opened. Both drive Claude Code in non-interactive
 mode with read-only tools, and both decide what happened from the server's
-signed audit export, never from what the model says.
+signed audit export, never from what the model says (unless you opt in with
+`AIORC_ACCEPT_COMPILED=1`; see below).
+
+Use a project in **server-orchestrated** execution mode for gated reviews. A model-orchestrated
+(compiled) project's runs carry only a self-declared report: `publish.mjs`
+refuses them unless `AIORC_ACCEPT_COMPILED=1` (then it labels the review
+"self-declared, not server-verified"), `aiorc-review.sh` exits 3, and the
+pre-push hook never blocks on them.
 
 Flags used, checked against `claude --help` (Claude Code 2.1.319):
 `-p`, `--mcp-config`, `--strict-mcp-config`, `--tools`, `--allowedTools`

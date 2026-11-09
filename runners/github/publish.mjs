@@ -13,6 +13,8 @@
 // usage: node publish.mjs --export <file> --repo <owner/name> --pr <n> --head-sha <sha>
 //                         (--public-key <pem file> | --keys-url <url>) [--dry-run]
 // env:   GITHUB_TOKEN (not needed with --dry-run), GITHUB_API_URL (default https://api.github.com)
+//        AIORC_ACCEPT_COMPILED=1 to publish a model-orchestrated (compiled) run's SELF-DECLARED
+//        report, labelled as such. Refused by default: the server did not verify it.
 // exit:  0 published (or planned), 1 the export failed verification, 2 usage error
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -47,7 +49,7 @@ export function verifyExport(doc, key, headSha) {
   const errors = [];
   const p = doc?.payload;
   if (!p || !doc.signature) return ['not an AIOrc audit export'];
-  if (p.format !== 'aiorc.audit.v1') errors.push(`unknown format ${p.format}`);
+  if (p.format !== 'aiorc.audit.v2') errors.push(`unknown format ${p.format}`);
   if (doc.signature.alg !== 'Ed25519') errors.push('signature is not Ed25519');
   if (doc.signature.kid !== kidOf(key)) errors.push(`signed with key ${doc.signature.kid}, expected ${kidOf(key)}`);
   let sigOk = false;
@@ -69,14 +71,32 @@ export function verifyExport(doc, key, headSha) {
   }
   if ((p.steps ?? []).length !== recorded.size) errors.push('step outputs differ from the chain');
 
+  // The mode comes from the chain (run.started), never from the mutable run row.
+  const mode = runMode(p);
+  if (p.run?.mode !== mode) errors.push(`run.mode ${p.run?.mode} differs from the chain (${mode})`);
+  if (mode !== 'stepped') {
+    if (process.env.AIORC_ACCEPT_COMPILED !== '1') errors.push('this run is model-orchestrated mode (compiled): its report is self-declared, not server-verified. Use a server-orchestrated project, or set AIORC_ACCEPT_COMPILED=1 to publish it labelled as such');
+    const received = (p.events ?? []).find(e => e.type === 'report.received');
+    if (!received) errors.push('the model-orchestrated run has no report');
+    else if (sha256(canonicalJson(p.self_declared_report ?? null)) !== received.payload.report_sha256) errors.push('self_declared_report is not the report recorded in the chain');
+  }
+
   if (p.review?.head_sha !== headSha) errors.push(`the export reviewed ${p.review?.head_sha ?? 'no commit'}, not the pull request head ${headSha}`);
   return errors;
 }
 
-// The findings of the last completed step (the report), shape-checked.
+export function runMode(p) {
+  const started = (p.events ?? []).find(e => e.type === 'run.started');
+  return String(started?.payload?.mode ?? 'stepped');
+}
+
+// The findings of the last completed step (the report), shape-checked. For an
+// accepted model-orchestrated run, the findings of its self-declared report.
 export function finalFindings(p) {
   const last = Math.max(0, ...(p.steps ?? []).map(s => s.step));
-  const raw = (p.steps ?? []).filter(s => s.step === last).flatMap(s => (Array.isArray(s.output?.findings) ? s.output.findings : []));
+  const raw = runMode(p) === 'compiled'
+    ? (Array.isArray(p.self_declared_report?.findings) ? p.self_declared_report.findings : [])
+    : (p.steps ?? []).filter(s => s.step === last).flatMap(s => (Array.isArray(s.output?.findings) ? s.output.findings : []));
   return raw.filter(f => f && typeof f.file === 'string' && typeof f.title === 'string' && SEVERITIES.includes(f.severity) && Number.isInteger(f.line_start))
     .sort((a, b) => SEVERITIES.indexOf(b.severity) - SEVERITIES.indexOf(a.severity));
 }
@@ -88,9 +108,12 @@ const md = s => String(s ?? '').replace(/[<>]/g, c => (c === '<' ? '&lt;' : '&gt
 export function plan(doc, headSha) {
   const p = doc.payload;
   const findings = finalFindings(p);
-  const completed = p.run.status === 'completed';
+  const selfDeclared = runMode(p) === 'compiled';
+  const completed = selfDeclared ? p.run.status === 'reported' : p.run.status === 'completed';
   const counts = SEVERITIES.slice().reverse().map(s => [s, findings.filter(f => f.severity === s).length]).filter(([, n]) => n);
-  const title = !completed ? `AIOrc review did not complete (${p.run.status})`
+  const title = selfDeclared
+    ? (completed ? `AIOrc review (self-declared, not server-verified): ${findings.length} finding(s)` : `AIOrc review did not report (${p.run.status})`)
+    : !completed ? `AIOrc review did not complete (${p.run.status})`
     : findings.length ? `AIOrc review: ${findings.length} finding(s), outcome ${p.run.outcome}` : `AIOrc review: no findings, outcome ${p.run.outcome}`;
   const lines = [
     MARKER,

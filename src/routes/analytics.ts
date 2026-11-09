@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { sweepAbandonedRuns } from './runs';
+import { classifySkips } from '../lib/skipAnalysis';
+import { normalizeFlow } from '../orchestrator';
 
 const router = Router();
 
@@ -10,7 +12,7 @@ interface UsageRow {
   project_id: string;
   agent_id: string | null;
   agent_name: string;
-  source: 'planned' | 'executed';
+  source: 'planned' | 'executed' | 'reported';
   invocations: number;
   created_at: number;
   has_report: number;
@@ -27,8 +29,10 @@ interface UsageRow {
 // Answers what the registry alone can't:
 //   1. Which agents are actually used (vs. registered noise)?
 //   2. Which agents does the LLM skip even though the flow plans them?
-//   3. Who is using them? (attribution = owner of the project the run came in through;
-//      MCP calls authenticate with a project key, not a personal token)
+//   3. Who is using them? (attribution = the verified caller of the personal
+//      token; runs without one fall back to the project owner)
+// A "verified" run is a stepped (server-orchestrated) run that was not
+// cancelled or abandoned: the same predicate everywhere below and in admin.
 router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   sweepAbandonedRuns();
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId!) as { role: string } | undefined;
@@ -45,11 +49,11 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   if (since) { where.push('r.created_at >= ?'); args.push(since); }
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
-  // A run is auditable when it has a self-declared report OR was driven by the
-  // stepped engine (engine_state) — the latter is server-verified ground truth.
+  // A run is auditable when it completed under the server (stepped: ground
+  // truth) or a compiled (model-orchestrated mode) run posted its self-declared report.
   const rows = db.prepare(
     `SELECT u.run_id, u.project_id, u.agent_id, u.agent_name, u.source, u.invocations, u.created_at,
-            CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END AS has_report,
             p.name AS project_name, p.user_id AS owner_id, ow.nickname AS owner_nickname,
             r.caller_email
      FROM agent_usage u
@@ -59,17 +63,36 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
      ${whereSql}`
   ).all(...args) as UsageRow[];
 
-  // Runs are server-driven: an agent the path required cannot be skipped, so
-  // there are no "real skips" to classify any more. A planned agent that
-  // never completed a step in a finished run was simply off the path taken.
+  // Server-orchestrated runs cannot skip: the server dispatched every step, so a
+  // planned agent that never completed one was simply off the path taken.
+  // Compiled (model-orchestrated mode) runs only have the model's report, so their skips are
+  // classified by replaying the reported path against the flow they ran
+  // (see lib/skipAnalysis.ts).
   const realSkipsByRun = new Map<string, Set<string>>();
+  const compiledReported = db.prepare(
+    `SELECT r.id, r.flow_json, rr.report_json FROM runs r
+     JOIN projects p ON p.id = r.project_id JOIN run_reports rr ON rr.run_id = r.id
+     ${whereSql ? whereSql + ' AND' : 'WHERE'} r.mode = 'compiled' AND r.status = 'reported'`
+  ).all(...args) as { id: string; flow_json: string; report_json: string }[];
+  for (const cr of compiledReported) {
+    try {
+      const flow = normalizeFlow(JSON.parse(cr.flow_json));
+      const report = JSON.parse(cr.report_json) as { path?: unknown };
+      const path = Array.isArray(report.path) ? report.path.filter((p): p is string => typeof p === 'string') : [];
+      const planned = new Set(rows.filter(r => r.run_id === cr.id && r.source === 'planned').map(r => r.agent_name));
+      const executed = new Set(rows.filter(r => r.run_id === cr.id && r.source !== 'planned').map(r => r.agent_name));
+      realSkipsByRun.set(cr.id, classifySkips(flow, planned, executed, path).realSkips);
+    } catch { /* unreadable flow or report: no skip classification for this run */ }
+  }
 
   const runStats = db.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS with_report,
-            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified
+            SUM(CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END) AS with_report,
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified,
+            SUM(CASE WHEN r.mode = 'compiled' THEN 1 ELSE 0 END) AS compiled,
+            SUM(CASE WHEN r.mode = 'compiled' AND r.status = 'reported' THEN 1 ELSE 0 END) AS reported
      FROM runs r JOIN projects p ON p.id = r.project_id ${whereSql}`
-  ).get(...args) as { total: number; with_report: number | null; verified: number | null };
+  ).get(...args) as { total: number; with_report: number | null; verified: number | null; compiled: number | null; reported: number | null };
 
   const registeredAgents = db.prepare(
     isAdmin
@@ -176,9 +199,9 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }))
     .sort((x, y) => Number(y.in_flows) - Number(x.in_flows));
 
-  // Usage by user — who actually consumes the agents. Attribution prefers the
-  // caller's email (x-user-email header, set per person via AIORC_USER_EMAIL
-  // in the MCP bridge); runs without it fall back to the project owner.
+  // Usage by user — who actually consumes the agents. Attribution uses the
+  // verified caller's email (from the personal access token, runs.caller_email);
+  // runs without one fall back to the project owner. x-user-email is not used.
   interface UserAgg { nickname: string; runs: Set<string>; invocations: number; agents: Set<string>; last_used: number }
   const byUser = new Map<string, UserAgg>();
   for (const row of rows) {
@@ -199,8 +222,9 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const recentRuns = db.prepare(
     `SELECT r.id, r.created_at, r.status, p.name AS project_name, ow.nickname AS owner_nickname,
             r.caller_email,
-            CASE WHEN r.status = 'completed' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS has_report,
+            CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END AS has_report,
             CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END AS verified,
+            r.mode,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source = 'planned') AS agents_planned,
             (SELECT COUNT(*) FROM agent_usage u WHERE u.run_id = r.id AND u.source != 'planned') AS agents_reported
      FROM runs r JOIN projects p ON p.id = r.project_id JOIN users ow ON ow.id = p.user_id
@@ -218,7 +242,7 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const runsByDay = db.prepare(
     `SELECT date(r.created_at / 1000, 'unixepoch') AS day,
             COUNT(*) AS runs,
-            SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified
      FROM runs r JOIN projects p ON p.id = r.project_id
      ${whereSql}
      GROUP BY day ORDER BY day ASC`
@@ -263,8 +287,9 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const projectsStats = db.prepare(
     `SELECT p.id, p.name,
             COUNT(r.id) AS runs,
-            SUM(CASE WHEN r.status = 'completed' THEN 1 ELSE 0 END) AS audited,
-            SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified,
+            SUM(CASE WHEN r.status IN ('completed','reported') THEN 1 ELSE 0 END) AS audited,
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified,
+            SUM(CASE WHEN r.mode = 'compiled' THEN 1 ELSE 0 END) AS compiled,
             MAX(r.created_at) AS last_run_at,
             (SELECT COUNT(*) FROM eval_cases c WHERE c.project_id = p.id) AS eval_cases
      FROM projects p
@@ -308,6 +333,8 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
       total_runs: totalRuns,
       runs_with_report: runsWithReport,
       runs_verified: runStats.verified ?? 0,
+      runs_compiled: runStats.compiled ?? 0,
+      runs_reported: runStats.reported ?? 0,
       report_rate: totalRuns > 0 ? Math.round((runsWithReport / totalRuns) * 100) : 0,
       agents_registered: registeredAgents.length,
       agents_executed: executedIds.size,
@@ -434,7 +461,7 @@ router.get('/timeseries', requireAuth, (req: AuthRequest, res: Response): void =
   const runRows = db.prepare(
     `SELECT ${bucketOf('r.created_at')} AS bucket,
             COUNT(*) AS runs,
-            SUM(CASE WHEN r.mode = 'stepped' THEN 1 ELSE 0 END) AS verified
+            SUM(CASE WHEN r.mode = 'stepped' AND r.status NOT IN ('cancelled','abandoned') THEN 1 ELSE 0 END) AS verified
      FROM runs r JOIN projects p ON p.id = r.project_id
      ${whereSql} GROUP BY bucket`
   ).all(...args) as { bucket: number; runs: number; verified: number }[];

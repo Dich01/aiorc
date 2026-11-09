@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { section, test } from '../harness';
-import { gateExecution, isAbandoned } from '../../lib/controlPlane';
+import { canAcceptReport, gateExecution, isAbandoned } from '../../lib/controlPlane';
 
 section('controlPlane');
 
@@ -38,4 +38,12 @@ test('isAbandoned: 2h without activity marks abandonment, recent activity does n
   const TWO_H = 2 * 3600 * 1000;
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H + 1, TWO_H), true);
   assert.strictEqual(isAbandoned(1000, 1000 + TWO_H - 1, TWO_H), false);
+});
+
+test('a model-orchestrated run accepts its report while delivered or abandoned, never after cancel or a first report', () => {
+  assert.strictEqual(canAcceptReport('delivered'), true);
+  assert.strictEqual(canAcceptReport('abandoned'), true);
+  assert.strictEqual(canAcceptReport('reported'), false);
+  assert.strictEqual(canAcceptReport('cancelled'), false);
+  assert.strictEqual(canAcceptReport('running'), false);
 });

@@ -22,11 +22,14 @@ export function buildSignedExport(runId: string): SignedExport | null {
   const steps = (db.prepare('SELECT step, node_id, agent_name, output_json, sha256 FROM run_step_outputs WHERE run_id = ? ORDER BY step, node_id').all(runId) as { step: number; node_id: string; agent_name: string; output_json: string; sha256: string }[])
     .map(o => ({ step: o.step, node: o.node_id, agent: o.agent_name, sha256: o.sha256, output: JSON.parse(o.output_json) as unknown }));
 
+  const reportRow = db.prepare('SELECT report_json FROM run_reports WHERE run_id = ?').get(runId) as { report_json: string } | undefined;
+  const selfDeclared: unknown = reportRow ? JSON.parse(reportRow.report_json) : null;
+
   const payload: ExportPayload = {
     format: EXPORT_FORMAT,
     engine_version: ENGINE_VERSION,
     run: {
-      id: run.id, project_id: run.project_id, project_name: run.project_name,
+      id: run.id, project_id: run.project_id, project_name: run.project_name, mode: run.mode || 'stepped',
       status: run.status, outcome: run.outcome || null, end_node: run.end_node || null, created_at: run.created_at,
     },
     identity: {
@@ -42,6 +45,7 @@ export function buildSignedExport(runId: string): SignedExport | null {
       entities: hashes.filter(h => h.kind !== 'flow').map(h => ({ kind: h.kind, id: h.entity_id, name: h.name, sha256: h.sha256 })),
     },
     steps,
+    self_declared_report: selfDeclared,
     events,
     chain_head: events.length ? events[events.length - 1]!.hash : GENESIS_HASH,
     eval: run.eval_case_id ? { case_id: run.eval_case_id, verdict: run.eval_verdict, reasons: run.eval_reasons ? JSON.parse(run.eval_reasons) : null } : null,
