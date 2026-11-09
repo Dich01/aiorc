@@ -118,3 +118,30 @@ test('the harness eval cases pass when the run does what they expect', async () 
   const verdicts = db.prepare('SELECT eval_verdict, eval_reasons FROM runs WHERE id IN (?, ?)').all(trivial.meta.runId, runId) as { eval_verdict: string; eval_reasons: string }[];
   assert.deepStrictEqual(verdicts.map(v => v.eval_verdict), ['pass', 'pass'], JSON.stringify(verdicts));
 });
+
+section('harness: two harnesses of one owner');
+
+function miniHarness(dir: string, project: string, agentText: string) {
+  const fs = require('fs') as typeof import('fs');
+  fs.mkdirSync(path.join(dir, 'agents', 'gate'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'agents', 'gate', 'AGENT.md'), agentText);
+  fs.writeFileSync(path.join(dir, 'harness.json'), JSON.stringify({
+    name: project, agents: { gate: { description: 'gate' } },
+    projects: [{ name: project, flow: {
+      nodes: [{ id: 's', type: 'start' }, { id: 'g', type: 'agent', agent: 'gate' }, { id: 'e', type: 'end', outcome: 'done' }],
+      edges: [{ id: '1', from: 's', to: 'g' }, { id: '2', from: 'g', to: 'e' }],
+    } }],
+  }));
+}
+
+test('applying a harness never rewrites an agent that another project of the owner uses', async () => {
+  const { TEST_DIR } = require('../env') as typeof import('../env');
+  const owner = await createUser();
+  const a = path.join(TEST_DIR, 'harness-a'), b = path.join(TEST_DIR, 'harness-b');
+  miniHarness(a, 'project A', 'Gate for A.');
+  miniHarness(b, 'project B', 'Gate for B, different.');
+  applyHarness(loadHarness(a), owner.id);
+  assert.throws(() => applyHarness(loadHarness(b), owner.id), /used by "project A"/);
+  const content = db.prepare("SELECT f.content FROM agent_files f JOIN agents g ON g.id = f.agent_id WHERE g.user_id = ? AND g.name = 'gate'").get(owner.id) as { content: string };
+  assert.strictEqual(content.content, 'Gate for A.', 'nothing was written');
+});

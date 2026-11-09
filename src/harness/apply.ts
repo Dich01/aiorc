@@ -6,7 +6,7 @@ import db from '../db/client';
 import { writeEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES, FileConfig } from '../lib/entityFiles';
 import { canonicalJson, hashJson } from '../lib/canonicalJson';
 import { newSecret, PROJECT_KEY_PREFIX } from '../lib/secrets';
-import { validateProjectFlow } from '../orchestrator';
+import { validateProjectFlow, flowsReferencingAgents } from '../orchestrator';
 import { Harness, HarnessEntity } from './load';
 
 export interface ApplyReport {
@@ -25,6 +25,15 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
   const report: ApplyReport = { hashes: [], created: [], updated: [], newProjectKeys: [] };
   const now = Date.now();
 
+  // Entities are matched by (owner, name), so two harnesses of the same owner
+  // that both define, say, "merge-gate" would overwrite each other. Refuse to
+  // change an entity that a project outside this harness depends on.
+  const mine = new Set(h.projects.map(p => p.name));
+  const outsiders = (projects: { name: string }[]) => projects.map(p => p.name).filter(n => !mine.has(n));
+  const conflict = (what: string, used: string[]) => {
+    throw new Error(`${what} already exists for this owner and is used by ${used.map(n => `"${n}"`).join(', ')}, which this harness does not define. Applying would change it there too: rename it in the harness.`);
+  };
+
   const tx = db.transaction(() => {
     const upsertSimple = (table: 'skills' | 'contexts', cfg: FileConfig, e: HarnessEntity): string => {
       const row = db.prepare(`SELECT id, description FROM ${table} WHERE user_id = ? AND name = ?`).get(ownerId, e.name) as { id: string; description: string } | undefined;
@@ -35,6 +44,10 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
         db.prepare(`INSERT INTO ${table} (id, user_id, name, description, content, created_at) VALUES (?, ?, ?, ?, ?, ?)`).run(id, ownerId, e.name, e.description, entry, now);
         report.created.push(`${table.slice(0, -1)} ${e.name}`);
       } else if (row!.description !== e.description || !filesEqual(cfg.table, cfg.fk, id, e.files)) {
+        const used = table === 'skills'
+          ? outsiders(flowsReferencingAgents((db.prepare('SELECT agent_id FROM agent_skills WHERE skill_id = ?').all(id) as { agent_id: string }[]).map(r => r.agent_id)))
+          : outsiders(db.prepare('SELECT p.name FROM project_contexts pc JOIN projects p ON p.id = pc.project_id WHERE pc.context_id = ?').all(id) as { name: string }[]);
+        if (used.length) conflict(`The ${table.slice(0, -1)} "${e.name}"`, used);
         db.prepare(`UPDATE ${table} SET description = ? WHERE id = ?`).run(e.description, id);
         report.updated.push(`${table.slice(0, -1)} ${e.name}`);
       }
@@ -60,6 +73,8 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       } else {
         const curSkills = (db.prepare('SELECT skill_id FROM agent_skills WHERE agent_id = ? ORDER BY ordinal').all(id) as { skill_id: string }[]).map(r => r.skill_id);
         if (row!.description !== a.description || row!.output_schema !== schema || row!.allowed_tools !== tools || canonicalJson(curSkills) !== canonicalJson(wantSkills) || !filesEqual('agent_files', 'agent_id', id, a.files)) {
+          const used = outsiders(flowsReferencingAgents([id]));
+          if (used.length) conflict(`The agent "${a.name}"`, used);
           db.prepare('UPDATE agents SET description = ?, output_schema = ?, allowed_tools = ? WHERE id = ?').run(a.description, schema, tools, id);
           report.updated.push(`agent ${a.name}`);
         }
