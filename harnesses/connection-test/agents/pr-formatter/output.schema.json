@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": ["title", "body", "labels", "push_plan"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 72 },
+    "body": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "labels": { "type": "array", "items": { "type": "string", "maxLength": 50 }, "maxItems": 10 },
+    "push_plan": {
+      "type": "object",
+      "required": ["branch", "commands"],
+      "properties": {
+        "branch": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "commands": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "minItems": 1, "maxItems": 20 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

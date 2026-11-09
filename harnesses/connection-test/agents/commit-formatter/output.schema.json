@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["type", "subject", "body", "breaking", "message"],
+  "properties": {
+    "type": { "enum": ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"] },
+    "scope": { "type": "string", "pattern": "^[a-z0-9._/-]{0,40}$" },
+    "subject": { "type": "string", "minLength": 1, "maxLength": 72 },
+    "body": { "type": "string", "maxLength": 4000 },
+    "breaking": { "type": "boolean" },
+    "split_suggestion": { "type": "string", "maxLength": 1000 },
+    "message": { "type": "string", "minLength": 1, "maxLength": 5000 }
+  },
+  "additionalProperties": false
+}
