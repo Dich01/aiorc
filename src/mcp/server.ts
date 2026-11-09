@@ -273,8 +273,8 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
 
   if (toolName === 'workflow.eval') {
     const cases = db.prepare(
-      'SELECT id, name, input, expected_outcome, must_run_agents FROM eval_cases WHERE project_id = ? ORDER BY created_at ASC'
-    ).all(project.id) as { id: string; name: string; input: string; expected_outcome: string; must_run_agents: string }[];
+      'SELECT id, name, expected_outcome, must_complete_agents FROM eval_cases WHERE project_id = ? ORDER BY created_at ASC'
+    ).all(project.id) as { id: string; name: string; expected_outcome: string; must_complete_agents: string }[];
     const text = cases.length === 0
       ? 'This project has no eval cases defined.'
       : [
@@ -286,7 +286,7 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
             `## ${c.name}`,
             `- id: \`${c.id}\``,
             c.expected_outcome ? `- expected outcome: ${c.expected_outcome}` : '- expected outcome: (any End)',
-            c.must_run_agents ? `- required agents: ${c.must_run_agents}` : '',
+            c.must_complete_agents !== '[]' ? `- agents that must complete: ${(JSON.parse(c.must_complete_agents) as string[]).join(', ')}` : '',
             '',
           ].filter(Boolean).join('\n')),
         ].join('\n');

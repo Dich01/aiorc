@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
 import { EvalCase, FlowDocument, FlowNode, RunCaller } from '../db/schema';
-import { gradeEval } from '../lib/evalGrading';
+import { gradeEval, parseCriteria } from '../lib/evalGrading';
+import { factsFromEvents } from '../lib/evalFacts';
 import { recordExecutedUsage, recordPlannedUsage } from '../lib/usage';
 import { canonicalJson, hashJson, sha256 } from '../lib/canonicalJson';
 import { DEFAULT_OUTPUT_SCHEMA, validateOutput } from '../lib/outputSchema';
@@ -78,21 +79,21 @@ function persistState(runId: string, state: EngineState): void {
     .run(JSON.stringify(state), runStatusColumn(state), state.outcome ?? '', state.end_node ?? '', Date.now(), runId);
 }
 
-// Grade a finished eval run from server-verified facts only.
-function gradeIfEval(runId: string, evalCaseId: string, state: EngineState): string {
+// Grade a finished eval run from the event chain only (never from the
+// mutable run row). A broken chain fails the eval.
+function gradeIfEval(runId: string, evalCaseId: string): string {
   if (!evalCaseId) return '';
   const evalCase = db.prepare('SELECT * FROM eval_cases WHERE id = ?').get(evalCaseId) as EvalCase | undefined;
   if (!evalCase) return '';
-  const completedAgents = new Set(state.steps.filter(s => s.completed_at).flatMap(s => s.agents));
-  const verdict = gradeEval(
-    { expected_outcome: evalCase.expected_outcome, must_run_agents: evalCase.must_run_agents },
-    { completed: state.status === 'completed', outcome: state.outcome ?? '', executedAgents: completedAgents }
-  );
+  const { facts, problems } = factsFromEvents(runId);
+  const verdict = gradeEval(parseCriteria(evalCase), facts);
+  const reasons = [...problems.map(p => `audit chain: ${p}`), ...verdict.reasons];
+  const pass = reasons.length === 0;
   db.prepare('UPDATE runs SET eval_verdict = ?, eval_reasons = ? WHERE id = ?')
-    .run(verdict.pass ? 'pass' : 'fail', verdict.pass ? '' : JSON.stringify(verdict.reasons), runId);
-  return verdict.pass
-    ? `\n\n**EVAL "${evalCase.name}": PASS** (graded by the server).`
-    : `\n\n**EVAL "${evalCase.name}": FAIL**: ${verdict.reasons.join('; ')}.`;
+    .run(pass ? 'pass' : 'fail', pass ? '' : JSON.stringify(reasons), runId);
+  return pass
+    ? `\n\n**EVAL "${evalCase.name}": PASS** (graded by the server from the run's event chain).`
+    : `\n\n**EVAL "${evalCase.name}": FAIL**: ${reasons.join('; ')}.`;
 }
 
 // ── Prompt for one dispatched step ──────────────────────────────────────────
@@ -272,7 +273,7 @@ export function startRun(projectId: string, input: Record<string, unknown>, who:
     const start = flow.nodes.find(n => n.type === 'start')!;
     const target = flow.nodes.find(n => n.id === outgoing(flow, start.id)[0]!.to)!;
     const meta = enter(runId, snap, state, target, lines);
-    const evalText = state.status !== 'active' ? gradeIfEval(runId, evalCaseId, state) : '';
+    const evalText = state.status !== 'active' ? gradeIfEval(runId, evalCaseId) : '';
     persistState(runId, state);
     return respond(runId, state, lines.join('\n') + evalText, meta);
   })();
@@ -355,7 +356,7 @@ export function nextStep(runId: string, args: NextArgs): StepResult {
     const lines: string[] = [];
     const target = flow.nodes.find(n => n.id === choice.edge!.to)!;
     const meta = enter(runId, snap, state, target, lines);
-    const evalText = state.status !== 'active' ? gradeIfEval(runId, row.eval_case_id, state) : '';
+    const evalText = state.status !== 'active' ? gradeIfEval(runId, row.eval_case_id) : '';
     const result = respond(runId, state, lines.join('\n') + evalText, meta);
     state.last = { step: args.step, request_sha256: requestHash, response: { text: result.text, meta: result.meta } };
     persistState(runId, state);

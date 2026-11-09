@@ -263,15 +263,16 @@ export interface Run {
 }
 
 // A test case for a project's flow: a fixed input plus deterministic acceptance
-// criteria. Eval runs execute through the stepped engine, so the server grades
-// them against ground truth — no LLM judge involved.
+// criteria, graded from the run's event chain (see lib/evalGrading.ts).
 export interface EvalCase {
   id: string;
   project_id: string;
   name: string;
-  input: string;              // the request fed to the workflow
-  expected_outcome: string;   // substring matched against the End outcome reached ('' = any completion)
-  must_run_agents: string;    // comma-separated agent names that MUST execute ('' = none required)
+  input: string;                 // JSON object fed to workflow.start
+  expected_outcome: string;      // exact End outcome reached ('' = any End)
+  must_complete_agents: string;  // JSON array: agents that must COMPLETE a step
+  expected_findings: string;     // JSON array of matchers against the final output's findings
+  max_extra_findings: number | null;
   created_at: number;
 }
 
@@ -295,7 +296,7 @@ export interface AgentUsage {
 // Bump whenever CREATE_TABLES_SQL changes in a way an existing database can't
 // pick up through CREATE ... IF NOT EXISTS. There are no in-place migrations:
 // a database at another version is refused at startup (see db/client.ts).
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -732,10 +733,13 @@ CREATE TABLE IF NOT EXISTS eval_cases (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
   name TEXT NOT NULL,
-  input TEXT NOT NULL,
-  expected_outcome TEXT NOT NULL DEFAULT '',
-  must_run_agents TEXT NOT NULL DEFAULT '',
+  input TEXT NOT NULL,                              -- JSON object fed to workflow.start
+  expected_outcome TEXT NOT NULL DEFAULT '',        -- exact End outcome, '' = any End
+  must_complete_agents TEXT NOT NULL DEFAULT '[]',  -- JSON array of agent names
+  expected_findings TEXT NOT NULL DEFAULT '[]',     -- JSON array of finding matchers
+  max_extra_findings INTEGER,                       -- NULL = no limit
   created_at INTEGER NOT NULL,
+  UNIQUE (project_id, name),
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_eval_cases_project ON eval_cases(project_id);

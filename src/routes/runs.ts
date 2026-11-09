@@ -76,7 +76,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
   let evalCase = null;
   if (run.eval_case_id) {
-    evalCase = db.prepare('SELECT id, name, expected_outcome, must_run_agents FROM eval_cases WHERE id = ?')
+    evalCase = db.prepare('SELECT id, name, expected_outcome, must_complete_agents, expected_findings, max_extra_findings FROM eval_cases WHERE id = ?')
       .get(run.eval_case_id) ?? null;
   }
 

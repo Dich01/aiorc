@@ -1,51 +1,51 @@
 import assert from 'assert';
 import { section, test } from '../harness';
-import { gradeEval } from '../../lib/evalGrading';
+import { EvalCriteria, EvalRunFacts, gradeEval, matchFindings } from '../../lib/evalGrading';
 
-section('evalGrading');
+const criteria = (c: Partial<EvalCriteria> = {}): EvalCriteria => ({ expected_outcome: '', must_complete_agents: [], expected_findings: [], max_extra_findings: null, ...c });
+const facts = (f: Partial<EvalRunFacts> = {}): EvalRunFacts => ({ status: 'completed', outcome: 'clean', completedAgents: new Set(), findings: [], ...f });
 
+section('evalGrading (F10)');
 
-test('passes when the run completes, the outcome matches and the required agents ran', () => {
-  const v = gradeEval(
-    { expected_outcome: 'success', must_run_agents: 'brain, jira' },
-    { completed: true, outcome: 'End: success', executedAgents: new Set(['brain', 'mem', 'jira']) }
-  );
-  assert.strictEqual(v.pass, true);
-  assert.deepStrictEqual(v.reasons, []);
+test('the expected outcome is compared exactly, not by substring', () => {
+  assert.strictEqual(gradeEval(criteria({ expected_outcome: 'clean' }), facts({ outcome: 'clean' })).pass, true);
+  assert.strictEqual(gradeEval(criteria({ expected_outcome: 'clean' }), facts({ outcome: 'not clean' })).pass, false);
+  assert.strictEqual(gradeEval(criteria({ expected_outcome: 'changes-requested' }), facts({ outcome: 'changes' })).pass, false);
 });
 
-test('fails when the run did not complete', () => {
-  const v = gradeEval(
-    { expected_outcome: '', must_run_agents: '' },
-    { completed: false, outcome: 'invocation cap reached: brain', executedAgents: new Set(['brain']) }
-  );
+test('a run that did not reach an End fails, whatever else matches', () => {
+  for (const status of ['capped', 'cancelled', 'failed', 'active'] as const) {
+    assert.strictEqual(gradeEval(criteria(), facts({ status })).pass, false, status);
+  }
+});
+
+test('required agents must have completed a step, not just been dispatched', () => {
+  const v = gradeEval(criteria({ must_complete_agents: ['scope', 'verifier'] }), facts({ completedAgents: new Set(['scope']) }));
   assert.strictEqual(v.pass, false);
-  assert.ok(v.reasons[0]!.includes('did not complete'));
+  assert.ok(v.reasons[0]!.includes('verifier'));
 });
 
-test('fails when the outcome differs from the expected one', () => {
-  const v = gradeEval(
-    { expected_outcome: 'PR created', must_run_agents: '' },
-    { completed: true, outcome: 'verify done', executedAgents: new Set(['brain']) }
-  );
+test('expected findings match by field and minimum severity', () => {
+  const findings = [
+    { file: 'src/auth.ts', category: 'security', severity: 'high', title: 'x' },
+    { file: 'src/ui.ts', category: 'style', severity: 'low', title: 'y' },
+  ];
+  assert.strictEqual(gradeEval(criteria({ expected_findings: [{ file: 'src/auth.ts', category: 'security', min_severity: 'medium' }] }), facts({ findings })).pass, true);
+  assert.strictEqual(gradeEval(criteria({ expected_findings: [{ file: 'src/auth.ts', min_severity: 'critical' }] }), facts({ findings })).pass, false);
+  assert.strictEqual(gradeEval(criteria({ expected_findings: [{ file: 'src/auth' }] }), facts({ findings })).pass, false, 'no partial strings');
+});
+
+test('max_extra_findings limits false positives', () => {
+  const findings = [{ file: 'a', severity: 'high' }, { file: 'b', severity: 'low' }, { file: 'c', severity: 'low' }];
+  const c = criteria({ expected_findings: [{ file: 'a' }], max_extra_findings: 1 });
+  const v = gradeEval(c, facts({ findings }));
   assert.strictEqual(v.pass, false);
-  assert.ok(v.reasons[0]!.includes('expected outcome'));
+  assert.strictEqual(v.extra, 2);
+  assert.strictEqual(gradeEval({ ...c, max_extra_findings: 2 }, facts({ findings })).pass, true);
 });
 
-test('fails listing the required agents that never ran', () => {
-  const v = gradeEval(
-    { expected_outcome: '', must_run_agents: 'security-qa, quality-gate' },
-    { completed: true, outcome: 'success', executedAgents: new Set(['brain', 'security-qa']) }
-  );
-  assert.strictEqual(v.pass, false);
-  assert.ok(v.reasons[0]!.includes('quality-gate'));
-  assert.ok(!v.reasons[0]!.includes('security-qa,'));
-});
-
-test('an empty expected outcome accepts any clean completion', () => {
-  const v = gradeEval(
-    { expected_outcome: '', must_run_agents: '' },
-    { completed: true, outcome: 'anything at all', executedAgents: new Set() }
-  );
-  assert.strictEqual(v.pass, true);
+test('each expected finding needs its own finding, regardless of order', () => {
+  const findings = [{ file: 'a', category: 'security' }, { file: 'a', category: 'correctness' }];
+  assert.strictEqual(matchFindings([{ file: 'a' }, { file: 'a', category: 'security' }], findings).matched, 2);
+  assert.strictEqual(matchFindings([{ file: 'a' }, { file: 'a' }, { file: 'a' }], findings).matched, 2);
 });

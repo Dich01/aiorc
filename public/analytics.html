@@ -401,9 +401,9 @@
           </div>
           <form id="eval-form" style="display:grid;grid-template-columns:1fr 2fr 1fr 1fr auto;gap:8px;align-items:start">
             <input id="ev-name" placeholder="Case name" required style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
-            <input id="ev-input" placeholder="Input (the request fed to the workflow)" required style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
-            <input id="ev-outcome" placeholder="Expected outcome (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
-            <input id="ev-agents" placeholder="Required agents, comma-separated (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-input" placeholder="Input: text request, or a JSON object" required style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-outcome" placeholder="Expected End outcome, exact (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
+            <input id="ev-agents" placeholder="Agents that must complete a step, comma-separated (optional)" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit" />
             <button type="submit" class="btn btn-primary" style="padding:9px 16px">Add case</button>
           </form>
         </div>
@@ -831,8 +831,8 @@
               <div class="an-agent-name">${escHtml(c.name)}</div>
               <div class="an-projects" title="${escHtml(c.input)}">${escHtml(c.input.length > 80 ? c.input.slice(0, 80) + '…' : c.input)}</div>
             </td>
-            <td>${escHtml(c.expected_outcome) || '<span style="color:var(--muted)">any completion</span>'}</td>
-            <td>${escHtml(c.must_run_agents) || '<span style="color:var(--muted)">—</span>'}</td>
+            <td>${c.expected_outcome ? escHtml(c.expected_outcome) : '<span style="color:var(--muted)">any End</span>'}</td>
+            <td>${(() => { try { const a = JSON.parse(c.must_complete_agents || '[]'); return a.length ? escHtml(a.join(', ')) : '<span style="color:var(--muted)">—</span>'; } catch { return '—'; } })()}</td>
             <td class="num">${c.runs_graded}</td>
             <td class="num">${rate === null ? '<span class="pill pill-muted">never run</span>' : compliancePill(rate)}</td>
             <td>${c.last_verdict
@@ -859,7 +859,7 @@
         name: document.getElementById('ev-name').value.trim(),
         input: document.getElementById('ev-input').value.trim(),
         expected_outcome: document.getElementById('ev-outcome').value.trim(),
-        must_run_agents: document.getElementById('ev-agents').value.trim(),
+        must_complete_agents: document.getElementById('ev-agents').value.trim(),
       };
       if (!body.name || !body.input) return;
       const res = await authFetch('/evals', { method: 'POST', body: JSON.stringify(body) });
