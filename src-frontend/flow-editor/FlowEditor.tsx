@@ -402,14 +402,14 @@ function FlowEditorInner() {
             fitView
             fitViewOptions={{ padding: 0.2 }}
           >
-            <Background gap={16} color="#334155" />
+            <Background gap={18} size={1.2} color="#c9cfdb" />
             <Controls />
             <MiniMap nodeColor={(n) => {
               const t = (n.data as AnyNodeData)?.nodeType;
-              if (t === 'start') return '#22c55e';
-              if (t === 'end') return '#ef4444';
-              if (t === 'parallel') return '#f59e0b';
-              return '#4f46e5';
+              if (t === 'start') return '#0e1530';
+              if (t === 'end') return '#0e1530';
+              if (t === 'parallel') return '#c98a00';
+              return '#4361ee';
             }} />
           </ReactFlow>
           {nodes.length === 0 && (

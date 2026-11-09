@@ -319,7 +319,7 @@ export default function ConditionalEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: selected ? '#6366f1' : '#94a3b8',
+          stroke: selected ? '#4361ee' : '#8a93a8',
           strokeWidth: selected ? 2.5 : 1.8,
           fill: 'none',
         }}

@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
   <style>
     /* ── Anthropic article-style layout ─────────────────────────────────── */
     body { background:#fafafa; }
@@ -32,11 +36,11 @@
     .article ul, .article ol { padding-left:24px; margin-bottom:18px; }
     .article li { font-size:1rem; line-height:1.75; margin-bottom:8px; color:#1f2937; }
 
-    .article code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.86em; color:#1e40af; }
+    .article code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-family:var(--mono); font-size:0.86em; color:#1e40af; }
     .article a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
     .article a:hover { opacity:0.78; }
 
-    .pre-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:18px 22px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.82rem; line-height:1.7; white-space:pre; overflow-x:auto; margin:16px 0 24px; }
+    .pre-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:18px 22px; font-family:var(--mono); font-size:0.82rem; line-height:1.7; white-space:pre; overflow-x:auto; margin:16px 0 24px; }
     .pre-code .kw { color:#fbbf24; }
     .pre-code .com { color:#94a3b8; font-style:italic; }
 
@@ -129,18 +133,18 @@
 
   <main class="main-area">
   <article class="article">
-    <div class="article-eyebrow">Technical documentation</div>
     <h1 class="article-title">AIOrc: a server-driven control plane for agent workflows over MCP</h1>
-    <p class="article-deck">AIOrc stores a team's agents, skills and contexts, and exposes each project's workflow graph to any MCP client. The server never calls a model. It hands the client one step at a time, refuses to advance until each step's output matches the agent's JSON Schema, decides every transition itself, and writes each event to an append-only hash chain that exports as Ed25519-signed evidence.</p>
+    <p class="article-deck">AIOrc stores a team's agents, skills and contexts, and exposes each project's workflow graph to any MCP client. The server never calls a model. By default it hands the client one step at a time, refuses to advance until each step's output matches the agent's JSON Schema, decides rule-based transitions itself and checks every other one against the graph, and writes each event to an append-only hash chain that exports as Ed25519-signed evidence.</p>
 
     <div class="toc">
       <div class="toc-title">Contents</div>
       <ol>
         <li><a href="#resumen">Summary and positioning</a></li>
         <li><a href="#stack">Technical stack</a></li>
-        <li><a href="#contrato">How a run executes (MCP contract v2)</a></li>
+        <li><a href="#contrato">How a run executes (MCP contract v2.1)</a></li>
+        <li><a href="#modos">Execution modes: server-orchestrated and model-orchestrated</a></li>
         <li><a href="#completado">Dispatched is not completed</a></li>
-        <li><a href="#transiciones">Transitions the server decides</a></li>
+        <li><a href="#transiciones">Transitions the server decides or checks</a></li>
         <li><a href="#snapshots">Instructions frozen per run</a></li>
         <li><a href="#garantias">What the server guarantees, and what it does not</a></li>
         <li><a href="#auditoria">Audit chain and verification</a></li>
@@ -155,7 +159,7 @@
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="resumen">Summary and positioning</h2>
     <p>Agent frameworks and workflow tools usually hand the model a plan and trust it to follow along; what actually happened is then reconstructed from the model's own account. AIOrc takes the opposite position: the workflow graph lives on the server, the server releases one step at a time, and a step only counts once the model hands back an output of the declared shape.</p>
-    <p>The model still does the work: it reads the instructions, runs tools in its own environment and produces the outputs. AIOrc is the contract and the auditor. That split is deliberate: the server stays small, deterministic and free of any model dependency, and every claim it makes about a run is something it checked itself.</p>
+    <p>The model still does the work: it reads the instructions, runs tools in its own environment and produces the outputs. AIOrc is the contract and the auditor. That split is deliberate: the server stays small, deterministic and free of any model dependency, and every claim it makes about a server-orchestrated run is something it checked itself; model-orchestrated runs are stored and labelled as self-declared.</p>
 
     <div class="callout">
       <div class="callout-title">Key idea</div>
@@ -181,8 +185,8 @@
     </table>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
-    <h2 id="contrato">How a run executes (MCP contract v2)</h2>
-    <p>Three tools are exposed: <code>workflow.start</code>, <code>workflow.next</code> and <code>workflow.eval</code>.</p>
+    <h2 id="contrato">How a run executes (MCP contract v2.1)</h2>
+    <p>Four tools are exposed in every project: <code>workflow.start</code>, <code>workflow.next</code>, <code>workflow.report</code> and <code>workflow.eval</code>. This section describes server-orchestrated mode, the default; model-orchestrated mode is described <a href="#modos">below</a>.</p>
     <ol>
       <li><code>workflow.start {request | input, evalCase?}</code>: the server validates the flow and the run input (against the project's input schema, when it has one), freezes a snapshot of everything the run uses, and returns step 1: the agent's instructions and the JSON Schema its output must satisfy.</li>
       <li><code>workflow.next {runId, step, outputs: [{node, output}], transition?}</code>: the client hands back one output per dispatched node. If any is missing or invalid, or the step number is not the current one, the call is rejected and nothing is consumed.</li>
@@ -191,16 +195,25 @@
     <p>Retries are safe: resending the last accepted call returns the same answer without advancing. Every advance happens in a single database transaction together with its audit events.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
-    <h2 id="completado">Dispatched is not completed</h2>
-    <p>A step is <em>dispatched</em> when its instructions are sent, and <em>completed</em> only when its output is accepted. Usage analytics, eval grading and the audit trail all count completed steps. Outputs are stored whole, never truncated, with their SHA-256. When the run input lists <code>changed_files</code>, the server also rejects any finding whose <code>file</code> is not in that list.</p>
+    <h2 id="modos">Execution modes: server-orchestrated and model-orchestrated</h2>
+    <p>Each project has a switch in <em>Settings → Execution mode</em> (also <code>PATCH /projects/:id/execution-mode</code>, or <code>execution_mode</code> in a harness). The mode is frozen in the run when <code>workflow.start</code> is called, so switching never affects runs in flight, and the client's tools and <code>CLAUDE.md</code> rule stay the same in both modes.</p>
+    <ul>
+      <li><strong>Server-orchestrated</strong> (default): everything on this page. The server hands out one step at a time and checks every output, transition and cap.</li>
+      <li><strong>Model-orchestrated</strong>: <code>workflow.start</code> returns the whole flow in one document (every node's instructions and output shape, the routing with edge ids, rule edges written out for the model to evaluate, caps and outcomes). The model runs it on its own and finishes with <code>workflow.report {runId, report}</code>: its own account of the path, invocations and findings. The run goes from <code>delivered</code> to <code>reported</code>; it is never <code>completed</code>, because only the server can complete a run.</li>
+    </ul>
+    <p>What model-orchestrated mode gives up: no output validation, no enforced transitions or caps, no way to stop a run midway (cancelling only refuses its report), no external MCP tools, and every agent's instructions are sent, including branches that are not taken. What it keeps: the same flow validation and frozen snapshot at start, the report stored whole with its SHA-256 and chained as a <code>report.received</code> event, and honest labels: model-orchestrated runs are "self-declared" in Audit and Analytics, never counted as verified, and their usage is capped at what the flow allows. Analytics replays a model-orchestrated run's reported path against its flow to flag agents the path required but the report skips. Eval runs always execute server-orchestrated, whatever the project's mode, and the review runners refuse model-orchestrated exports by default.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
-    <h2 id="transiciones">Transitions the server decides</h2>
+    <h2 id="completado">Dispatched is not completed</h2>
+    <p>A step is <em>dispatched</em> when its instructions are sent, and <em>completed</em> only when its output is accepted. Eval grading and the audit trail count only completed steps. Usage analytics also shows model-orchestrated runs' self-declared usage, labelled as such. Outputs are stored whole, never truncated, with their SHA-256. When the run input lists <code>changed_files</code>, the server also rejects any finding whose <code>file</code> is not in that list.</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="transiciones">Transitions the server decides or checks</h2>
     <ul>
       <li><strong>One exit</strong>: taken.</li>
       <li><strong>Rule exits</strong> (<code>when: {path, op, value}</code> with <code>eq, ne, in, gt, gte, lt, lte, exists</code> and <code>all</code>/<code>any</code>): evaluated by the server, in priority order, on the validated output. The client does not choose.</li>
       <li><strong>Natural-language exits</strong> (<code>condition</code>): the client picks one by its exact edge id. Agent names, condition text and partial matches are refused.</li>
-      <li>A node with several exits has exactly one default edge. There is no "none": a run completes only at an End. Other endings are <code>capped</code>, <code>cancelled</code>, <code>abandoned</code> and <code>failed</code>.</li>
+      <li>A node with several exits has exactly one default edge. There is no "none": a run completes only at an End. Other endings are <code>capped</code>, <code>cancelled</code> and <code>failed</code>; a run idle for 2 h shows as <code>abandoned</code> and resumes if the client comes back.</li>
       <li><strong>Forks</strong>: a Parallel node fans out to agent branches that all join one node. The server waits for every branch output before moving on.</li>
     </ul>
     <p>Flows are validated when saved and again at <code>workflow.start</code>: unique ids, known node types, every node reachable from Start and able to reach an End, exits for every non-End node, the fork shape, and an output schema wherever rule edges need one.</p>
@@ -212,13 +225,13 @@
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="garantias">What the server guarantees, and what it does not</h2>
-    <p><strong>Guaranteed</strong>: the order of steps; that every completed step produced an output of the declared shape; that transitions follow the graph (decided by the server for rule edges); that the run used the instructions it started with; that external tools were only called during the run, by an agent allowed to call them; and that the history cannot be changed without breaking the hash chain and the signature.</p>
+    <p><strong>In server-orchestrated mode, guaranteed</strong>: the order of steps; that every completed step produced an output of the declared shape; that transitions follow the graph (decided by the server for rule edges); that the run used the instructions it started with; that external tools were only called during the run, by an agent allowed to call them; and that the history cannot be changed without breaking the hash chain and the signature. Model-orchestrated runs only guarantee the flow validation, the frozen snapshot and that the stored report is the one chained.</p>
     <p><strong>Not guaranteed</strong>: that the model did the work well. A schema-valid output can still be wrong, and content in a diff can mislead the model. That is why the reference review harness has a verifier step, keeps its results advisory, and measures quality with evals built on pull requests with seeded bugs.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="auditoria">Audit chain and verification</h2>
-    <p>Every run writes <code>run.started</code>, <code>step.dispatched</code>, <code>step.completed</code>, <code>transition.taken</code>, <code>tool.called</code> and a final <code>run.completed</code>, <code>run.capped</code>, <code>run.cancelled</code> or <code>run.failed</code> event. Each event hash covers the previous hash and the canonical JSON of the event; database triggers make the table append-only.</p>
-    <p>The export (<code>aiorc.audit.v1</code>) carries the event chain, the manifest of frozen entities and their hashes, every accepted output, the engine version, the verified and the declared caller, and the commit it reviewed (<code>repo</code>, <code>base_sha</code>, <code>head_sha</code>, <code>pr_number</code>, <code>diff_sha256</code>). It is signed with Ed25519. Anyone with the public key can verify it offline with <code>npm run audit:verify</code>, or on the server with <code>POST /audit/verify</code>.</p>
+    <p>A server-orchestrated run writes <code>run.started</code>, <code>step.dispatched</code>, <code>step.completed</code>, <code>transition.taken</code>, <code>tool.called</code> and a final <code>run.completed</code>, <code>run.capped</code>, <code>run.cancelled</code> or <code>run.failed</code> event. A model-orchestrated run writes <code>run.started</code>, then <code>report.received</code> (or <code>run.cancelled</code>). Each event hash covers the previous hash and the canonical JSON of the event; database triggers make the table append-only.</p>
+    <p>The export (<code>aiorc.audit.v2</code>) carries the event chain, the manifest of frozen entities and their hashes, every accepted output, the engine version, the run's execution mode (with the self-declared report of a model-orchestrated run, checked against its chained hash), the verified and the declared caller, and the commit the run input declares it reviewed (<code>repo</code>, <code>base_sha</code>, <code>head_sha</code>, <code>pr_number</code>, <code>diff_sha256</code>), as supplied by the caller. It is signed with Ed25519. Anyone with the public key can verify it offline with <code>npm run audit:verify</code>, or on the server with <code>POST /audit/verify</code>.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="harness">Harnesses and review runners</h2>
@@ -227,7 +240,7 @@
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="limitaciones">Limitations</h2>
     <h3>1. One round trip per step</h3>
-    <p>Each step costs a call to the server. The price buys the guarantees above; flows with many tiny steps feel it most.</p>
+    <p>Each step costs a call to the server. The price buys the guarantees above; flows with many tiny steps feel it most. A project can switch to <a href="#modos">model-orchestrated mode</a> to remove the round trips, at the cost of the execution guarantees.</p>
     <h3>2. Fork branches are a single agent</h3>
     <p>Each branch of a Parallel node is one agent whose only exit is the join. Multi-step branches are not supported yet.</p>
     <h3>3. Rules are edited as files</h3>
@@ -236,7 +249,7 @@
     <p>SQLite and in-memory login throttling assume one server process.</p>
 
     <h2 id="eu-ai-act">Audit logging and the EU AI Act (Article 12)</h2>
-    <p>Article 12 of the EU AI Act requires high-risk AI systems to support automatic event logging across their lifetime, with logs that allow tracing how each output was produced (retention of at least six months under Articles 19/26). AIOrc's audit layer maps directly onto that requirement for agentic workflows:</p>
+    <p>Article 12 of the EU AI Act requires high-risk AI systems to support automatic event logging across their lifetime, with logs that allow tracing how each output was produced (retention of at least six months under Articles 19/26). AIOrc's audit layer supports that requirement for agentic workflows run in server-orchestrated mode:</p>
     <ul>
       <li><strong>Per-step events</strong>: every dispatch, completed output, transition (and what decided it) and tool call is an event in an append-only hash chain, with timestamps and the caller's identity (verified through a personal access token, or marked as declared).</li>
       <li><strong>Interpretability</strong>: the Audit page reconstructs any run step by step with its outputs; the same data is available as a signed JSON export.</li>
@@ -244,13 +257,13 @@
       <li><strong>Tool-call trail</strong>: calls to external MCP servers proxied through AIOrc are logged with server, tool, caller, outcome and latency.</li>
       <li><strong>Retention</strong>: runs and telemetry live in the instance database with no automatic expiry; the retention policy is in your hands (the deadline for high-risk obligations moved to December 2027 under the 2026 Digital Omnibus, but the logging architecture is in place today).</li>
     </ul>
-    <p>This does not make a deployment "compliant" by itself — compliance is a property of the whole system — but the event log Article 12 demands is exactly what AIOrc produces as a side effect of verified execution.</p>
+    <p>This does not make a deployment "compliant" by itself — compliance is a property of the whole system — but the event log Article 12 asks for is what server-orchestrated runs produce as a side effect.</p>
 
     <h2 id="eval-gating">Gating agent changes with evals</h2>
     <p>Evals turn "I think this change improved the agent" into a measurable verdict. The recommended working pattern:</p>
     <ol>
       <li>Define 3-10 eval cases per flow (in the harness files, or Usage analytics → Evals): a fixed input, the exact End it must reach, the agents that must complete a step, and for review flows the findings a seeded bug must produce (<code>{file, category, min_severity}</code>) with a cap on extra findings.</li>
-      <li>Before changing an agent or the flow, run the suite from any MCP client: call <code>workflow.eval</code>, then <code>workflow.start</code> with each case id. The server grades each run from its event chain; the model never grades its own work.</li>
+      <li>Before changing an agent or the flow, run the suite from any MCP client: call <code>workflow.eval</code>, then <code>workflow.start</code> with each case id. Eval runs always execute server-orchestrated, and the server grades each run from its event chain; the model never grades its own work.</li>
       <li>Change the agent. Run the suite again.</li>
       <li>Compare pass rates in the Evals table. A drop means the change broke a path your team depends on — fix it before anyone else hits it.</li>
     </ol>
@@ -261,7 +274,7 @@
       <div class="ref-item">
         <span class="ref-num">[1]</span>
         <span class="ref-title">Anthropic — Model Context Protocol (MCP)</span>
-        <div class="ref-meta">Specification of the protocol AIOrc implements. Defines how Claude connects to external tools via stdio or HTTP. AIOrc exposes <code>workflow.start</code>, <code>workflow.next</code> and <code>workflow.eval</code> as MCP tools. <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">modelcontextprotocol.io</a></div>
+        <div class="ref-meta">Specification of the protocol AIOrc implements. Defines how Claude connects to external tools via stdio or HTTP. AIOrc exposes <code>workflow.start</code>, <code>workflow.next</code>, <code>workflow.report</code> and <code>workflow.eval</code> as MCP tools. <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">modelcontextprotocol.io</a></div>
       </div>
       <div class="ref-item">
         <span class="ref-num">[2]</span>
@@ -306,7 +319,7 @@
       <div class="ref-item">
         <span class="ref-num">[10]</span>
         <span class="ref-title">Liu et al. — Lost in the Middle: How Language Models Use Long Contexts (2023)</span>
-        <div class="ref-meta">Seminal work on <em>context rot</em>. One reason AIOrc hands the model one step at a time instead of the whole flow: long contexts degrade how well models use what is in them. <a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">arxiv.org/abs/2307.03172</a></div>
+        <div class="ref-meta">Seminal work on <em>context rot</em>. One reason AIOrc's default mode hands the model one step at a time instead of the whole flow: long contexts degrade how well models use what is in them. <a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">arxiv.org/abs/2307.03172</a></div>
       </div>
       <div class="ref-item">
         <span class="ref-num">[11]</span>
@@ -316,7 +329,7 @@
     </div>
 
     <div class="footer-meta">
-      AIOrc · Technical documentation · Version 1.0
+      AIOrc v0.1 · MCP contract v2.1 · Technical documentation
     </div>
   </article>
   </main>
@@ -332,41 +345,7 @@
     const mount = document.getElementById('shell-mount');
     if (isLoggedIn) {
       document.body.classList.add('has-sidebar');
-      mount.outerHTML = `
-        <aside class="sidebar" id="sidebar">
-          <div class="sidebar-header">
-            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
-            <button class="sidebar-collapse-btn" id="sidebar-toggle" onclick="toggleSidebar()">‹</button>
-          </div>
-          <div class="sidebar-section-title">Workspace</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="dashboard.html?tab=projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>
-            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
-          </nav>
-          <div class="sidebar-section-title">Insights</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="analytics.html"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
-            <a class="sidebar-item" href="audit.html" title="Audit"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>
-          </nav>
-          <div class="sidebar-section-title">Community</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="repository.html"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>
-            <a class="sidebar-item" href="issues.html"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
-          </nav>
-          <div class="sidebar-section-title">Help</div>
-          <nav class="sidebar-nav">
-            <button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>
-            <a class="sidebar-item active" href="faq.html"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>
-          </nav>
-          <div class="sidebar-footer">
-            <div class="sidebar-user" style="font-weight:600">${userNickname ? '@' + esc(userNickname) : esc(userEmail)}</div>
-            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(userEmail)}</div>
-            <a href="#" class="sidebar-logout" id="logout-btn">Log out</a>
-          </div>
-        </aside>`;
+      mount.outerHTML = SiteShell.sidebarHTML('docs');
 
       const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
       const apply = () => {
@@ -393,19 +372,7 @@
         } catch {}
       })();
     } else {
-      mount.outerHTML = `
-        <nav class="anon-nav">
-          <a href="index.html" class="logo">AI<span>Orc</span></a>
-          <div style="display:flex;gap:32px;align-items:center">
-            <a href="faq.html" style="color:#fff;text-decoration:none;font-size:0.9rem;font-weight:600">Documentation</a>
-            <a href="repository.html" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">Public repository</a>
-            <a href="index.html#origen" style="color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.9rem">About</a>
-          </div>
-          <div class="anon-nav-cta">
-            <a href="index.html">Log in</a>
-            <a href="index.html" class="cta">Create account</a>
-          </div>
-        </nav>`;
+      mount.outerHTML = SiteShell.publicNavHTML('docs');
     }
   </script>
 </body>

@@ -40,7 +40,7 @@ The test runner is a small custom harness (`src/tests/harness.ts`, entry point `
 | `src/routes/` | Express route handlers, one file per resource |
 | `src/shared/flow.ts` | Flow model, transition rules and graph validation, imported by the server and the editor |
 | `src/orchestrator/` | The execution engine — run snapshots, step dispatch, output validation, transitions, invocation caps |
-| `src/mcp/` | MCP server (`workflow.start`, `workflow.next`, `workflow.eval`) over JSON-RPC 2.0, with ajv-validated arguments |
+| `src/mcp/` | MCP server (`workflow.start`, `workflow.next`, `workflow.report`, `workflow.eval`) over JSON-RPC 2.0, with ajv-validated arguments |
 | `src/lib/` | Audit chain and signing, eval grading, outbound guard, canonical JSON, usage |
 | `src/db/` | Schema (single `CREATE_TABLES_SQL`, versioned) and SQLite client (WAL mode) |
 | `src/harness/`, `harnesses/` | Harness loader/applier, and the reference `code-review` harness |
@@ -53,16 +53,16 @@ The test runner is a small custom harness (`src/tests/harness.ts`, entry point `
 ## Conventions
 
 - **TypeScript** on the backend. Keep types explicit at module boundaries.
-- **Schema changes** go into `CREATE_TABLES_SQL` and bump `SCHEMA_VERSION` in `src/db/schema.ts`. There are no in-place migrations.
+- **Schema changes** go into `CREATE_TABLES_SQL` and bump `SCHEMA_VERSION` in `src/db/schema.ts`. New tables need nothing else (`CREATE TABLE IF NOT EXISTS`). The only in-place migration is the additive 6 → 7 step in `src/db/client.ts` (one column with a default); any other version mismatch is refused at startup unless `AIORC_DB_RESET=1`. Add a new step only for purely additive changes, with a test in `src/tests/integration/bootstrap.test.ts`.
 - **Harness changes** (prompts, schemas, flows, evals) are files under `harnesses/`; run `npm run harness:apply -- <dir> --dry-run` to validate them.
 - **The server never calls an LLM.** AIOrc is the contract and the auditor; the consuming model does the work. A PR that adds an LLM dependency to the server path is very unlikely to be merged.
-- **Existing code comments and test names are in Spanish.** You are welcome to write new comments in English or Spanish — please don't translate existing ones as part of an unrelated PR.
+- **Some older comments in `public/project.html` are in Spanish.** Code and tests are otherwise in English; please don't translate the old comments as part of an unrelated PR.
 - **No emoji in UI copy, labels or code.**
 - Match the style of the file you're editing rather than introducing a new one.
 
 ## Never commit a database
 
-`data/` is gitignored and holds real runtime data. `*.db`, `*.db-wal`, `*.db-shm` and `*.bak` files must never enter a commit — they contain user emails, password hashes and project API keys. If you think you may have committed one, say so in the PR before it gets merged; it is far easier to fix before it lands.
+`data/` is gitignored and holds real runtime data. `*.db`, `*.db-wal`, `*.db-shm` and `*.bak` files must never enter a commit — they contain user emails, password hashes and project key hashes. If you think you may have committed one, say so in the PR before it gets merged; it is far easier to fix before it lands.
 
 Likewise: `.env`, `.jwt-secret`, `.audit-ed25519.key` and any `*.key` or `*.pem` are ignored and must stay that way.
 

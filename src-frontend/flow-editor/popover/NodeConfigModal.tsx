@@ -30,7 +30,7 @@ export default function NodeConfigModal({ mode, initialValue, onSave, onClose }:
       ? 'How many times this agent can be invoked at most during a workflow execution. Default 10, max 50.'
       : mode === 'end_outcome'
         ? 'Free text describing in what state the flow ends when this End is reached. E.g.: "all OK", "critical failure", "needs manual approval". Optional.'
-        : 'Optional label to identify this fork in the compiled prompt. E.g.: "QA gates", "domain". If left empty, it is shown as "Parallel".';
+        : 'Optional label to identify this fork in the step instructions (and in the fast-mode prompt). E.g.: "QA gates", "domain". If left empty, it is shown as "Parallel".';
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

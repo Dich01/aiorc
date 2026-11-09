@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
   <style>
     body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
     .sidebar { width:240px; background:#1a1a2e; color:#e0e0ff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); transition:width .2s ease; z-index:50; }
@@ -47,7 +51,7 @@
     .profile-header { display:flex; gap:24px; align-items:flex-start; margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid var(--border); }
     .profile-avatar-wrap { flex-shrink:0; }
     .profile-avatar-img { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; border:3px solid var(--border); }
-    .profile-avatar-initials { width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg,#4361ee,#7c3aed); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:2rem; }
+    .profile-avatar-initials { width:96px; height:96px; border-radius:50%; background:var(--route-tint); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--primary); font-size:2rem; }
     .profile-info { flex:1; min-width:0; }
     .profile-nick { font-size:1.5rem; font-weight:700; color:var(--text); margin-bottom:2px; }
     .profile-name { font-size:0.9rem; color:var(--muted); margin-bottom:10px; }
@@ -182,42 +186,7 @@
   var mount = document.getElementById('shell-mount');
   if (isLoggedIn) {
     document.body.classList.add('has-sidebar');
-    mount.outerHTML = '<aside class="sidebar" id="sidebar">' +
-      '<div class="sidebar-header">' +
-        '<div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>' +
-        '<button class="sidebar-collapse-btn" id="sidebar-toggle" onclick="toggleSidebar()">&#8249;</button>' +
-      '</div>' +
-      '<div class="sidebar-section-title">Workspace</div>' +
-      '<nav class="sidebar-nav">' +
-        '<a class="sidebar-item" href="dashboard.html?tab=projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>' +
-        '<a class="sidebar-item" href="dashboard.html?tab=agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>' +
-        '<a class="sidebar-item" href="dashboard.html?tab=skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>' +
-        '<a class="sidebar-item" href="dashboard.html?tab=contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>' +
-        '<a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>' +
-      '</nav>' +
-      '<div class="sidebar-section-title">Insights</div>' +
-      '<nav class="sidebar-nav">' +
-        '<a class="sidebar-item" href="analytics.html"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>' +
-        '<a class="sidebar-item" href="audit.html"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>' +
-      '</nav>' +
-      '<div class="sidebar-section-title">Community</div>' +
-      '<nav class="sidebar-nav">' +
-        '<a class="sidebar-item" href="repository.html"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>' +
-        '<a class="sidebar-item" href="issues.html"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>' +
-      '</nav>' +
-      '<div class="sidebar-section-title">Help</div>' +
-      '<nav class="sidebar-nav">' +
-        '<button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>' +
-        '<a class="sidebar-item" href="faq.html"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>' +
-      '</nav>' +
-      '<div class="sidebar-footer">' +
-        '<a href="' + (myNick ? 'user.html?nick=' + encodeURIComponent(myNick) : '#') + '" class="sidebar-user" style="font-weight:600;text-decoration:none;color:inherit">' +
-          (myNick ? '@' + esc(myNick) : esc(myEmail)) +
-        '</a>' +
-        '<div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">' + esc(myEmail) + '</div>' +
-        '<a href="#" class="sidebar-logout" id="logout-btn">Log out</a>' +
-      '</div>' +
-    '</aside>';
+    mount.outerHTML = SiteShell.sidebarHTML('profile');
 
     var SK = 'aiorc.sidebar.collapsed';
     window.toggleSidebar = function() {
@@ -246,16 +215,7 @@
       }).catch(function(){});
 
   } else {
-    mount.outerHTML =
-      '<nav class="anon-nav">' +
-        '<a href="/" class="logo">AI<span>Orc</span></a>' +
-        '<div class="anon-nav-cta">' +
-          '<a href="repository.html">Public repository</a>' +
-          '<a href="faq.html">Documentation</a>' +
-          '<a href="index.html">Log in</a>' +
-          '<a href="index.html" class="cta">Create account</a>' +
-        '</div>' +
-      '</nav>';
+    mount.outerHTML = SiteShell.publicNavHTML('profile');
   }
 
   /* ── avatar HTML builder ── */
@@ -291,8 +251,8 @@
       '<div class="repo-card-desc' + (desc ? '' : ' empty') + '">' + esc(desc || 'No description.') + '</div>' +
       '<div class="repo-stats-row">' +
         '<span class="repo-stat' + ((p.stars_count || 0) > 0 ? ' gold' : '') + '" title="Stars">&#9733; ' + (p.stars_count || 0) + '</span>' +
-        '<span class="repo-stat" title="Forks">&#x1F374; ' + (p.forks_count || 0) + '</span>' +
-        '<span class="repo-stat" title="Agents">&#9881; ' + (p.agents_count || 0) + '</span>' +
+        '<span class="repo-stat" title="Forks"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ' + (p.forks_count || 0) + '</span>' +
+        '<span class="repo-stat" title="Agents"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6.5" width="12" height="9.5" rx="2.2"/><path d="M10 3.5v3M7.6 10.6h.01M12.4 10.6h.01M8.3 13.4h3.4"/></svg> ' + (p.agents_count || 0) + '</span>' +
       '</div>' +
       '<div class="card-footer"><a href="repository.html" style="font-size:0.8rem;color:var(--primary);text-decoration:none">View in repository &#8594;</a></div>' +
     '</div>';
@@ -306,8 +266,8 @@
       '<div class="repo-card-desc' + (desc ? '' : ' empty') + '">' + esc(desc || 'No description.') + '</div>' +
       '<div class="repo-stats-row">' +
         '<span class="repo-stat' + ((a.stars_count || 0) > 0 ? ' gold' : '') + '" title="Stars">&#9733; ' + (a.stars_count || 0) + '</span>' +
-        '<span class="repo-stat" title="Forks">&#x1F374; ' + (a.forks_count || 0) + '</span>' +
-        '<span class="repo-stat" title="Skills">&#9881; ' + skills + '</span>' +
+        '<span class="repo-stat" title="Forks"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ' + (a.forks_count || 0) + '</span>' +
+        '<span class="repo-stat" title="Skills"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 3 6.5 10 10l7-3.5z"/><path d="m3 10 7 3.5 7-3.5"/><path d="m3 13.5 7 3.5 7-3.5"/></svg> ' + skills + '</span>' +
       '</div>' +
       '<div class="card-footer"><a href="repository.html" style="font-size:0.8rem;color:var(--primary);text-decoration:none">View in repository &#8594;</a></div>' +
     '</div>';
@@ -320,7 +280,7 @@
       '<div class="repo-card-desc' + (desc ? '' : ' empty') + '">' + esc(desc || 'No description.') + '</div>' +
       '<div class="repo-stats-row">' +
         '<span class="repo-stat' + ((s.stars_count || 0) > 0 ? ' gold' : '') + '" title="Stars">&#9733; ' + (s.stars_count || 0) + '</span>' +
-        '<span class="repo-stat" title="Forks">&#x1F374; ' + (s.forks_count || 0) + '</span>' +
+        '<span class="repo-stat" title="Forks"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ' + (s.forks_count || 0) + '</span>' +
       '</div>' +
       '<div class="card-footer"><a href="repository.html" style="font-size:0.8rem;color:var(--primary);text-decoration:none">View in repository &#8594;</a></div>' +
     '</div>';
@@ -438,7 +398,7 @@
     apiFetch('/users/me/tokens').then(function(r){ return r.ok ? r.json() : []; }).then(function(list) {
       var active = list.filter(function(t){ return !t.revoked_at; });
       box.innerHTML =
-        '<p style="font-size:0.85rem;color:var(--muted);margin:0 0 10px">Use a token with a project ID (<code>AIORC_PROJECT_ID</code> + <code>AIORC_TOKEN</code>) to run any project you own or were invited to. Runs are recorded under your name. A token is shown only once.</p>' +
+        '<p style="font-size:0.85rem;color:var(--muted);margin:0 0 10px">Use a token with a project ID (<code>AIORC_PROJECT_ID</code> + <code>AIORC_TOKEN</code>) to run any project you own or were invited to, and any public project. Runs are recorded under your name. A token is shown only once.</p>' +
         '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">' +
           '<input id="new-token-name" placeholder="Token name, e.g. laptop or ci" maxlength="80" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">' +
           '<button class="profile-edit-btn" id="create-token-btn" style="margin:0">Create token</button>' +
@@ -544,9 +504,9 @@
                   '<span class="profile-meta-item">Member since ' + fmtDate(user.created_at) + '</span>' +
                   '<span class="profile-meta-item">&#183; Last activity ' + fmtDate(user.last_login) + '</span>' +
                   '<span class="profile-meta-item">&#183; &#9733; ' + (st.stars_received || 0) + ' received</span>' +
-                  '<span class="profile-meta-item">&#183; &#x1F374; ' + (st.forks_received || 0) + ' received</span>' +
+                  '<span class="profile-meta-item">&#183; <svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="4.6" r="1.7"/><circle cx="14" cy="4.6" r="1.7"/><circle cx="10" cy="15.4" r="1.7"/><path d="M6 6.3v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1M10 9.3v4.4"/></svg> ' + (st.forks_received || 0) + ' received</span>' +
                 '</div>' +
-                (isMe ? '<button class="profile-edit-btn" onclick="toggleEdit(true)">&#9998; Edit profile</button>' : '') +
+                (isMe ? '<button class="profile-edit-btn" onclick="toggleEdit(true)">Edit profile</button>' : '') +
               '</div>' +
             '</div>';
 

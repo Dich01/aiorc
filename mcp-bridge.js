@@ -5,8 +5,10 @@
  * HTTPS, writes the response to stdout. For clients that only speak stdio;
  * Claude Code can also connect to AIORC_URL directly as an HTTP MCP server.
  *
- * Usage: AIORC_URL=https://aiorc.example.com/mcp AIORC_PROJECT_KEY=aiorc_pk_... node mcp-bridge.js
- *   AIORC_TOKEN       optional personal access token (aiorc_pat_...): the run's
+ * Usage: AIORC_URL=https://aiorc.example.com/mcp AIORC_PROJECT_ID=<id> AIORC_TOKEN=aiorc_pat_... node mcp-bridge.js
+ *    or: AIORC_URL=... AIORC_PROJECT_KEY=aiorc_pk_... node mcp-bridge.js   (CI, runners)
+ *   AIORC_TOKEN       personal access token (aiorc_pat_...): required with
+ *                     AIORC_PROJECT_ID, optional with the key; the run's
  *                     caller becomes a verified identity
  *   AIORC_USER_EMAIL  optional, recorded only as a declared (unverified) caller
  */
@@ -22,7 +24,7 @@ const USER_EMAIL = process.env.AIORC_USER_EMAIL;
 const AIORC_URL = process.env.AIORC_URL || 'http://localhost:3001/mcp';
 
 if (!PROJECT_KEY && !PROJECT_ID) {
-  process.stderr.write('AIOrc bridge: set AIORC_PROJECT_KEY (private) or AIORC_PROJECT_ID (public).\n');
+  process.stderr.write('AIOrc bridge: set AIORC_PROJECT_ID with AIORC_TOKEN, or AIORC_PROJECT_KEY.\n');
   process.exit(1);
 }
 

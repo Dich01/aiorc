@@ -26,6 +26,7 @@ Findings that are especially relevant to AIOrc's threat model:
 - **Cross-tenant data access** — reading or writing another user's or project's agents, skills, contexts, flows or runs
 - **Orchestration integrity** — making the engine accept an illegal transition, complete a step without a schema-valid output, skip a required step or fork branch, advance twice on a retry, or exceed invocation caps. The server enforcing the graph is the core guarantee of the product; anything that breaks it is high severity.
 - **Audit forgery** — producing a run export that passes `npm run audit:verify` (Ed25519 signature and hash chain) but misrepresents what actually ran, or changing `run_events` without breaking the chain
+- Model-orchestrated (compiled) runs are self-declared by design: what their reports claim is out of scope for orchestration integrity, but a compiled export that verifies as a server-orchestrated one is in scope.
 - **Snapshot bypass** — making a run execute instructions other than the ones frozen at `workflow.start`
 - **SSRF** via the MCP gateway's outbound connections to user-configured servers (DNS resolution, IPv6 and IPv4-mapped forms, redirects, rebinding)
 - **Identity spoofing** — a run recorded with a verified caller that did not present that caller's personal access token

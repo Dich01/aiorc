@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Issues</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
   <style>
     /* Sidebar (logged-in) + anon top-nav, same pattern as repository.html */
     body.has-sidebar { display:flex; min-height:100vh; background:var(--bg); }
@@ -125,9 +129,9 @@
     .comment:first-child { border-top:none; }
     .comment-avatar {
       width:34px; height:34px; border-radius:50%;
-      background:linear-gradient(135deg,#4361ee,#7c3aed);
+      background:var(--route-tint);
       display:flex; align-items:center; justify-content:center;
-      font-weight:700; font-size:0.78rem; color:#fff; flex-shrink:0;
+      font-weight:700; font-size:0.78rem; color:var(--primary); flex-shrink:0;
     }
     .comment-body { flex:1; min-width:0; }
     .comment-meta { font-size:0.82rem; color:var(--muted); margin-bottom:4px; display:flex; gap:8px; align-items:center; }
@@ -176,9 +180,9 @@
       <div class="form-group">
         <label for="report-type">Type</label>
         <div class="type-chips" id="report-type-chips" style="margin-top:4px">
-          <button type="button" class="type-chip active" data-type="bug">🐛 Bug</button>
-          <button type="button" class="type-chip" data-type="feature">✨ Feature</button>
-          <button type="button" class="type-chip" data-type="question">❓ Question</button>
+          <button type="button" class="type-chip active" data-type="bug"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6.5" width="8" height="10" rx="4"/><path d="M8 6.5V5.6a2 2 0 0 1 4 0v.9M3.5 11H6M14 11h2.5M4.2 6.8 6 8M15.8 6.8 14 8M4.2 15.2 6 14M15.8 15.2 14 14"/></svg> Bug</button>
+          <button type="button" class="type-chip" data-type="feature"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3c.6 3.4 2.2 5 5.6 5.6-3.4.6-5 2.2-5.6 5.6-.6-3.4-2.2-5-5.6-5.6C7.8 8 9.4 6.4 10 3z"/></svg> Feature</button>
+          <button type="button" class="type-chip" data-type="question"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg> Question</button>
         </div>
       </div>
       <div class="form-group">
@@ -223,48 +227,14 @@
       if (d < 30) return `${d}d ago`;
       return new Date(ts).toLocaleDateString('en');
     }
-    const TYPE_GLYPH = { bug:'🐛', feature:'✨', question:'❓' };
+    const TYPE_GLYPH = { bug:'<svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6.5" width="8" height="10" rx="4"/><path d="M8 6.5V5.6a2 2 0 0 1 4 0v.9M3.5 11H6M14 11h2.5M4.2 6.8 6 8M15.8 6.8 14 8M4.2 15.2 6 14M15.8 15.2 14 14"/></svg>', feature:'<svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3c.6 3.4 2.2 5 5.6 5.6-3.4.6-5 2.2-5.6 5.6-.6-3.4-2.2-5-5.6-5.6C7.8 8 9.4 6.4 10 3z"/></svg>', question:'<svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg>' };
     const TYPE_LABEL = { bug:'Bug', feature:'Feature', question:'Question' };
 
     // ── Shell ──
     const mount = document.getElementById('shell-mount');
     if (isLoggedIn) {
       document.body.classList.add('has-sidebar');
-      mount.outerHTML = `
-        <aside class="sidebar" id="sidebar">
-          <div class="sidebar-header">
-            <div class="sidebar-logo"><a href="dashboard.html">AI<span>Orc</span></a></div>
-            <button class="sidebar-collapse-btn" id="sidebar-toggle" onclick="toggleSidebar()">‹</button>
-          </div>
-          <div class="sidebar-section-title">Workspace</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="dashboard.html?tab=projects"><span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=agents"><span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=skills"><span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span></a>
-            <a class="sidebar-item" href="dashboard.html?tab=contexts"><span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span></a>
-            <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team"><span class="sidebar-item-glyph">E</span><span class="sidebar-item-label">Team</span><span id="team-badge" class="team-badge" style="display:none">0</span></a>
-          </nav>
-          <div class="sidebar-section-title">Insights</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="analytics.html"><span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span></a>
-            <a class="sidebar-item" href="audit.html" title="Audit"><span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span></a>
-          </nav>
-          <div class="sidebar-section-title">Community</div>
-          <nav class="sidebar-nav">
-            <a class="sidebar-item" href="repository.html"><span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span></a>
-            <a class="sidebar-item active" href="issues.html"><span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span></a>
-          </nav>
-          <div class="sidebar-section-title">Help</div>
-          <nav class="sidebar-nav">
-            <button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span></button>
-            <a class="sidebar-item" href="faq.html"><span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span></a>
-          </nav>
-          <div class="sidebar-footer">
-            <div class="sidebar-user" style="font-weight:600">${myNickname ? '@' + esc(myNickname) : esc(myEmail)}</div>
-            <div class="sidebar-user" style="font-size:0.74rem;opacity:0.6">${esc(myEmail)}</div>
-            <a href="#" class="sidebar-logout" id="logout-btn">Log out</a>
-          </div>
-        </aside>`;
+      mount.outerHTML = SiteShell.sidebarHTML('issues');
       const SIDEBAR_KEY = 'aiorc.sidebar.collapsed';
       const apply = () => {
         const c = localStorage.getItem(SIDEBAR_KEY) === '1';
@@ -289,16 +259,7 @@
         } catch {}
       })();
     } else {
-      mount.outerHTML = `
-        <nav class="anon-nav">
-          <a href="/" class="logo">AI<span>Orc</span></a>
-          <div class="anon-nav-cta">
-            <a href="repository.html">Public repository</a>
-            <a href="faq.html">Documentation</a>
-            <a href="index.html">Log in</a>
-            <a href="index.html" class="cta">Create account</a>
-          </div>
-        </nav>`;
+      mount.outerHTML = SiteShell.publicNavHTML('issues');
     }
 
     // ── Routing: ?id=X switches to detail view ──
@@ -316,7 +277,6 @@
       return `
         <div class="issues-header">
           <div>
-            <div class="issues-eyebrow">Issues</div>
             <h1 class="issues-title">Report bugs, request features</h1>
             <p class="issues-deck">Shared space for feedback on AIOrc. Any logged-in user can report and comment; maintainers close the ones that get resolved.</p>
           </div>
@@ -333,16 +293,16 @@
           </div>
           <div class="type-chips">
             <button class="type-chip" data-type="" onclick="setType('')">All types</button>
-            <button class="type-chip" data-type="bug" onclick="setType('bug')">🐛 Bug</button>
-            <button class="type-chip" data-type="feature" onclick="setType('feature')">✨ Feature</button>
-            <button class="type-chip" data-type="question" onclick="setType('question')">❓ Question</button>
+            <button class="type-chip" data-type="bug" onclick="setType('bug')"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6.5" width="8" height="10" rx="4"/><path d="M8 6.5V5.6a2 2 0 0 1 4 0v.9M3.5 11H6M14 11h2.5M4.2 6.8 6 8M15.8 6.8 14 8M4.2 15.2 6 14M15.8 15.2 14 14"/></svg> Bug</button>
+            <button class="type-chip" data-type="feature" onclick="setType('feature')"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3c.6 3.4 2.2 5 5.6 5.6-3.4.6-5 2.2-5.6 5.6-.6-3.4-2.2-5-5.6-5.6C7.8 8 9.4 6.4 10 3z"/></svg> Feature</button>
+            <button class="type-chip" data-type="question" onclick="setType('question')"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg> Question</button>
           </div>
           <div class="search-input-wrap">
             <input type="text" id="search-input" class="search-input" placeholder="Search issues…" autocomplete="off"/>
           </div>
           <select id="sort-select" class="sort-select">
             <option value="recent">Most recent</option>
-            <option value="votes">Most voted (👍)</option>
+            <option value="votes">Most voted</option>
             <option value="comments">Most commented</option>
           </select>
         </div>
@@ -418,8 +378,8 @@
           </div>
         </div>
         <div class="issue-stats">
-          <span class="${(i.votes_count||0) > 0 ? 'has-votes' : ''}" title="Votes">👍 ${i.votes_count || 0}</span>
-          <span title="Comments">💬 ${i.comments_count || 0}</span>
+          <span class="${(i.votes_count||0) > 0 ? 'has-votes' : ''}" title="Votes"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4.5M5.5 9 10 4.5 14.5 9"/></svg> ${i.votes_count || 0}</span>
+          <span title="Comments"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h12a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H8.5L5 16.8V14H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z"/></svg> ${i.comments_count || 0}</span>
         </div>
       </div>`;
     }
@@ -483,7 +443,7 @@
 
         <div class="detail-actions">
           <button class="vote-btn ${issue.is_voted ? 'is-voted' : ''}" onclick="toggleVote('${esc(issue.id)}', this)" ${isLoggedIn ? '' : 'disabled title="Log in to vote"'}>
-            👍 <span id="vote-count">${issue.votes_count || 0}</span>
+            <svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4.5M5.5 9 10 4.5 14.5 9"/></svg> <span id="vote-count">${issue.votes_count || 0}</span>
           </button>
           ${adminControls}
           ${deleteBtn}

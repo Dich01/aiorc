@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AIOrc — Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="flow-editor.css" />
   <script defer src="/flow-editor.js"></script>
@@ -248,7 +251,7 @@
     .mcp-path {
       display:inline-block; background:#0f172a; color:#fde68a;
       padding:3px 8px; border-radius:5px;
-      font-family:'SFMono-Regular',Consolas,monospace; font-size:0.78rem;
+      font-family:var(--mono); font-size:0.78rem;
       word-break:break-all;
     }
     .mcp-where-cli { font-size:0.83rem; color:#1e3a8a; margin:14px 0 0; line-height:1.6; padding-top:10px; border-top:1px dashed #93c5fd; }
@@ -338,7 +341,7 @@
     .info-steps { list-style:none; padding:0; margin:0; }
     .info-step { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start; font-size:0.88rem; line-height:1.6; }
     .info-step-num { background:var(--accent); color:#fff; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; margin-top:1px; }
-    .info-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:14px 16px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.78rem; line-height:1.6; white-space:pre; overflow-x:auto; margin:10px 0; }
+    .info-code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:14px 16px; font-family:var(--mono); font-size:0.78rem; line-height:1.6; white-space:pre; overflow-x:auto; margin:10px 0; }
     .info-modal-footer { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
     .info-block { margin-bottom:18px; }
     .info-block h4 { font-size:0.92rem; font-weight:700; margin-bottom:6px; color:var(--text); display:flex; align-items:center; gap:8px; }
@@ -395,19 +398,19 @@
     <div class="sidebar-section-title">Workspace</div>
     <nav class="sidebar-nav">
       <a class="sidebar-item" href="dashboard.html?tab=projects" title="Projects">
-        <span class="sidebar-item-glyph">P</span><span class="sidebar-item-label">Projects</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h3.8l1.9 2h5.3A1.5 1.5 0 0 1 17 8.5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/></svg></span><span class="sidebar-item-label">Projects</span>
       </a>
       <a class="sidebar-item" href="dashboard.html?tab=agents" title="Agents">
-        <span class="sidebar-item-glyph">A</span><span class="sidebar-item-label">Agents</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6.5" width="12" height="9.5" rx="2.2"/><path d="M10 3.5v3M7.6 10.6h.01M12.4 10.6h.01M8.3 13.4h3.4"/></svg></span><span class="sidebar-item-label">Agents</span>
       </a>
       <a class="sidebar-item" href="dashboard.html?tab=skills" title="Skills">
-        <span class="sidebar-item-glyph">S</span><span class="sidebar-item-label">Skills</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 3 6.5 10 10l7-3.5z"/><path d="m3 10 7 3.5 7-3.5"/><path d="m3 13.5 7 3.5 7-3.5"/></svg></span><span class="sidebar-item-label">Skills</span>
       </a>
       <a class="sidebar-item" href="dashboard.html?tab=contexts" title="Contexts">
-        <span class="sidebar-item-glyph">C</span><span class="sidebar-item-label">Contexts</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 4.5A1.5 1.5 0 0 1 6 3h9.5v11H6a1.5 1.5 0 0 0-1.5 1.5z"/><path d="M4.5 15.5A1.5 1.5 0 0 0 6 17h9.5v-3"/></svg></span><span class="sidebar-item-label">Contexts</span>
       </a>
       <a class="sidebar-item" id="sb-team" href="dashboard.html?tab=team" title="Team">
-        <span class="sidebar-item-glyph">E</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="2.8"/><path d="M2.8 16.5a5.2 5.2 0 0 1 10.4 0"/><path d="M13 4.4a2.8 2.8 0 0 1 0 5.2M15.2 12.2a5.2 5.2 0 0 1 2 4.3"/></svg></span>
         <span class="sidebar-item-label">Team</span>
         <span id="team-badge" class="team-badge" style="display:none">0</span>
       </a>
@@ -416,31 +419,35 @@
     <div class="sidebar-section-title">Insights</div>
     <nav class="sidebar-nav">
       <a class="sidebar-item" href="analytics.html" title="Usage analytics">
-        <span class="sidebar-item-glyph">U</span><span class="sidebar-item-label">Usage analytics</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16V10M10 16V4.5M15.5 16v-6"/></svg></span><span class="sidebar-item-label">Usage analytics</span>
       </a>
       <a class="sidebar-item" href="audit.html" title="Audit">
-        <span class="sidebar-item-glyph">L</span><span class="sidebar-item-label">Audit</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8 4.2 5.2v4.3c0 3.6 2.5 6.4 5.8 7.7 3.3-1.3 5.8-4.1 5.8-7.7V5.2z"/><path d="m7.6 10 1.7 1.7 3.2-3.4"/></svg></span><span class="sidebar-item-label">Audit</span>
+      </a>
+      <a class="sidebar-item" id="sb-admin" href="admin.html" title="Admin panel" style="display:none">
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6h7.5M14.5 6h2M3.5 14h2M9 14h7.5"/><circle cx="12.8" cy="6" r="1.8"/><circle cx="7.2" cy="14" r="1.8"/></svg></span><span class="sidebar-item-label">Admin panel</span>
       </a>
     </nav>
 
     <div class="sidebar-section-title">Community</div>
     <nav class="sidebar-nav">
       <a class="sidebar-item" href="repository.html" title="Public repository">
-        <span class="sidebar-item-glyph">R</span><span class="sidebar-item-label">Public repository</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span>
       </a>
       <a class="sidebar-item" href="issues.html" title="Issues">
-        <span class="sidebar-item-glyph">I</span><span class="sidebar-item-label">Issues</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span>
       </a>
     </nav>
 
     <div class="sidebar-section-title">Help</div>
     <nav class="sidebar-nav">
       <button class="sidebar-item" onclick="openInfoModal()" title="How to use AIOrc">
-        <span class="sidebar-item-glyph">?</span><span class="sidebar-item-label">How to use AIOrc</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg></span><span class="sidebar-item-label">How to use AIOrc</span>
       </button>
       <a class="sidebar-item" href="faq.html" title="Documentation">
-        <span class="sidebar-item-glyph">D</span><span class="sidebar-item-label">Documentation</span>
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span>
       </a>
+      <a class="sidebar-item" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -455,12 +462,15 @@
     <!-- Project header -->
     <div id="project-header" class="card" style="margin-bottom:28px">
       <div>
-        <div class="card-title" id="project-name" style="font-size:1.3rem">Loading…</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="card-title" id="project-name" style="font-size:1.3rem;margin-bottom:0">Loading…</div>
+          <span id="project-mode-pill"></span>
+        </div>
         <div id="project-owner" style="font-size:0.78rem;color:var(--muted);margin-top:4px"></div>
         <div id="project-tags-header" class="tag-chips" style="margin-top:8px"></div>
       </div>
       <div style="margin-top:14px">
-        <label style="font-size:0.8rem;margin-bottom:5px;display:block;color:var(--muted)">MCP Key</label>
+        <label style="font-size:0.8rem;margin-bottom:5px;display:block;color:var(--muted)">Project key</label>
         <div class="api-key-row">
           <span class="api-key-value" id="project-api-key"></span>
           <button class="btn btn-sm btn-ghost" id="copy-key-btn">Copy</button>
@@ -675,10 +685,27 @@
       </div>
 
       <div class="card" style="margin-bottom:20px">
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">Execution mode</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">
+          <strong>Server-orchestrated</strong> (default): the server hands your AI one step at a time, validates every output against
+          the agent's schema, decides or checks every transition and enforces the caps.
+          <strong>Model-orchestrated</strong>: your AI receives the whole flow in one prompt, runs it on its own and reports what it did;
+          the report is stored as self-declared and nothing is verified. The mode is fixed when a run starts, so switching
+          never affects runs in flight. Eval runs are always server-orchestrated.
+        </p>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem">
+          <input type="checkbox" id="mode-toggle" style="width:18px;height:18px;cursor:pointer" />
+          <span>Model-orchestrated mode (one prompt, self-declared)</span>
+        </label>
+        <div id="mode-status" style="margin-top:10px;font-size:0.82rem"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
         <div class="card-title" style="font-size:1rem;margin-bottom:6px">Visibility</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">
-          If the project is <strong>private</strong>, any client must send the <code>x-project-key</code> header with the API key to execute the flow.
-          If it is <strong>public</strong>, the project can be identified by its ID alone — no API key required.
+          A <strong>private</strong> project runs only for you and the people you invite, each with their own personal token.
+          A <strong>public</strong> project is listed in the repository and anyone with an AIOrc personal token can run it with its project ID;
+          without a token the ID only lists its tools and evals.
         </p>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem">
           <input type="checkbox" id="visibility-toggle" style="width:18px;height:18px;cursor:pointer" />
@@ -688,21 +715,21 @@
       </div>
 
       <div class="card">
-        <div class="card-title" style="font-size:1rem;margin-bottom:6px">MCP Key</div>
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">Project key</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">
-          Resetting the MCP key invalidates the previous key immediately. Any existing integration will stop working until updated with the new key.
+          Resetting the project key invalidates the previous key immediately. Integrations that use the key (CI, runners) stop working until updated. Connections that use the project ID and a personal token are unaffected.
         </p>
         <div class="api-key-row" style="margin-bottom:12px">
           <span class="api-key-value" id="settings-api-key"></span>
           <button class="btn btn-sm btn-ghost" id="settings-copy-key-btn">Copy</button>
         </div>
-        <button class="btn btn-sm" style="background:#dc2626;color:#fff" id="reset-key-btn">Reset MCP Key</button>
+        <button class="btn btn-sm" style="background:#dc2626;color:#fff" id="reset-key-btn">Reset project key</button>
       </div>
 
       <div class="card">
         <div class="card-title" style="font-size:1rem;margin-bottom:6px">Share with</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">
-          Invite another person by email. They will receive a notification in their <strong>Team</strong> tab with the option to fork this project to their workspace. The invitee does <strong>not</strong> access the original project — they only receive an offer to copy it.
+          Invite someone by email. While the invitation is pending or accepted they can run this project with its project ID and their own personal token, and they can fork a copy from their <strong>Team</strong> tab. Revoke the invitation to remove access.
         </p>
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px">
           <input type="email" id="invite-email" placeholder="email@example.com" autocomplete="email"
@@ -723,8 +750,9 @@
           <strong>This is the step that brings your project to life.</strong> Your flow doesn't run inside AIOrc —
           it runs inside YOUR AI client (Claude Code, Claude Desktop, Cursor...). Paste the configuration below into
           that client and it will discover this project's workflow tools automatically. From then on, any task you
-          give it goes through your flow, step by step, validated by the server.
+          give it goes through your flow.
         </p>
+        <p id="mcp-mode-note" style="font-size:0.85rem;margin:-4px 0 14px"></p>
 
         <div class="mcp-where">
           <div class="mcp-where-title">Where to paste it?</div>
@@ -787,9 +815,10 @@
       <div class="card" style="margin-top:20px">
         <div class="card-title" style="font-size:1rem;margin-bottom:6px">External MCP servers</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px">
-          One connection rules them all: your client connects ONLY to AIOrc, and the servers you register
-          here are exposed through that same connection. Their tools appear as <code>server__tool</code> in
-          the client's tool list, and every call is proxied and logged by AIOrc.
+          Your client does not connect to these servers directly: the servers you register here are exposed
+          through this project's AIOrc connection. Their tools appear as <code>server__tool</code> in
+          the client's tool list. A tool can only be called during a server-orchestrated run, by an agent whose
+          <code>allowed_tools</code> lists it (set through the API or a harness file), and every call is logged.
         </p>
         <div id="mcp-servers-list" style="margin-bottom:14px"></div>
         <div style="display:grid;grid-template-columns:1fr 2fr 2fr auto;gap:8px">
@@ -823,7 +852,7 @@
   <div class="content-modal" id="validation-modal" onclick="if(event.target===this)closeValidationModal()">
     <div class="content-box" style="max-width:680px">
       <button class="content-close" onclick="closeValidationModal()">×</button>
-      <h2 style="color:#dc2626">⚠ The flow could not be saved</h2>
+      <h2 style="color:#dc2626;display:flex;align-items:center;gap:10px"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.2 17.5 16.5h-15z"/><path d="M10 8.5v3.5M10 14.2h.01"/></svg> The flow could not be saved</h2>
       <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px">
         Found <span id="vm-count">0</span> error(s) preventing this flow from running. Fix each one and try saving again.
       </p>
@@ -861,22 +890,52 @@
     </div>
   </div>
 
+  <!-- Model-orchestrated mode confirmation modal -->
+  <div class="content-modal" id="fast-confirm-modal" onclick="if(event.target===this)closeFastConfirm()">
+    <div class="content-box" style="max-width:520px">
+      <button class="content-close" onclick="closeFastConfirm()">×</button>
+      <h2 style="color:#8a5a0b;display:flex;align-items:center;gap:10px">
+        <span style="background:#fdf4e3;color:#8a5a0b;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.2 17.5 16.5h-15z"/><path d="M10 8.5v3.5M10 14.2h.01"/></svg></span>
+        Switch to model-orchestrated mode?
+      </h2>
+      <div style="margin-top:14px;font-size:0.92rem;line-height:1.6;color:var(--text)">
+        <p style="margin-bottom:10px">New runs will receive the <strong>whole flow in one prompt</strong> and finish with a self-declared report. Faster, but the server stops checking how they execute:</p>
+        <ul style="padding-left:22px;margin-bottom:14px;color:var(--muted)">
+          <li>No output is validated and no transition or cap is enforced: the model decides the path on its own.</li>
+          <li>The report is stored as <strong>self-declared</strong>; these runs never count as verified in Audit or Analytics.</li>
+          <li>A run cannot be stopped midway: cancelling only refuses its report.</li>
+          <li>External MCP tools are not available, and every agent's instructions are sent, including branches not taken.</li>
+          <li>The CI review runners refuse model-orchestrated runs by default. Eval runs keep running server-orchestrated.</li>
+        </ul>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:0.85rem;color:#92400e">
+          Runs already in flight keep their mode. You can switch back to server-orchestrated mode at any time.
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-sm btn-ghost" onclick="closeFastConfirm()">Cancel</button>
+        <button class="btn btn-sm" style="background:#b7791f;color:#fff" id="confirm-fast-btn">Yes, use model-orchestrated mode</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Public visibility confirmation modal -->
   <div class="content-modal" id="public-confirm-modal" onclick="if(event.target===this)closePublicConfirm()">
     <div class="content-box" style="max-width:480px">
       <button class="content-close" onclick="closePublicConfirm()">×</button>
       <h2 style="color:#dc2626;display:flex;align-items:center;gap:10px">
-        <span style="background:#fee2e2;color:#dc2626;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem">⚠</span>
+        <span style="background:#fee2e2;color:#dc2626;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.2 17.5 16.5h-15z"/><path d="M10 8.5v3.5M10 14.2h.01"/></svg></span>
         Make this project public?
       </h2>
       <div style="margin-top:14px;font-size:0.92rem;line-height:1.6;color:var(--text)">
         <p style="margin-bottom:10px">
-          Once public, <strong>anyone</strong> who knows the project ID will be able to:
+          Once public, <strong>anyone</strong> with an AIOrc account and personal token will be able to:
         </p>
         <ul style="padding-left:22px;margin-bottom:14px;color:var(--muted)">
-          <li>Execute the flow via MCP <strong>without needing the API key</strong>.</li>
-          <li>Consume your model credits if your integration provides them.</li>
+          <li>Run this flow with its project ID (each run is recorded under them).</li>
+          <li>Call the external MCP servers registered on it during their runs.</li>
+          <li>List and export this project's runs through the runner API.</li>
           <li>See the project listed in the <em>Public repository</em>.</li>
+          <li>Without a token, the project ID only exposes the eval suite.</li>
         </ul>
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:0.85rem;color:#92400e">
           You can revert it at any time from this same screen.
@@ -1180,7 +1239,7 @@
       } catch { return null; }
     }
     function copyProjectKey() {
-      if (revealedKey) { copyText(revealedKey, 'MCP key copied!'); return; }
+      if (revealedKey) { copyText(revealedKey, 'Project key copied!'); return; }
       uiAlert('The key is only shown once, when it is created or reset. Reset it to get a new one; the old key stops working.');
     }
     function renderProject(p) {
@@ -1215,6 +1274,19 @@
 
       updatePauseUI(!!p.paused);
 
+      const fast = p.execution_mode === 'compiled';
+      document.getElementById('mode-toggle').checked = fast;
+      document.getElementById('mode-status').innerHTML = fast
+        ? '<span class="mode-pill fast">Model-orchestrated</span> New runs get the whole flow in one prompt and finish with <code>workflow.report</code>. Self-declared, not verified.'
+        : '<span class="mode-pill">Server-orchestrated</span> New runs are driven step by step by the server with <code>workflow.next</code>, and every step is checked.';
+      document.getElementById('project-mode-pill').innerHTML = fast
+        ? '<span class="mode-pill fast" title="Model-orchestrated mode: whole flow in one prompt, self-declared">Model-orchestrated</span>'
+        : '<span class="mode-pill" title="Server-orchestrated: the server drives and checks every step">Server-orchestrated</span>';
+      const modeNote = document.getElementById('mcp-mode-note');
+      if (modeNote) modeNote.innerHTML = fast
+        ? 'This project runs in <strong>model-orchestrated mode</strong>: <code>workflow.start</code> returns the whole flow and your AI finishes with <code>workflow.report</code>.'
+        : 'This project runs in <strong>server-orchestrated mode</strong>: <code>workflow.start</code> returns step 1 and your AI advances with <code>workflow.next</code>.';
+
       const toggle = document.getElementById('visibility-toggle');
       toggle.checked = isPublic;
       const status = document.getElementById('visibility-status');
@@ -1248,6 +1320,30 @@
       const stashed = takeStashedKey(projectId);
       if (stashed) revealedKey = stashed;
       renderProject(p);
+    }
+
+    async function applyMode(mode) {
+      const res = await authFetch(`/projects/${projectId}/execution-mode`, { method: 'PATCH', body: JSON.stringify({ mode }) });
+      if (!res.ok) {
+        await uiAlert('Could not change the execution mode.');
+        document.getElementById('mode-toggle').checked = !!(currentProject && currentProject.execution_mode === 'compiled');
+        return;
+      }
+      renderProject(await res.json());
+    }
+    function openFastConfirm() {
+      document.getElementById('fast-confirm-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeFastConfirm() {
+      document.getElementById('fast-confirm-modal').classList.remove('open');
+      document.body.style.overflow = '';
+      document.getElementById('mode-toggle').checked = !!(currentProject && currentProject.execution_mode === 'compiled');
+    }
+    async function handleModeChange(fast) {
+      // Verified → fast loses guarantees: confirm. Fast → verified: apply at once.
+      if (fast) { openFastConfirm(); return; }
+      await applyMode('verified');
     }
 
     async function applyVisibility(makePublic) {
@@ -1287,15 +1383,15 @@
     }
 
     async function resetApiKey() {
-      if (!await uiConfirm('Reset the API key? The previous key will stop working immediately.')) return;
+      if (!await uiConfirm('Reset the project key? The previous key will stop working immediately.')) return;
       const res = await authFetch(`/projects/${projectId}/reset-key`, { method: 'POST' });
-      if (!res.ok) { await uiAlert('Could not reset the API key.'); return; }
+      if (!res.ok) { await uiAlert('Could not reset the project key.'); return; }
       const updated = await res.json();
       renderProject(updated);
-      copyText(updated.api_key, 'New MCP key copied. It will not be shown again.');
+      copyText(updated.api_key, 'New project key copied. It will not be shown again.');
     }
 
-    // "rmillon PR review" -> "aiorc-rmillon-pr-review" (accents folded, MCP-safe charset).
+    // "Code review" -> "aiorc-code-review" (accents folded, MCP-safe charset).
     function mcpServerName(name) {
       const slug = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
@@ -1313,8 +1409,9 @@
         `When a task fits that use, start it by calling \`workflow.start\` on the`,
         `\`${server}\` server, not on another AIOrc server. NEVER respond with a`,
         'direct solution for those tasks without going through the workflow.',
-        'Execute ONLY the step the server hands you and advance with',
-        '`workflow.next`: never skip steps or modify them with your own judgment.',
+        'Do exactly what workflow.start returns: either ONE step at a time, advanced',
+        'with `workflow.next`, or the whole flow, finished with `workflow.report`.',
+        'Never skip steps or modify them with your own judgment.',
       ].join('\n');
     }
 
@@ -1364,6 +1461,12 @@
     }
 
     document.getElementById('visibility-toggle').addEventListener('change', e => handleVisibilityChange(e.target.checked));
+    document.getElementById('mode-toggle').addEventListener('change', e => handleModeChange(e.target.checked));
+    document.getElementById('confirm-fast-btn').addEventListener('click', async () => {
+      document.getElementById('fast-confirm-modal').classList.remove('open');
+      document.body.style.overflow = '';
+      await applyMode('compiled');
+    });
     document.getElementById('reset-key-btn').addEventListener('click', resetApiKey);
     document.getElementById('save-description-btn').addEventListener('click', saveDescription);
     document.getElementById('save-tags-btn').addEventListener('click', saveTags);
@@ -1906,7 +2009,7 @@
     function nodeIconHtml(node) {
       const ntype = node.node_type ?? 'agent';
       if (ntype === 'decision') return '◇';
-      if (ntype === 'gate')     return '⛔';
+      if (ntype === 'gate')     return '<svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.8h6l4.2 4.2v6L13 17.2H7L2.8 13V7z"/><path d="M7 10h6"/></svg>';
       if (ntype === 'loop_start') return '↻';
       if (ntype === 'loop_end')   return '↺';
       if (ntype === 'end')        return '⊙';
@@ -2416,7 +2519,7 @@
 
       const st = document.getElementById('flow-status');
       if (errors.length > 0) {
-        st.textContent = '⚠ ' + errors.length + ' error' + (errors.length === 1 ? '' : 's') + ' — click to see detail';
+        st.textContent = errors.length + ' error' + (errors.length === 1 ? '' : 's') + ' — click to see detail';
         st.className = 'flow-status unsaved';
         st.title = '';
       } else {
@@ -2473,7 +2576,7 @@
       const errors = validateFlowClient();
       const st = document.getElementById('flow-status');
       if (errors.length > 0) {
-        st.textContent = '⚠ ' + errors.length + ' error' + (errors.length === 1 ? '' : 's') + ' — open the panel to see detail';
+        st.textContent = errors.length + ' error' + (errors.length === 1 ? '' : 's') + ' — open the panel to see detail';
         st.className = 'flow-status unsaved';
         showValidationModal(errors);
         return;
@@ -3006,11 +3109,11 @@
 
       <div id="proj-info-tab-how" class="info-tab-panel active">
         <ol class="info-steps">
-          <li class="info-step"><div class="info-step-num">1</div><span><strong>Define agents</strong> — In Dashboard → Agents. Each agent is a Markdown prompt that the model executes as a step of the flow.</span></li>
+          <li class="info-step"><div class="info-step-num">1</div><span><strong>Define agents</strong> — In Dashboard → Agents. Each agent is a Markdown prompt: a step of the flow in server-orchestrated mode, a section of the whole-flow prompt in model-orchestrated mode.</span></li>
           <li class="info-step"><div class="info-step-num">2</div><span><strong>Build the flow</strong> — On this page (Flow Builder). Drag agents from the left panel and connect them. Branch with conditions on the edges; fork with Parallel; iterate with back-edges.</span></li>
-          <li class="info-step"><div class="info-step-num">3</div><span><strong>Save</strong> — The flow is validated (single Start, valid agent references, well-formed Parallel forks). Cycles are legal — a back-edge is a loop. If it passes, it is persisted; if not, errors are shown inline.</span></li>
-          <li class="info-step"><div class="info-step-num">4</div><span><strong>Copy the MCP key</strong> and configure the target project (see next tab).</span></li>
-          <li class="info-step"><div class="info-step-num">5</div><span><strong>Done</strong> — Claude calls <code>workflow.start</code> and the server hands it one step at a time, validating each output and transition, until the flow reaches an End.</span></li>
+          <li class="info-step"><div class="info-step-num">3</div><span><strong>Save</strong> — The flow is validated (single Start, valid agent references, well-formed Parallel forks). Cycles are legal — a back-edge is a loop. If it passes, it is persisted; if not, the errors are listed in a dialog and saving is blocked.</span></li>
+          <li class="info-step"><div class="info-step-num">4</div><span><strong>Connect your AI</strong> with the <em>Connect AI</em> tab: it generates the <code>.mcp.json</code> entry and the <code>CLAUDE.md</code> rule for this project.</span></li>
+          <li class="info-step"><div class="info-step-num">5</div><span><strong>Done</strong> — Claude calls <code>workflow.start</code>. In <strong>server-orchestrated mode</strong> (default) the server hands it one step at a time, validating each output and deciding or checking each transition, until the flow reaches an End. In <strong>model-orchestrated mode</strong> it receives the whole flow at once and finishes with <code>workflow.report</code>, a self-declared report.</span></li>
         </ol>
       </div>
 
@@ -3020,12 +3123,13 @@
           <p>Tells the Claude client how to connect to the AIOrc server.</p>
           <div class="info-code" id="proj-mcp-snippet">{
   "mcpServers": {
-    "aiorc": {
+    "aiorc-&lt;project&gt;": {
       "type": "stdio",
       "command": "node",
       "args": ["/absolute/path/to/AIOrc/mcp-bridge.js"],
       "env": {
-        "AIORC_PROJECT_KEY": "key-XXXXXXXXXXXXXXXXXXXX",
+        "AIORC_PROJECT_ID": "&lt;project id&gt;",
+        "AIORC_TOKEN": "${AIORC_TOKEN}",
         "AIORC_URL": "__AIORC_ORIGIN__/mcp"
       }
     }
@@ -3036,26 +3140,22 @@
 
         <div class="info-block">
           <h4>2. Rule in <code>CLAUDE.md</code></h4>
-          <p>Tells the model to always call <code>workflow</code> before responding. Without this rule, Claude may ignore AIOrc.</p>
-          <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">
-            <strong>Recommended:</strong> paste it in <code>~/.claude/CLAUDE.md</code> (global) — applies in any project without having to repeat it.
-            You can also put it in each project's <code>CLAUDE.md</code>.
-          </p>
-          <div class="info-code" id="claude-md-snippet">## AIOrc — Mandatory rule
+          <p>Tells the model to always start with <code>workflow.start</code> and follow what it returns. Without this rule, Claude may ignore AIOrc. Use the rule generated in the <em>Connect AI</em> tab: it names this project's server, so several AIOrc projects can live in one repository.</p>
+          <div class="info-code">## AIOrc: &lt;project name&gt;
 
-If the AIOrc `workflow.start` tool is available in this context,
-ALWAYS call it before responding to any technical task
-(design, implementation, review, planning, testing).
+Server: `aiorc-&lt;project&gt;` (AIOrc project "&lt;project name&gt;").
+Use it for: &lt;project description&gt;
 
-Execute exactly the step the server returns, hand back each output
-with `workflow.next` in the shape its schema asks for, and repeat
-until the server says the run is over. Never run other agents of
-the flow on your own.</div>
-          <button class="btn btn-sm btn-ghost" onclick="copyClaudeMd()" style="margin-top:8px">Copy CLAUDE.md</button>
+When a task fits that use, start it by calling `workflow.start` on the
+`aiorc-&lt;project&gt;` server, not on another AIOrc server. NEVER respond with a
+direct solution for those tasks without going through the workflow.
+Do exactly what workflow.start returns: either ONE step at a time, advanced
+with `workflow.next`, or the whole flow, finished with `workflow.report`.
+Never skip steps or modify them with your own judgment.</div>
         </div>
 
         <div class="info-note">
-          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path and <code>aiorc_pk_...</code> with the project API key (shown once, when the project is created or its key is reset).
+          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path, <code>aiorc-&lt;project&gt;</code> with the server name and <code>&lt;project id&gt;</code> with the project id. Each person exports their own personal token (<code>export AIORC_TOKEN=aiorc_pat_...</code>, created in their profile), so the file can be committed. The project's <em>Connect AI</em> tab generates both snippets for you.
         </div>
       </div>
 
@@ -3064,22 +3164,22 @@ the flow on your own.</div>
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-decision">◇</span> Decision — branch by content</h4>
-          <p><em>Pattern:</em> an agent followed by several outgoing edges with natural-language conditions. Edges are evaluated by ascending priority and a single transition is taken; an edge without condition acts as the fallback.</p>
+          <p><em>Pattern:</em> an agent followed by several outgoing edges with natural-language conditions. The client picks exactly one edge by its id (the server rejects any other); an edge without a condition is the fallback. For deterministic branching use rule edges (harness or API), which the server evaluates in priority order.</p>
           <p style="font-size:0.82rem;color:var(--muted)">Example conditions: <em>"intent == 'bug'"</em>, <em>"the agent determines that it needs more context"</em>.</p>
         </div>
 
         <div class="info-block">
-          <h4><span class="info-block-glyph glyph-gate">⛔</span> Gate — mandatory verdict</h4>
+          <h4><span class="info-block-glyph glyph-gate"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.8h6l4.2 4.2v6L13 17.2H7L2.8 13V7z"/><path d="M7 10h6"/></svg></span> Gate — mandatory verdict</h4>
           <p><em>Pattern:</em> the agent emits a literal verdict (PASS / FAIL / score ≥ X) and its outgoing edges carry conditions matching that verdict. Same structure as a branch — the verdict text is the condition.</p>
         </div>
 
         <div class="info-block">
           <h4><span class="info-block-glyph glyph-loop">↻</span> Loop — iteration with cap</h4>
-          <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent carries <code>max_invocations</code> (default 10, max 50) which caps the repetition. In verified mode the server enforces the cap itself.</p>
+          <p><em>Pattern:</em> an edge pointing back to a previous agent (back-edge). Cycles are legal by construction; each agent node carries <code>max_invocations</code> (default 10, max 50) which caps the repetition. In server-orchestrated mode the server enforces the cap itself.</p>
         </div>
 
         <div class="info-note">
-          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides or checks every transition against the graph and enforces the caps itself.
+          The patterns combine freely (loops inside branches, gates after forks). The server (<code>workflow.start</code> / <code>workflow.next</code>) validates every step's output, decides rule-based transitions and checks every other one against the graph, and enforces the per-node caps.
         </div>
       </div>
 
@@ -3089,5 +3189,6 @@ the flow on your own.</div>
       </div>
     </div>
   </div>
+<script>if (localStorage.getItem('userRole') === 'admin') { const a = document.getElementById('sb-admin'); if (a) a.style.display = ''; }</script>
 </body>
 </html>

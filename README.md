@@ -1,6 +1,6 @@
 # AIOrc
 
-**The control plane for a company's AI agents. The server enforces your workflow graph instead of suggesting it to the model: every step must hand back an output that matches its schema, the server decides each transition, and every run exports as signed, hash-chained evidence.**
+**The control plane for a company's AI agents. The server enforces your workflow graph instead of suggesting it to the model: every step must hand back an output that matches its schema, the server decides rule-based transitions and checks every other one, and every run exports as signed, hash-chained evidence.**
 
 [![CI](https://github.com/Dich01/aiorc/actions/workflows/ci.yml/badge.svg)](https://github.com/Dich01/aiorc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -13,14 +13,14 @@
 
 ![AIOrc — deterministic agent orchestration, server-enforced, MCP-native](docs/img/hero.png)
 
-AIOrc is the **control plane for a company's AI agents**: a multi-tenant registry that stores, shares, governs and *measures* agents — and exposes each project's workflow to any MCP-compatible LLM client (Claude Code, Cursor, or anything that speaks MCP) with **server-verified execution**. The orchestration graph is enforced by the server, not just suggested to the model; any project can be paused instantly (kill switch), any in-flight run cancelled surgically, and every run exported as a signed, tamper-evident audit trail.
+AIOrc is the **control plane for a company's AI agents**: a multi-tenant registry that stores, shares, governs and *measures* agents — and exposes each project's workflow to any MCP-compatible LLM client (Claude Code, Cursor, or anything that speaks MCP) with **server-orchestrated execution** by default. The orchestration graph is enforced by the server, not just suggested to the model; any project can be paused instantly (kill switch), any in-flight run cancelled surgically, and every run exported as a signed, tamper-evident audit trail.
 
 ## Why
 
 When a company adopts AI seriously, prompts and agents scatter across repos, notes and people's heads. Nobody knows which agents exist, which ones actually work, or which ones the LLM silently skips mid-workflow. AIOrc answers all three:
 
 - **Registry**: agents, skills (reusable guardrails) and contexts (business knowledge), organized per project, shareable across users with invitations, stars, forks and issues.
-- **Verified orchestration**: the server hands the model **one step at a time**. Each agent declares an output schema; a step counts as completed only when its output validates. Rule edges are evaluated by the server on that output; natural-language edges are chosen by exact edge id. Invocation caps, fork joins and step numbers are enforced, and a run only completes at an End node.
+- **Server-orchestrated execution** (the default): the server hands the model **one step at a time**. Each agent declares an output schema; a step counts as completed only when its output validates. Rule edges are evaluated by the server on that output; natural-language edges are chosen by exact edge id. Invocation caps, fork joins and step numbers are enforced, and a run only completes at an End node. Projects that need speed over guarantees can switch to **model-orchestrated mode**: the whole flow in one response, finished with a self-declared report that is labelled as such everywhere.
 - **Usage analytics**: live dashboards of which agents, skills, projects and contexts actually complete steps, and who runs them.
 - **Evals**: test cases per flow, graded from the run's event chain: the exact End reached, the agents that completed a step, and field-by-field matches on the final findings. The model never grades its own work.
 - **Harnesses as files**: a whole review setup (agents, skills, contexts, flows, evals) lives in a directory, is validated by the server's own validators and applied with one command, so changes go through pull requests.
@@ -30,11 +30,11 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 
 | | |
 |---|---|
-| Multi-tenant projects | Private (API-key) or public, with per-project agent/skill/context libraries |
+| Multi-tenant projects | Private (owner, admins and invitees, each with their own token, or the project key) or public (anyone with a personal token), with per-project agent/skill/context libraries |
 | Agents, Skills, Contexts | Multi-file markdown entities with an output schema per agent; frozen per run when it starts |
 | Visual flow editor | Start / Agent / Parallel / End nodes, natural-language edge conditions, loops via back-edges; rule edges round-trip and show read-only |
-| MCP server | `workflow.start`, `workflow.next`, `workflow.eval` over JSON-RPC 2.0 (contract v2) |
-| Verified execution | Outputs validated per step, server-decided transitions, real fork joins, idempotent retries |
+| MCP server | `workflow.start`, `workflow.next`, `workflow.report`, `workflow.eval` over JSON-RPC 2.0 (contract v2.1) |
+| Server-orchestrated execution | Outputs validated per step, rule transitions decided and every other transition checked by the server, real fork joins, idempotent retries |
 | Kill switch & cancel | Pause a project (blocks new runs; in-flight runs finish) or cancel a single run without touching anything else |
 | Signed audit trails | Append-only, hash-chained event log per run; exports signed with Ed25519 and verifiable offline |
 | Evals | Per-project test cases graded from the event chain, including expected findings for seeded-bug PRs |
@@ -45,9 +45,9 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 
 ## How it compares
 
-Dify and n8n put multi-team workspaces, granular permissions, audit trails and self-hosting behind an Enterprise plan. Here they are in the MIT-licensed core, with no seat count and no paid tier.
+Audit trails, sharing and self-hosting are in the MIT-licensed core, with no seat count and no paid tier.
 
-The larger difference is architectural. Those tools, and agent frameworks like LangGraph and CrewAI, hand the model a workflow and trust it to follow along. AIOrc drives execution from the server: it releases one step at a time, refuses to advance until the step's output validates, decides the transition itself, enforces per-agent invocation caps, and writes each event to a hash chain. "The agent skipped a step" stops being something you discover afterwards from a self-reported log, because the skip is refused while it is being attempted.
+The larger difference is architectural. Those tools, and agent frameworks like LangGraph and CrewAI, hand the model a workflow and trust it to follow along. In its default server-orchestrated mode, AIOrc drives execution from the server: it releases one step at a time, refuses to advance until the step's output validates, decides rule-based transitions and checks every other one against the graph, enforces per-node invocation caps, and writes each event to a hash chain. "The agent skipped a step" stops being something you discover afterwards from a self-declared log, because the skip is refused while it is being attempted.
 
 ## Screenshots
 
@@ -81,7 +81,8 @@ accounts in the meantime (`POST /admin/users`).
 
 The database has a schema version. A build that needs another version refuses
 to start; `AIORC_DB_RESET=1` moves the old file aside as `*.bak` and starts
-empty. There are no in-place migrations.
+empty. The only in-place migration is 6 → 7 (adds `projects.execution_mode`); any other
+mismatch is refused unless `AIORC_DB_RESET=1`.
 
 ### Environment
 
@@ -99,22 +100,35 @@ empty. There are no in-place migrations.
 
 ### Connect an MCP client
 
-Claude Code can connect over HTTP directly:
+People connect with the project ID and their own personal access token
+(`Authorization: Bearer aiorc_pat_...`, created in their profile or at
+`POST /users/me/tokens`). Claude Code can connect over HTTP directly:
 
 ```bash
-claude mcp add --transport http aiorc https://aiorc.example.com/mcp \
-  --header "x-project-key: aiorc_pk_..." --header "Authorization: Bearer aiorc_pat_..."
+claude mcp add --transport http aiorc-<project> https://aiorc.example.com/mcp \
+  --header "x-project-id: <project id>" --header "Authorization: Bearer aiorc_pat_..."
 ```
 
-Clients that only speak stdio can use `mcp-bridge.js` (`AIORC_URL`,
-`AIORC_PROJECT_KEY`, optional `AIORC_TOKEN`). The project key is shown once,
-when the project is created or its key is reset; only a hash is stored. The
-personal access token (`Authorization: Bearer aiorc_pat_...`, created at
-`POST /users/me/tokens`) is optional and makes the run's caller a verified
-identity. `x-user-email` is still accepted but recorded as a declared,
-unverified caller.
+The project's Connect AI tab generates the same entry for `mcp-bridge.js`, for
+clients that only speak stdio (`AIORC_URL`, `AIORC_PROJECT_ID`, `AIORC_TOKEN`).
+With a project ID the token is required to run anything; it also makes the
+run's caller a verified identity.
 
-### MCP contract v2
+CI and runners can use the project key instead (`x-project-key: aiorc_pk_...`,
+or `AIORC_PROJECT_KEY` in the bridge), with the token optional. The project key
+is shown once, when the project is created or its key is reset; only a hash is
+stored. `x-user-email` is still accepted but recorded as a declared, unverified
+caller.
+
+### MCP contract v2.1
+
+Server-orchestrated mode (the default) is described below. In **model-orchestrated mode** (a per-project
+switch: Settings, `PATCH /projects/:id/execution-mode`, or `execution_mode` in a
+harness) `workflow.start` returns the whole flow in one document and the model
+finishes with `workflow.report {runId, report}`; the run goes `delivered` →
+`reported`, the report is stored and chained as self-declared, and the run never
+counts as verified. Eval runs always execute server-orchestrated. The mode is frozen per
+run, and the tools are the same in both modes, so switching needs no client change.
 
 1. `workflow.start {request | input, evalCase?}` validates the flow and the
    input (against the project's input schema, if it has one), freezes a
@@ -127,15 +141,16 @@ unverified caller.
    sends the exact edge id it chose. Resending the same call returns the
    same answer; a call with another step number is refused.
 3. Repeat until the run reaches an End (`completed`). Other endings are
-   `capped`, `cancelled`, `abandoned` and `failed`.
+   `capped`, `cancelled` and `failed`; a run idle for 2 h is `abandoned` and
+   resumes if the client comes back.
 
 External MCP servers registered in a project are proxied through the same
-connection, only during an active run (`params._meta.runId`) and only for
-tools the dispatched agent lists in `allowed_tools`.
+connection, only during an active server-orchestrated run (`params._meta.runId`) and only
+for tools the dispatched agent lists in `allowed_tools`.
 
 ### What the server guarantees, and what it does not
 
-It guarantees the order of steps, that each completed step handed back an
+In server-orchestrated mode it guarantees the order of steps, that each completed step handed back an
 output of the declared shape, that transitions follow the graph (decided by
 the server for rule edges), that a run is executed from the instructions it
 started with, and that its history cannot be edited without breaking the
