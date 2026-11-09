@@ -19,6 +19,7 @@ import './integration/engine.test';
 import './integration/audit.test';
 import './integration/evals.test';
 import './integration/harness.test';
+import './integration/runners.test';
 
 runAll()
   .then(async failed => {

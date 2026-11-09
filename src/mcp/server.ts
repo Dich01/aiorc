@@ -179,6 +179,8 @@ router.post('/', requireProjectKey, asyncHandler<ProjectKeyRequest & Request>(as
     return;
   }
 
+  if (method === 'ping') { res.json(rpcResult(id, {})); return; }
+
   if (method === 'tools/list') {
     const hasFlow = db.prepare('SELECT 1 FROM project_flows WHERE project_id = ?').get(project.id);
     if (!hasFlow) { res.json(rpcResult(id, { tools: [] })); return; }

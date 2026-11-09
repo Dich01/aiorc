@@ -19,6 +19,7 @@ import evalsRouter from './routes/evals';
 import adminRouter from './routes/admin';
 import mcpRouter from './mcp/server';
 import auditRouter from './routes/audit';
+import projectApiRouter from './routes/projectApi';
 
 // Builds the Express app without opening a port, so tests can mount it on an
 // ephemeral port. src/index.ts is the process entry point that listens.
@@ -51,6 +52,10 @@ export function createApp(): express.Express {
   app.use('/admin', adminRouter);
   app.use('/mcp', mcpRouter);
   app.use('/audit', auditRouter);
+  app.use('/api', projectApiRouter);
+  // Streamable-HTTP MCP clients may probe GET for a server-sent event stream;
+  // this server answers every request inline, so say so explicitly.
+  app.get('/mcp', (_req, res) => { res.setHeader('Allow', 'POST'); res.status(405).json({ error: 'Use POST for MCP JSON-RPC requests' }); });
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', version: '1.0.0', timestamp: Date.now() });
