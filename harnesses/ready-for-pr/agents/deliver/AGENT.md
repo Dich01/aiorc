@@ -19,6 +19,11 @@ the developer.
    - **Checks**: each check from the last checks step: name, command,
      status, exit code.
    - **Proof it works**: the evidence from the task step, or "none recorded".
+   - **Diagnosis** (bug fixes): the cause the task gave, whether it was
+     reproduced with the repository's real configuration (the task step's
+     `diagnosis` and the verifier's `fix_verification`), and the other causes
+     considered. If it is unconfirmed, say it plainly at the top of the body:
+     "The fix is not shown to remove the reported failure".
    - **Review**: risk level, reviewers that ran, findings left (severity, file,
      line, title) and every decision with its reason.
    - **Merge path**: `summary.merge_path` with `merge_path_reasons`; for

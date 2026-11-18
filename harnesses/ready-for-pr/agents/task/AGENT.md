@@ -39,5 +39,29 @@ push.
    response, a screenshot path. If there is none and the change can be
    exercised with one command, run it once and record the result. Never
    invent evidence; an empty list is allowed and the PR will say so.
-7. Return `status: "ready"` with `head_sha` (`git rev-parse HEAD`) and
+7. **Diagnosis.** Fill `diagnosis`. For a bug fix (`kind: "bug-fix"`), the
+   cause the task gives ("it fails because X") is a **hypothesis**, not a
+   fact, even when the user wrote it:
+   - `claimed_cause`: the cause as the task or the developer states it.
+   - Reproduce the original failure **the way the repository really runs**:
+     the same test command, flags, configuration and environment as the
+     profile's checks and CI, on the commit before the fix (a temporary
+     `git worktree` at `base_sha` keeps the working copy untouched).
+   - `reproduction`: the exact command, `same_config_as_repo`, and what
+     happened. If you had to change the configuration to make it fail (other
+     flags, a slower or faked dependency, a timing knob the repository does
+     not use), set `same_config_as_repo: false` and describe the change in
+     `config_changes`: a failure provoked that way shows the symptom can
+     happen, not that it is the cause.
+   - `status: "confirmed"` only when the failure was reproduced with the
+     repository's own configuration and the fix makes it go away; otherwise
+     `"unconfirmed"`, with the reason in `notes`. `"not-applicable"` for a
+     feature, refactor or docs change (`reproduction: null`).
+   - `alternatives`: other causes that would produce the same symptom, and
+     whether you ruled each one out and how. Look at least at shared
+     resources (ports, files, global state), ordering and concurrency, and
+     the environment.
+   An unconfirmed diagnosis does not stop the run: it is reported, and the
+   change goes to a person.
+8. Return `status: "ready"` with `head_sha` (`git rev-parse HEAD`) and
    `base_ref`.

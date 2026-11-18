@@ -15,3 +15,22 @@ How: follow the most critical path from input to output. For every function
 or interface the change modifies, search for its callers and check they still
 hold. Use `category: "correctness"` (or `"tests"` for a behavior the change
 introduces with no test, when the done criteria need one).
+
+## Question the diagnosis (bug fixes)
+
+You also receive the task step's `diagnosis`. A fix can be correct code for
+the wrong cause. Ask:
+
+- Does the cause the task gives fit how this code really runs, with the
+  repository's configuration? (For example: a "slow start" explanation does
+  not fit a call that the dependency answers synchronously.)
+- Which other cause produces the same symptom: shared resources such as
+  ports, files or global state; ordering and concurrency; a second process;
+  the environment?
+- Does the change remove the failure for those causes too, or only for the
+  one in the task?
+
+If the change fixes a cause that does not explain the reported failure, or
+leaves a more likely cause untouched, report it with `category:
+"diagnosis"`, the scenario that still fails, and the evidence from the
+code. The verifier will try to reproduce it.

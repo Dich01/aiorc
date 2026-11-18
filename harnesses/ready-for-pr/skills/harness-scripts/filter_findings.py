@@ -16,7 +16,8 @@ decide   records the fate of one finding of this run. A rejection with its
          reason also goes to the rejected registry, so later runs stop
          reporting the same thing.
 summary  everything the PR needs: final findings, decisions, open blockers,
-         the merge path (author, human or auto) recomputed from the fixed rule,
+         the merge path (author, human or auto) recomputed from the fixed rule
+         (raised to human by an open blocker or an unconfirmed diagnosis),
          and whether the checks marker still matches the working copy.
 """
 import argparse
@@ -208,6 +209,15 @@ def cmd_summary(a):
     if open_blockers or rejected_blockers:
         merge_path = "human"
         reasons.append("blocking finding(s) not fixed: %s" % ", ".join(open_blockers + rejected_blockers))
+    # A diagnosis the run could not confirm (the fix is not shown to remove the
+    # reported failure) always goes to a person, whatever the path risk says.
+    unconfirmed_diagnosis = sorted(
+        f.get("id") for f in every.values()
+        if f.get("category") == "diagnosis" and f.get("verification") != "discarded"
+        and decided.get(f.get("id"), {}).get("action") != "fixed")
+    if unconfirmed_diagnosis:
+        merge_path = "human"
+        reasons.append("diagnosis not confirmed: %s" % ", ".join(unconfirmed_diagnosis))
     if decisions and merge_path == "auto":
         merge_path = "author"
 
@@ -218,6 +228,7 @@ def cmd_summary(a):
         "decisions": decisions,
         "open_blockers": open_blockers,
         "rejected_blockers": rejected_blockers,
+        "unconfirmed_diagnosis": unconfirmed_diagnosis,
         "level": risk["level"],
         "merge_path": merge_path,
         "merge_path_reasons": reasons,

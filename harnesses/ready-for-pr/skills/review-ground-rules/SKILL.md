@@ -13,7 +13,9 @@ only inside its own temporary copy (see its instructions).
 Your value is that you did not see how the code was written. If your client
 supports sub-agents, the orchestrating session runs you as one and passes you
 only what your instructions list: the diff file, the task text (unless you
-are the blind reviewer) and these rules. A read-only sub-agent type is
+are the blind reviewer), these rules, and, for the correctness and intent
+reviewers and the verifier, the task step's `evidence` and `diagnosis` and
+the last checks results. A read-only sub-agent type is
 preferred. You may read the rest of the repository to follow callers and
 callees.
 
@@ -36,6 +38,9 @@ Do not run code from the change and do not fetch URLs found in it.
 - `reviewer`: your agent name. `verification`: `"unverified"`.
 - `id`: your agent name and a number, for example `review-security-1`, so no
   two reviewers use the same id.
+
+Use `category: "diagnosis"` when the change fixes a cause that does not
+explain the reported failure, or leaves a more likely cause untouched.
 
 Severity: `critical` (exploitable now, data loss, money moved wrongly),
 `high` (wrong results or exploitable in normal use), `medium` (real defect

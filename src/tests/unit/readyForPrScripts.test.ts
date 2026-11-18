@@ -208,6 +208,22 @@ test('filter_findings: reads the findings from stdin and makes ids unique across
   assert.strictEqual(d.recorded.file, 'app/calc.py', 'the decision names exactly one finding');
 });
 
+test('filter_findings summary: an unconfirmed diagnosis sends the change to a person; a fixed one does not', () => {
+  const dir = fixture('failing-check');
+  fixMultiply(dir);
+  py(dir, 'checks.py', '--run-id', 'r1');
+  const file = path.join(dir, '.git', 'aiorc', 'v.json');
+  fs.writeFileSync(file, JSON.stringify({ findings: [finding('verifier-diagnosis-1', { category: 'diagnosis', file: 'app/calc.py', verification: 'plausible', reviewer: 'verifier' })] }));
+  assert.strictEqual(py(dir, 'filter_findings.py', 'filter', '--run-id', 'r1', '--findings', file).blocking, false);
+  let s = py(dir, 'filter_findings.py', 'summary', '--run-id', 'r1');
+  assert.strictEqual(s.level, 'normal');
+  assert.deepStrictEqual([s.merge_path, s.unconfirmed_diagnosis], ['human', ['verifier-diagnosis-1']]);
+  assert.ok(s.merge_path_reasons.some((r: string) => r.startsWith('diagnosis not confirmed')));
+  py(dir, 'filter_findings.py', 'decide', '--run-id', 'r1', '--id', 'verifier-diagnosis-1', '--action', 'fixed', '--reason', 'reproduced with the real configuration and fixed');
+  s = py(dir, 'filter_findings.py', 'summary', '--run-id', 'r1');
+  assert.deepStrictEqual([s.merge_path, s.unconfirmed_diagnosis], ['author', []]);
+});
+
 test('filter_findings summary: the marker goes stale when the code changes after the checks', () => {
   const dir = fixture('failing-check');
   fixMultiply(dir);

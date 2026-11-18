@@ -68,12 +68,15 @@ function taskOutput(dir: string, extra: Record<string, unknown> = {}) {
     status: 'ready', task: 'the task', done_criteria: 'it is done', branch: git(dir, 'rev-parse', '--abbrev-ref', 'HEAD'),
     base_ref: 'main', head_sha: git(dir, 'rev-parse', 'HEAD'), committed: false,
     evidence: [{ kind: 'test-output', description: 'unit tests', result: 'passed' }],
+    diagnosis: { kind: 'feature', claimed_cause: '', status: 'not-applicable', reproduction: null, alternatives: [], notes: '' },
     scripts: py(dir, 'common.py', 'manifest').scripts, profile_loaded: true, notes: '', ...extra,
   };
 }
 
 const checksOutput = (dir: string, runId: string) => ({ checks: py(dir, 'checks.py', '--run-id', runId), weakening: py(dir, 'detect_weakening.py') });
 const none = { findings: [], notes: '' };
+const noFix = { applies: false, reproduced_before: null, fixed_after: null, same_config_as_repo: null, how: 'not a bug fix', notes: '' };
+const verified = (findings: unknown[], fix = noFix) => ({ findings, fix_verification: fix, notes: '' });
 const fixerOutput = (kind: 'checks' | 'findings', commits: string[], decisions: unknown[] = [], extra: Record<string, unknown> = {}) =>
   ({ kind, decisions, commits, changed_files: [], stuck: false, summary: 'fixed', notes: '', ...extra });
 const explainOutput = { problem: 'p', behavior: 'b', decisions: [], read_first: [], risks: [], files_in_order: [], evidence: 'tests passed', markdown: '## What and why\n\np' };
@@ -132,7 +135,7 @@ test('normal change: a failing check is fixed, two reviewers run, and the run en
   await run.next(['checks'], { checks: checksOutput(dir, run.id) });
   await run.next(['prepare'], { prepare: py(dir, 'prepare_diff.py', '--run-id', run.id) });
   await run.next(MIN, { 'min-correctness': none, 'min-intent': none });
-  await run.next(['verifier'], { verifier: none });
+  await run.next(['verifier'], { verifier: verified([]) });
   await run.next(['filter'], { filter: filterOutput(dir, run.id, []) });
   await run.next(['explain'], { explain: explainOutput });
   await run.next(['deliver'], { deliver: deliverOutput(dir, run.id) });
@@ -152,7 +155,7 @@ test('sensitive change: all five reviewers, a confirmed blocker is fixed, re-rev
   const raised = finding('sec-1', { verification: 'unverified' });
   delete (raised as Record<string, unknown>).verification_note;
   await run.next(FULL, { 'full-security': { findings: [raised], notes: '' }, 'full-correctness': none, 'full-intent': none, 'full-blind': none, 'full-duplicates': none });
-  await run.next(['verifier'], { verifier: { findings: [finding('sec-1')], notes: '' } });
+  await run.next(['verifier'], { verifier: verified([finding('sec-1')]) });
   const filtered = filterOutput(dir, run.id, [finding('sec-1')]);
   assert.strictEqual(filtered.blocking, true);
   await run.next(['filter'], { filter: filtered });
@@ -167,7 +170,7 @@ test('sensitive change: all five reviewers, a confirmed blocker is fixed, re-rev
   assert.deepStrictEqual([round2.scope, round2.depth, round2.files], ['incremental', 'full', ['app/auth/users.py']]);
   await run.next(['prepare'], { prepare: round2 });
   await run.next(FULL, { 'full-security': none, 'full-correctness': none, 'full-intent': none, 'full-blind': none, 'full-duplicates': none });
-  await run.next(['verifier'], { verifier: none });
+  await run.next(['verifier'], { verifier: verified([]) });
   await run.next(['filter'], { filter: filterOutput(dir, run.id, []) });
   await run.next(['explain'], { explain: explainOutput });
   const delivered = deliverOutput(dir, run.id);
@@ -244,12 +247,40 @@ test('the early Ends: weakened tests, oversized change, no changes, missing task
   await run.next(['checks'], { checks: checksOutput(dir, run.id) });
   await run.next(['prepare'], { prepare: py(dir, 'prepare_diff.py', '--run-id', run.id) });
   await run.next(MIN, { 'min-correctness': none, 'min-intent': none });
-  await run.next(['verifier'], { verifier: none });
+  await run.next(['verifier'], { verifier: verified([]) });
   await run.next(['filter'], { filter: filterOutput(dir, run.id, []) });
   await run.next(['explain'], { explain: explainOutput });
   write(dir, 'app/calc.py', fs.readFileSync(path.join(dir, 'app/calc.py'), 'utf8') + '\n# edited after the checks\n');
   await run.next(['deliver'], { deliver: deliverOutput(dir, run.id) });
   assert.strictEqual(run.outcome, 'checks-stale');
+});
+
+test('a bug fix whose diagnosis the verifier cannot reproduce goes to a person, even on a normal path', async () => {
+  const { key } = await applied();
+  const dir = fixture('failing-check');
+  const run = await Run.start(key, { request: 'multiply fails because of rounding; fix it' });
+  await run.next(['task'], { task: taskOutput(dir, { diagnosis: {
+    kind: 'bug-fix', claimed_cause: 'rounding in multiply', status: 'unconfirmed',
+    reproduction: { command: 'python3 -m unittest', same_config_as_repo: false, config_changes: 'forced float inputs', result: 'fails only with floats' },
+    alternatives: ['multiply adds instead of multiplying'], notes: 'only reproduced with a changed configuration' } }) });
+  await run.next(['risk'], { risk: py(dir, 'classify_risk.py') });
+  await run.next(['checks'], { checks: checksOutput(dir, run.id) });
+  const sha = fixMultiply(dir);
+  await run.next(['fix-checks'], { 'fix-checks': fixerOutput('checks', [sha]) });
+  await run.next(['checks'], { checks: checksOutput(dir, run.id) });
+  await run.next(['prepare'], { prepare: py(dir, 'prepare_diff.py', '--run-id', run.id) });
+  await run.next(MIN, { 'min-correctness': none, 'min-intent': none });
+  const diag = finding('verifier-diagnosis-1', { category: 'diagnosis', file: 'app/calc.py', reviewer: 'verifier', verification: 'plausible',
+    title: 'The reported failure was not reproduced with the real configuration', verification_note: 'only with forced floats' });
+  await run.next(['verifier'], { verifier: verified([diag], { applies: true, reproduced_before: false, fixed_after: true, same_config_as_repo: false, how: 'ran the suite 5 times at base_sha', notes: '' }) });
+  const f = filterOutput(dir, run.id, [diag]);
+  assert.strictEqual(f.blocking, false, 'a plausible diagnosis finding does not block');
+  await run.next(['filter'], { filter: f });
+  await run.next(['explain'], { explain: explainOutput });
+  const delivered = deliverOutput(dir, run.id);
+  assert.deepStrictEqual(delivered.summary.unconfirmed_diagnosis, ['verifier-diagnosis-1']);
+  await run.next(['deliver'], { deliver: delivered });
+  assert.strictEqual(run.outcome, 'ready-human-review', 'normal risk, but the diagnosis is unconfirmed');
 });
 
 test('a fourth round of fixes is refused: the run stops as capped', async () => {
@@ -264,7 +295,7 @@ test('a fourth round of fixes is refused: the run stops as capped', async () => 
     await run.next(['checks'], { checks: checksOutput(dir, run.id) });
     await run.next(['prepare'], { prepare: prepared });
     await run.next(FULL, { 'full-security': none, 'full-correctness': none, 'full-intent': none, 'full-blind': none, 'full-duplicates': none });
-    await run.next(['verifier'], { verifier: { findings: [finding('sec-1')], notes: '' } });
+    await run.next(['verifier'], { verifier: verified([finding('sec-1')]) });
     const r = await run.next(['filter'], { filter: blocking });
     if (round < 4) await run.next(['fix-findings'], { 'fix-findings': fixerOutput('findings', [], [{ id: 'sec-1', action: 'rejected', reason: 'not convinced' }]) });
     else {
@@ -278,6 +309,10 @@ test('outputs that do not come from the scripts are refused', async () => {
   const { key, token } = await applied();
   const dir = fixture('failing-check');
   const run = await Run.start(key, { request: 'x' });
+  const noDiagnosis = taskOutput(dir) as Record<string, unknown>;
+  delete noDiagnosis.diagnosis;
+  const missing = await mcp(key, 'workflow.next', { runId: run.id, step: run.step, outputs: [{ node: 'task', output: noDiagnosis }] });
+  assert.strictEqual(missing.meta.error, 'invalid_output', 'the task step must say whether the diagnosis was reproduced');
   await run.next(['task'], { task: taskOutput(dir) });
   const forged = { ...py(dir, 'classify_risk.py') };
   delete forged.script;

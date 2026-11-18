@@ -1,18 +1,83 @@
 {
   "type": "object",
-  "required": ["findings", "notes"],
+  "required": [
+    "findings",
+    "fix_verification",
+    "notes"
+  ],
   "properties": {
     "findings": {
       "type": "array",
       "maxItems": 200,
       "items": {
         "allOf": [
-          { "$include": "../../schemas/finding.schema.json" },
-          { "required": ["verification_note"], "properties": { "verification": { "enum": ["confirmed", "plausible", "discarded"] } } }
+          {
+            "$include": "../../schemas/finding.schema.json"
+          },
+          {
+            "required": [
+              "verification_note"
+            ],
+            "properties": {
+              "verification": {
+                "enum": [
+                  "confirmed",
+                  "plausible",
+                  "discarded"
+                ]
+              }
+            }
+          }
         ]
       }
     },
-    "notes": { "type": "string", "maxLength": 2000 }
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "fix_verification": {
+      "type": "object",
+      "required": [
+        "applies",
+        "reproduced_before",
+        "fixed_after",
+        "same_config_as_repo",
+        "how",
+        "notes"
+      ],
+      "properties": {
+        "applies": {
+          "type": "boolean"
+        },
+        "reproduced_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "fixed_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "same_config_as_repo": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "how": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }
