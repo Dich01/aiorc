@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": ["level", "depth", "merge_path", "requires_human", "owners", "reasons", "base_ref", "base_sha", "head_sha", "dirty", "stats", "changed_files", "profile_loaded", "script"],
+  "properties": {
+    "level": { "enum": ["none", "split", "sensitive", "auto", "normal"] },
+    "depth": { "enum": ["none", "min", "full"] },
+    "merge_path": { "enum": ["author", "human", "auto"] },
+    "requires_human": { "type": "boolean" },
+    "owners": { "type": "array" },
+    "reasons": { "type": "array", "minItems": 1 },
+    "base_ref": { "type": "string" },
+    "base_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "dirty": { "type": "boolean" },
+    "stats": { "type": "object", "required": ["files", "added", "deleted"] },
+    "changed_files": { "type": "array", "items": { "type": "string" } },
+    "profile_loaded": { "type": "boolean" },
+    "script": { "$include": "../../schemas/script.schema.json" }
+  },
+  "additionalProperties": false
+}

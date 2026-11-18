@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["round", "scope", "from_sha", "head_sha", "depth", "level", "files", "diff_file", "diff_sha256", "nocomments_file", "nocomments_sha256", "comment_lines_removed", "script"],
+  "properties": {
+    "round": { "type": "integer", "minimum": 1 },
+    "scope": { "enum": ["full", "incremental"] },
+    "from_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "depth": { "enum": ["none", "min", "full"] },
+    "level": { "enum": ["none", "split", "sensitive", "auto", "normal"] },
+    "files": { "type": "array", "items": { "type": "string" } },
+    "diff_file": { "type": "string" },
+    "diff_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nocomments_file": { "type": "string" },
+    "nocomments_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "comment_lines_removed": { "type": "integer" },
+    "script": { "$include": "../../schemas/script.schema.json" }
+  },
+  "additionalProperties": false
+}

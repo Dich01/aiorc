@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["name", "sha256"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z_]+\\.py$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "additionalProperties": false
+}

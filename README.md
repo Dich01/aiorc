@@ -176,6 +176,11 @@ against it, and checks the Ed25519 signature.
 - `harnesses/code-review/`: reference harness with two projects,
   `code-review-pre-pr` and `code-review-post-pr`. Prompts are skeletons; the
   structure (schemas, rules, fork, verifier, evals) is complete.
+- `harnesses/ready-for-pr/`: language-agnostic local harness that leaves a
+  change ready for its pull request (fixed-rule risk, the repository's checks,
+  weakening detector, parallel reviewers, verifier, capped fix loop,
+  explanation). Fork it per repository and attach that repository's profile.
+  See [its README](harnesses/ready-for-pr/README.md).
 - `runners/`: the pre-PR script and hook, and the GitHub Actions template.
   See [runners/README.md](runners/README.md).
 

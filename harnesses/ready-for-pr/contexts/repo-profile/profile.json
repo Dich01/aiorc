@@ -1,0 +1,50 @@
+{
+  "base_branch": "main",
+  "checks": [
+    {
+      "name": "syntax",
+      "command": "python3 -B -c \"import ast, pathlib; [ast.parse(p.read_text(), str(p)) for d in ('app', 'tests') for p in pathlib.Path(d).rglob('*.py')]\"",
+      "timeout_seconds": 60
+    },
+    {
+      "name": "tests",
+      "command": "python3 -B -m unittest discover -s tests -t .",
+      "timeout_seconds": 300
+    }
+  ],
+  "sensitive_paths": [
+    "app/auth/**",
+    "app/payments/**",
+    "migrations/**",
+    ".github/workflows/**",
+    ".claude/**"
+  ],
+  "auto_paths": [
+    "**/*.md",
+    "docs/**",
+    "LICENSE"
+  ],
+  "test_paths": [
+    "tests/**",
+    "**/test_*.py"
+  ],
+  "max_changed_lines": 600,
+  "max_changed_files": 40,
+  "full_review_levels": [
+    "sensitive"
+  ],
+  "block_severities": [
+    "high",
+    "critical"
+  ],
+  "owners": [
+    {
+      "paths": [
+        "app/auth/**",
+        "app/payments/**"
+      ],
+      "team": "security"
+    }
+  ],
+  "allow_push": false
+}

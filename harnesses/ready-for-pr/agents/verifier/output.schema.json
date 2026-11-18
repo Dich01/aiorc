@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "required": ["findings", "notes"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "allOf": [
+          { "$include": "../../schemas/finding.schema.json" },
+          { "required": ["verification_note"], "properties": { "verification": { "enum": ["confirmed", "plausible", "discarded"] } } }
+        ]
+      }
+    },
+    "notes": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

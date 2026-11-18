@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": ["summary", "findings", "branch", "pr_title", "pr_body", "commands", "pushed", "pr_url", "notes"],
+  "properties": {
+    "summary": {
+      "type": "object",
+      "required": ["rounds", "findings", "decisions", "open_blockers", "rejected_blockers", "level", "merge_path", "merge_path_reasons", "owners", "checks_current", "head_sha", "base_sha", "script"],
+      "properties": {
+        "merge_path": { "enum": ["author", "human", "auto"] },
+        "checks_current": { "type": "boolean" },
+        "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "script": { "$include": "../../schemas/script.schema.json" }
+      }
+    },
+    "findings": { "type": "array", "maxItems": 200, "items": { "$include": "../../schemas/finding.schema.json" } },
+    "branch": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "pr_title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "pr_body": { "type": "string", "minLength": 1, "maxLength": 30000 },
+    "commands": { "type": "array", "items": { "type": "string", "maxLength": 2000 }, "maxItems": 20 },
+    "pushed": { "type": "boolean" },
+    "pr_url": { "type": "string", "maxLength": 500 },
+    "notes": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

@@ -21,3 +21,6 @@ data/*.bak-wal
 # Config local de Claude Code (importa rutas privadas)
 CLAUDE.md
 .claude/
+
+# Python bytecode (harness scripts)
+__pycache__/

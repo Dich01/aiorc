@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["problem", "behavior", "decisions", "read_first", "risks", "files_in_order", "evidence", "markdown"],
+  "properties": {
+    "problem": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "behavior": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "decisions": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "maxItems": 20 },
+    "read_first": { "type": "array", "items": { "type": "string", "maxLength": 500 }, "maxItems": 10 },
+    "risks": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "maxItems": 20 },
+    "files_in_order": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["file", "why"],
+        "properties": { "file": { "type": "string" }, "why": { "type": "string", "maxLength": 500 } },
+        "additionalProperties": false
+      }
+    },
+    "evidence": { "type": "string", "maxLength": 4000 },
+    "markdown": { "type": "string", "minLength": 1, "maxLength": 12000 }
+  },
+  "additionalProperties": false
+}

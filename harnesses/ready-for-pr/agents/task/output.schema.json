@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "required": ["status", "task", "done_criteria", "branch", "base_ref", "head_sha", "committed", "evidence", "scripts", "profile_loaded", "notes"],
+  "properties": {
+    "status": { "enum": ["ready", "no-changes", "missing-task", "setup-error"] },
+    "task": { "type": "string", "maxLength": 8000 },
+    "done_criteria": { "type": "string", "maxLength": 4000 },
+    "branch": { "type": "string", "maxLength": 200 },
+    "base_ref": { "type": "string", "maxLength": 200 },
+    "head_sha": { "type": "string", "pattern": "^([0-9a-f]{40})?$" },
+    "committed": { "type": "boolean" },
+    "evidence": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "required": ["kind", "description", "result"],
+        "properties": {
+          "kind": { "enum": ["test-output", "command-output", "screenshot", "http-response", "manual-check", "other"] },
+          "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "result": { "type": "string", "maxLength": 4000 },
+          "path": { "type": "string", "maxLength": 500 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scripts": { "type": "array", "maxItems": 20, "items": { "$include": "../../schemas/script.schema.json" } },
+    "profile_loaded": { "type": "boolean" },
+    "notes": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}
