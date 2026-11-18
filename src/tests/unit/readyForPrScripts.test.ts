@@ -184,6 +184,21 @@ test('filter_findings: drops discarded, merges duplicates, blocks only on confir
   assert.strictEqual(again.blocking, false, 'a rejected finding is not reported again');
 });
 
+test('filter_findings: reads the findings from stdin and makes ids unique across reviewers', () => {
+  const dir = fixture('sql-injection');
+  const verified = { findings: [
+    finding('corr-1'),
+    finding('corr-1', { reviewer: 'review-blind', file: 'app/calc.py', category: 'correctness', title: 'Another defect' }),
+  ] };
+  const out = execFileSync('python3', [path.join(RFP_SCRIPTS, 'filter_findings.py'), 'filter', '--run-id', 'r1', '--findings', '-'],
+    { cwd: dir, encoding: 'utf8', input: JSON.stringify(verified) });
+  const f = JSON.parse(out);
+  assert.deepStrictEqual(f.findings.map((x: { id: string }) => x.id).sort(), ['corr-1', 'corr-1-review-blind']);
+  assert.ok(fs.existsSync(path.join(dir, '.git', 'aiorc', 'runs', 'r1', 'verified-1.json')), 'a copy of the input is kept');
+  const d = py(dir, 'filter_findings.py', 'decide', '--run-id', 'r1', '--id', 'corr-1-review-blind', '--action', 'fixed', '--reason', 'changed');
+  assert.strictEqual(d.recorded.file, 'app/calc.py', 'the decision names exactly one finding');
+});
+
 test('filter_findings summary: the marker goes stale when the code changes after the checks', () => {
   const dir = fixture('failing-check');
   fixMultiply(dir);

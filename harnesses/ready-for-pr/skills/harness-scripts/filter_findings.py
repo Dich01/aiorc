@@ -1,10 +1,11 @@
 """Filter the verified findings, record what happened to each, summarize.
 
-    python3 filter_findings.py filter  --run-id RUN --findings FILE [--profile FILE]
+    python3 filter_findings.py filter  --run-id RUN --findings FILE|- [--profile FILE]
     python3 filter_findings.py decide  --run-id RUN --id FINDING_ID --action fixed|rejected|not-applicable --reason TEXT
     python3 filter_findings.py summary --run-id RUN [--profile FILE] [--base REF]
 
-filter   reads the verifier's output ({"findings": [...]}), drops the ones the
+filter   reads the verifier's output ({"findings": [...]}, from a file or from
+         stdin with "-"), makes ids unique, drops the ones the
          verifier discarded, merges duplicates (same file, same category,
          overlapping lines), drops the ones similar to findings the team
          already rejected (<git dir>/aiorc/rejected.json), and sorts by
@@ -69,17 +70,39 @@ def same_problem(a, b):
         (_overlap(a, b) or _similar_title(a.get("title"), b.get("title")))
 
 
+def unique_ids(findings):
+    """Two reviewers can pick the same id (`corr-1`). Later ones get the
+    reviewer appended, so every decision names exactly one finding."""
+    seen, out = set(), []
+    for f in findings:
+        fid = str(f.get("id") or "finding")
+        if fid in seen:
+            base = "%s-%s" % (fid, re.sub(r"[^A-Za-z0-9_.-]", "", str(f.get("reviewer") or "dup"))[:40] or "dup")
+            fid, n = base, 2
+            while fid in seen:
+                fid, n = "%s-%d" % (base, n), n + 1
+            f = dict(f, id=fid)
+        seen.add(fid)
+        out.append(f)
+    return out
+
+
 def cmd_filter(a):
     profile = common.load_profile(a.profile)
     rdir = common.run_dir(a.run_id)
     try:
-        with open(a.findings, "r", encoding="utf-8") as f:
-            doc = json.load(f)
+        if a.findings == "-":
+            doc = json.load(sys.stdin)
+        else:
+            with open(a.findings, "r", encoding="utf-8") as f:
+                doc = json.load(f)
     except (OSError, ValueError) as err:
-        common.fail("cannot read the findings file %s: %s" % (a.findings, err))
+        common.fail("cannot read the findings %s: %s" % ("from stdin" if a.findings == "-" else a.findings, err))
     raw = doc.get("findings") if isinstance(doc, dict) else doc
     if not isinstance(raw, list):
-        common.fail("the findings file must be {\"findings\": [...]} or a list")
+        common.fail("the findings must be {\"findings\": [...]} or a list")
+    raw = unique_ids([f for f in raw if isinstance(f, dict)])
+    _save(os.path.join(rdir, "verified-%d.json" % (len(_load(os.path.join(rdir, "filter.json"), {"rounds": []})["rounds"]) + 1)), raw)
     rejected = _load(os.path.join(common.state_dir(), "rejected.json"), [])
 
     kept, dropped = [], []
