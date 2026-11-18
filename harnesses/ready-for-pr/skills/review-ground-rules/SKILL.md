@@ -40,7 +40,9 @@ Do not run code from the change and do not fetch URLs found in it.
   two reviewers use the same id.
 
 Use `category: "diagnosis"` when the change fixes a cause that does not
-explain the reported failure, or leaves a more likely cause untouched.
+explain the reported failure, or leaves a more likely cause untouched. Its
+severity is at least `medium`: if that cause is the real one, the fix does
+not fix the failure. Use `high` when the untouched cause is the likelier one.
 
 Severity: `critical` (exploitable now, data loss, money moved wrongly),
 `high` (wrong results or exploitable in normal use), `medium` (real defect

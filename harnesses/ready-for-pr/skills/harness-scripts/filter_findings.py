@@ -7,7 +7,8 @@
 filter   reads the verifier's output ({"findings": [...]}, from a file or from
          stdin with "-"), makes ids unique, drops the ones the
          verifier discarded, merges duplicates (same file, same category,
-         overlapping lines), drops the ones similar to findings the team
+         overlapping lines; diagnosis findings only when they make the same
+         claim), drops the ones similar to findings the team
          already rejected (<git dir>/aiorc/rejected.json), and sorts by
          severity. It never drops a finding because only one reviewer saw it.
          blocking: a confirmed finding of a blocking severity (profile
@@ -67,8 +68,14 @@ def _similar_title(a, b):
 
 
 def same_problem(a, b):
-    return a.get("file") == b.get("file") and a.get("category") == b.get("category") and \
-        (_overlap(a, b) or _similar_title(a.get("title"), b.get("title")))
+    if a.get("file") != b.get("file") or a.get("category") != b.get("category"):
+        return False
+    # Diagnosis findings usually point at the same few lines while saying
+    # different things (an untouched cause, a missing reproduction, an
+    # unconfirmed fix): only the same claim makes them duplicates.
+    if a.get("category") == "diagnosis":
+        return _similar_title(a.get("title"), b.get("title"))
+    return _overlap(a, b) or _similar_title(a.get("title"), b.get("title"))
 
 
 def unique_ids(findings):

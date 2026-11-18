@@ -208,6 +208,21 @@ test('filter_findings: reads the findings from stdin and makes ids unique across
   assert.strictEqual(d.recorded.file, 'app/calc.py', 'the decision names exactly one finding');
 });
 
+test('filter_findings: diagnosis findings on the same lines stay apart unless they make the same claim', () => {
+  const dir = fixture('failing-check');
+  const diag = (id: string, title: string, reviewer: string) => finding(id, { category: 'diagnosis', file: 'app/calc.py', line_start: 5, line_end: 9, title, reviewer, verification: 'confirmed', severity: 'medium' });
+  const file = path.join(dir, '.git', 'aiorc', 'd.json');
+  fs.writeFileSync(file, JSON.stringify({ findings: [
+    diag('corr-1', 'The port race in the free-port helper is left open', 'review-correctness'),
+    diag('intent-1', 'The flaky failure was never reproduced, so passing runs prove nothing', 'review-intent'),
+    diag('ver-1', 'Original failure not reproduced with the real configuration', 'verifier'),
+    diag('blind-1', 'Port race in the free-port helper left open', 'review-blind'),
+  ] }));
+  const f = py(dir, 'filter_findings.py', 'filter', '--run-id', 'r1', '--findings', file);
+  assert.deepStrictEqual(f.findings.map((x: { id: string }) => x.id).sort(), ['corr-1', 'intent-1', 'ver-1'], 'three different claims stay three findings');
+  assert.deepStrictEqual(f.dropped, [{ id: 'blind-1', reason: 'duplicate of corr-1' }], 'the same claim from another reviewer is merged');
+});
+
 test('filter_findings summary: an unconfirmed diagnosis sends the change to a person; a fixed one does not', () => {
   const dir = fixture('failing-check');
   fixMultiply(dir);

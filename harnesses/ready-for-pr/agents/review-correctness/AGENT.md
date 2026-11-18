@@ -33,4 +33,5 @@ the wrong cause. Ask:
 If the change fixes a cause that does not explain the reported failure, or
 leaves a more likely cause untouched, report it with `category:
 "diagnosis"`, the scenario that still fails, and the evidence from the
-code. The verifier will try to reproduce it.
+code: severity at least `medium`, `high` when the untouched cause is the
+likelier one. The verifier will try to reproduce it.
