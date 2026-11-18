@@ -67,6 +67,15 @@ test('checks: runs the profile commands, stops at the first failure and writes t
   assert.ok(r.results[1].output_tail.includes('test_multiply'), r.results[1].output_tail);
   assert.strictEqual(fs.existsSync(path.join(failing, '.git', 'aiorc', 'checked.json')), false);
 
+  // A later round keeps the log of the earlier failure.
+  fixMultiply(failing);
+  const again = py(failing, 'checks.py', '--run-id', 'r1');
+  assert.strictEqual(again.passed, true);
+  assert.notStrictEqual(again.results[1].log_file, r.results[1].log_file);
+  assert.ok(fs.readFileSync(r.results[1].log_file, 'utf8').includes('test_multiply'), 'the failure log of round 1 is still there');
+  assert.match(r.results[1].log_file, /checks\/round-1\/tests\.log$/);
+  assert.match(again.results[1].log_file, /checks\/round-2\/tests\.log$/);
+
   const ok = fixture('sql-injection');
   const p = py(ok, 'checks.py', '--run-id', 'r1');
   assert.strictEqual(p.passed, true);

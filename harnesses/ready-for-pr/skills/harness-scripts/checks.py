@@ -11,6 +11,10 @@ change only. "{changed_files:*.py}" (comma-separated globs) passes only the
 files that match, so a tool never receives a file type it cannot parse. A
 check whose placeholder matches no file is skipped.
 
+Each run of this script writes the full output of every check to its own
+folder, <git dir>/aiorc/runs/RUN/checks/round-N/<check>.log, so the log of a
+failure survives the later rounds (log_file in each result points at it).
+
 When every required check passes, a marker with the exact state that was
 checked (HEAD and the tree of the working copy) is written to
 <git dir>/aiorc/checked.json. If the code changes afterwards, the marker no
@@ -84,8 +88,12 @@ def main():
     root = common.repo_root()
     profile = common.load_profile(a.profile)
     run_dir = common.run_dir(a.run_id)
-    logs_dir = os.path.join(run_dir, "checks")
-    os.makedirs(logs_dir, exist_ok=True)
+    # One folder per round: a later round never overwrites the log of a failure.
+    checks_dir = os.path.join(run_dir, "checks")
+    os.makedirs(checks_dir, exist_ok=True)
+    taken = [int(n[6:]) for n in os.listdir(checks_dir) if n.startswith("round-") and n[6:].isdigit()]
+    logs_dir = os.path.join(checks_dir, "round-%d" % (max(taken, default=0) + 1))
+    os.makedirs(logs_dir)
 
     try:
         base = common.resolve_base(profile, a.base)
