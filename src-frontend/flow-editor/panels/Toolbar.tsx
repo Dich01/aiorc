@@ -38,9 +38,9 @@ export default function Toolbar({
         <button
           className={`fe-btn fe-btn-toggle${skillsVisible ? ' active' : ''}`}
           onClick={onToggleSkills}
-          title="Show/hide skills"
+          title="Show/hide skills and contexts"
         >
-          Skills <span className="fe-btn-icon">◨</span>
+          Skills &amp; contexts <span className="fe-btn-icon">◨</span>
         </button>
       </div>
 

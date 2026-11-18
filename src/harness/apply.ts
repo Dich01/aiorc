@@ -46,7 +46,10 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       } else if (row!.description !== e.description || !filesEqual(cfg.table, cfg.fk, id, e.files)) {
         const used = table === 'skills'
           ? outsiders(flowsReferencingAgents((db.prepare('SELECT agent_id FROM agent_skills WHERE skill_id = ?').all(id) as { agent_id: string }[]).map(r => r.agent_id)))
-          : outsiders(db.prepare('SELECT p.name FROM project_contexts pc JOIN projects p ON p.id = pc.project_id WHERE pc.context_id = ?').all(id) as { name: string }[]);
+          : outsiders([
+              ...db.prepare('SELECT p.name FROM project_contexts pc JOIN projects p ON p.id = pc.project_id WHERE pc.context_id = ?').all(id) as { name: string }[],
+              ...flowsReferencingAgents((db.prepare('SELECT agent_id FROM agent_contexts WHERE context_id = ?').all(id) as { agent_id: string }[]).map(r => r.agent_id)),
+            ]);
         if (used.length) conflict(`The ${table.slice(0, -1)} "${e.name}"`, used);
         db.prepare(`UPDATE ${table} SET description = ? WHERE id = ?`).run(e.description, id);
         report.updated.push(`${table.slice(0, -1)} ${e.name}`);
@@ -66,13 +69,15 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       const row = db.prepare('SELECT id, description, output_schema, allowed_tools FROM agents WHERE user_id = ? AND name = ?').get(ownerId, a.name) as { id: string; description: string; output_schema: string; allowed_tools: string } | undefined;
       let id = row?.id;
       const wantSkills = a.skills.map(s => skillIds.get(s)!);
+      const wantContexts = a.contexts.map(c => contextIds.get(c)!);
       if (!id) {
         id = uuidv4();
         db.prepare('INSERT INTO agents (id, user_id, name, description, output_schema, allowed_tools, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, ownerId, a.name, a.description, schema, tools, now);
         report.created.push(`agent ${a.name}`);
       } else {
         const curSkills = (db.prepare('SELECT skill_id FROM agent_skills WHERE agent_id = ? ORDER BY ordinal').all(id) as { skill_id: string }[]).map(r => r.skill_id);
-        if (row!.description !== a.description || row!.output_schema !== schema || row!.allowed_tools !== tools || canonicalJson(curSkills) !== canonicalJson(wantSkills) || !filesEqual('agent_files', 'agent_id', id, a.files)) {
+        const curContexts = (db.prepare('SELECT context_id FROM agent_contexts WHERE agent_id = ? ORDER BY ordinal').all(id) as { context_id: string }[]).map(r => r.context_id);
+        if (row!.description !== a.description || row!.output_schema !== schema || row!.allowed_tools !== tools || canonicalJson(curSkills) !== canonicalJson(wantSkills) || canonicalJson(curContexts) !== canonicalJson(wantContexts) || !filesEqual('agent_files', 'agent_id', id, a.files)) {
           const used = outsiders(flowsReferencingAgents([id]));
           if (used.length) conflict(`The agent "${a.name}"`, used);
           db.prepare('UPDATE agents SET description = ?, output_schema = ?, allowed_tools = ? WHERE id = ?').run(a.description, schema, tools, id);
@@ -82,8 +87,10 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       if (!filesEqual('agent_files', 'agent_id', id, a.files)) writeEntityFiles(id, a.files, AGENT_FILES);
       db.prepare('DELETE FROM agent_skills WHERE agent_id = ?').run(id);
       wantSkills.forEach((sid, i) => db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(id, sid, i));
+      db.prepare('DELETE FROM agent_contexts WHERE agent_id = ?').run(id);
+      wantContexts.forEach((cid, i) => db.prepare('INSERT INTO agent_contexts (agent_id, context_id, ordinal) VALUES (?, ?, ?)').run(id, cid, i));
       agentIds.set(a.name, id);
-      report.hashes.push({ kind: 'agent', name: a.name, sha256: hashJson({ description: a.description, output_schema: a.output_schema, allowed_tools: a.allowed_tools, skills: a.skills, files: a.files }) });
+      report.hashes.push({ kind: 'agent', name: a.name, sha256: hashJson({ description: a.description, output_schema: a.output_schema, allowed_tools: a.allowed_tools, skills: a.skills, ...(a.contexts.length ? { contexts: a.contexts } : {}), files: a.files }) });
     }
 
     for (const p of h.projects) {

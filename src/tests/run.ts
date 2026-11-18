@@ -27,6 +27,7 @@ import './integration/runners.test';
 import './integration/membership.test';
 import './integration/compiled.test';
 import './integration/readyForPr.test';
+import './integration/agentContexts.test';
 
 
 runAll()

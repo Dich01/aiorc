@@ -65,18 +65,25 @@ first step stops with `setup-error`.
 
 1. Fork the `ready-for-pr` project in AIOrc.
 2. In the fork, enable executable files again (a fork does not copy it).
-3. Create a context for the repository with a `CONTEXT.md` and a
-   `profile.json` (fields below) and attach it to the fork. Domain knowledge
-   the reviewers need (business rules, invariants) can go in the same context
-   or another one.
-4. Connect Claude Code to the fork (the project's Connect AI tab), and add a
+3. The fork carries its own copy of the example profile, attached to the
+   `task` agent (the only one that reads it). Edit that copy's `profile.json`
+   for the repository (fields below), or create a new context with a
+   `CONTEXT.md` and a `profile.json` and drag it onto the `task` agent in the
+   flow editor instead.
+4. Domain knowledge goes in contexts too, one document each (Contexts,
+   "Import .md files" creates one per file). Drag each one onto the agents that
+   need it in the flow editor: only those agents receive it, in their own
+   steps. Attach a context to the project only when every agent needs it.
+5. Connect Claude Code to the fork (the project's Connect AI tab), and add a
    line to the repository's `CLAUDE.md` saying to run the AIOrc flow before
    opening a pull request. `extras/ready-for-pr.md` is an optional slash
    command for that.
-5. Optional hard limits: `extras/claude-settings.example.json`.
+6. Optional hard limits: `extras/claude-settings.example.json`.
 
-A fork does not copy the eval cases or the executable-files setting. If you
-fork your own project, its agents get a "(fork)" suffix.
+A fork does not copy the eval cases or the executable-files setting. Contexts
+attached to agents travel with the fork; contexts attached to the project only
+when they are marked to travel on fork. If you fork your own project, its
+agents get a "(fork)" suffix.
 
 ## The profile
 

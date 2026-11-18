@@ -92,6 +92,19 @@ export function buildAgentBlock(agent: AgentSnap, snap: RunSnapshot, maxInvocati
     lines.push(`**Agent instructions:**`);
     renderFilesToLines(agent.files.map(f => ({ ...f, id: '', ordinal: 0 })), lines, snap.project.allow_executable_files);
   }
+  // Contexts attached to this agent only. One attached to the project as well
+  // is already in the "Project context" section.
+  const own = (agent.context_ids ?? []).map(id => snap.contexts.find(c => c.id === id && c.scope === 'agent')).filter((c): c is ContextSnap => !!c);
+  if (own.length > 0) {
+    lines.push('');
+    lines.push(`**Context for this agent** (documentation and business knowledge only this agent receives; read it before acting):`);
+    lines.push('');
+    for (const ctx of own) {
+      lines.push(`#### Context: ${ctx.name}`);
+      if (ctx.description) { lines.push(`*${ctx.description}*`); lines.push(''); }
+      renderFilesToLines(ctx.files.map(f => ({ ...f, id: '', ordinal: 0 })), lines, snap.project.allow_executable_files);
+    }
+  }
   if (skills.length > 0) {
     lines.push('');
     lines.push(`**Self-check:** before handing back the output, re-read it against every skill listed above.`);
@@ -99,7 +112,8 @@ export function buildAgentBlock(agent: AgentSnap, snap: RunSnapshot, maxInvocati
   return lines.join('\n');
 }
 
-export function renderContextsSection(contexts: ContextSnap[], lines: string[], allowExecutable: boolean): void {
+export function renderContextsSection(all: ContextSnap[], lines: string[], allowExecutable: boolean): void {
+  const contexts = all.filter(c => c.scope !== 'agent');  // agent contexts go in their agents' steps
   if (contexts.length === 0) return;
   lines.push('## Project context');
   lines.push('');

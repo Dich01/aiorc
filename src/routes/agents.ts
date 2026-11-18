@@ -8,6 +8,7 @@ import { Agent, AgentInvitation } from '../db/schema';
 import { checkOutputSchema, parseStoredSchema } from '../lib/outputSchema';
 import { flowsReferencingAgents } from '../orchestrator';
 import { normalizeToolList } from '../lib/mcpServers';
+import { copyAgentContexts } from '../lib/agentContexts';
 
 // output_schema arrives as a JSON Schema object, null/'' to clear it, or a
 // JSON string. Returns the column value, or an error.
@@ -38,6 +39,7 @@ function enrichAgent(a: Agent, viewerId?: string) {
     allowed_tools: JSON.parse(a.allowed_tools || '[]') as string[],
     files,
     skills: loadSkillsFor(a.id),
+    contexts: loadContextsFor(a.id),
     project_ids: loadProjectIdsFor(a.id),
     stars_count: (agentStarsCount.get(a.id) as { n: number }).n,
     forks_count: (agentForksCount.get(a.id) as { n: number }).n,
@@ -55,6 +57,18 @@ function loadSkillsFor(agentId: string): SkillRow[] {
      WHERE ag.agent_id = ?
      ORDER BY ag.ordinal ASC`
   ).all(agentId) as SkillRow[];
+}
+
+interface ContextRow { id: string; name: string; description: string; ordinal: number; }
+
+function loadContextsFor(agentId: string): ContextRow[] {
+  return db.prepare(
+    `SELECT c.id, c.name, c.description, ac.ordinal
+     FROM agent_contexts ac
+     JOIN contexts c ON c.id = ac.context_id
+     WHERE ac.agent_id = ?
+     ORDER BY ac.ordinal ASC`
+  ).all(agentId) as ContextRow[];
 }
 
 function loadProjectIdsFor(agentId: string): string[] {
@@ -102,12 +116,19 @@ function replaceAgentProjects(agentId: string, userId: string, projectIds: strin
   return { ok: true };
 }
 
-// Replace agent_skills rows for an agent. Validates ownership: user must own each skill (or be admin).
-function replaceAgentSkills(agentId: string, userId: string, skillIds: string[]): { ok: true } | { ok: false; error: string } {
+// Replace the skills or contexts attached to an agent. Validates ownership:
+// the user must own each one (or be admin).
+const LINKS = {
+  skills: { table: 'agent_skills', column: 'skill_id', entity: 'skills', label: 'skill' },
+  contexts: { table: 'agent_contexts', column: 'context_id', entity: 'contexts', label: 'context' },
+} as const;
+
+function replaceAgentLinks(kind: keyof typeof LINKS, agentId: string, userId: string, ids: string[]): { ok: true } | { ok: false; error: string } {
+  const l = LINKS[kind];
   const admin = isAdmin(userId);
   const seen = new Set<string>();
   const cleaned: string[] = [];
-  for (const id of skillIds) {
+  for (const id of ids) {
     if (typeof id !== 'string' || !id.trim() || seen.has(id)) continue;
     seen.add(id);
     cleaned.push(id);
@@ -115,22 +136,22 @@ function replaceAgentSkills(agentId: string, userId: string, skillIds: string[])
 
   if (cleaned.length > 0) {
     const placeholders = cleaned.map(() => '?').join(',');
-    const found = db.prepare(`SELECT id, user_id FROM skills WHERE id IN (${placeholders})`).all(...cleaned) as { id: string; user_id: string }[];
+    const found = db.prepare(`SELECT id, user_id FROM ${l.entity} WHERE id IN (${placeholders})`).all(...cleaned) as { id: string; user_id: string }[];
     if (found.length !== cleaned.length) {
       const foundIds = new Set(found.map(r => r.id));
       const missing = cleaned.filter(id => !foundIds.has(id));
-      return { ok: false, error: `Unknown skill ids: ${missing.join(', ')}` };
+      return { ok: false, error: `Unknown ${l.label} ids: ${missing.join(', ')}` };
     }
     if (!admin) {
       const foreign = found.find(r => r.user_id !== userId);
-      if (foreign) return { ok: false, error: `Skill ${foreign.id} does not belong to this user` };
+      if (foreign) return { ok: false, error: `${l.label[0]!.toUpperCase()}${l.label.slice(1)} ${foreign.id} does not belong to this user` };
     }
   }
 
-  const tx = db.transaction((ids: string[]) => {
-    db.prepare('DELETE FROM agent_skills WHERE agent_id = ?').run(agentId);
-    const ins = db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)');
-    ids.forEach((skillId, i) => ins.run(agentId, skillId, i));
+  const tx = db.transaction((list: string[]) => {
+    db.prepare(`DELETE FROM ${l.table} WHERE agent_id = ?`).run(agentId);
+    const ins = db.prepare(`INSERT INTO ${l.table} (agent_id, ${l.column}, ordinal) VALUES (?, ?, ?)`);
+    list.forEach((id, i) => ins.run(agentId, id, i));
   });
   tx(cleaned);
 
@@ -230,10 +251,10 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
 // POST /agents — create agent
 router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
-  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, context_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; context_ids?: string[]; project_ids?: string[];
   };
 
   if (!name?.trim() || !description?.trim()) {
@@ -255,7 +276,16 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
   writeEntityFiles(id, normalized.files, AGENT_FILES);
 
   if (Array.isArray(skill_ids) && skill_ids.length > 0) {
-    const result = replaceAgentSkills(id, req.userId!, skill_ids);
+    const result = replaceAgentLinks('skills', id, req.userId!, skill_ids);
+    if (!result.ok) {
+      db.prepare('DELETE FROM agents WHERE id = ?').run(id);
+      res.status(400).json({ error: result.error });
+      return;
+    }
+  }
+
+  if (Array.isArray(context_ids) && context_ids.length > 0) {
+    const result = replaceAgentLinks('contexts', id, req.userId!, context_ids);
     if (!result.ok) {
       db.prepare('DELETE FROM agents WHERE id = ?').run(id);
       res.status(400).json({ error: result.error });
@@ -285,10 +315,10 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     res.status(403).json({ error: 'Forbidden' }); return;
   }
 
-  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, project_ids } = req.body as {
+  const { name, description, tags, content, files, output_schema, allowed_tools, skill_ids, context_ids, project_ids } = req.body as {
     name?: string; description?: string; tags?: unknown;
     content?: string; files?: unknown[];
-    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; project_ids?: string[];
+    output_schema?: unknown; allowed_tools?: unknown; skill_ids?: string[]; context_ids?: string[]; project_ids?: string[];
   };
 
   let schemaValue = agent.output_schema;
@@ -324,7 +354,12 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   );
 
   if (Array.isArray(skill_ids)) {
-    const result = replaceAgentSkills(agent.id, req.userId!, skill_ids);
+    const result = replaceAgentLinks('skills', agent.id, req.userId!, skill_ids);
+    if (!result.ok) { res.status(400).json({ error: result.error }); return; }
+  }
+
+  if (Array.isArray(context_ids)) {
+    const result = replaceAgentLinks('contexts', agent.id, req.userId!, context_ids);
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
@@ -421,7 +456,7 @@ router.get('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): v
   `).all(agent.id));
 });
 
-// POST /agents/:id/fork — clone agent (and its skills) into caller's workspace.
+// POST /agents/:id/fork — clone agent (and its skills and contexts) into caller's workspace.
 router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void => {
   const source = db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params['id']) as Agent | undefined;
   if (!source) { res.status(404).json({ error: 'Agent not found' }); return; }
@@ -494,6 +529,9 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
       db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(newAgentId, newSkillId, s._ord);
     }
 
+    // Contexts attached to the agent travel with it, like its skills.
+    copyAgentContexts(source.id, newAgentId, req.userId!, now);
+
     if (invitation && invitation.status === 'pending') {
       db.prepare('UPDATE agent_invitations SET status = ?, responded_at = ?, invitee_user_id = COALESCE(invitee_user_id, ?) WHERE id = ?').run(
         'accepted', now, req.userId!, invitation.id
@@ -526,6 +564,7 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   }
 
   db.prepare('DELETE FROM agent_skills WHERE agent_id = ?').run(agent.id);
+  db.prepare('DELETE FROM agent_contexts WHERE agent_id = ?').run(agent.id);
   db.prepare('DELETE FROM project_agents WHERE agent_id = ?').run(agent.id);
   db.prepare('DELETE FROM agents WHERE id = ?').run(agent.id);
   res.status(204).end();

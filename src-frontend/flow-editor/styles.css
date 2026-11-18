@@ -1089,3 +1089,24 @@ select.modal-input { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .edge-popover, .modal-box { animation: none; }
 }
+
+/* Skills / Contexts tabs in the right-hand library */
+.fe-panel-tabs { display: flex; gap: 2px; flex: 1; margin-left: 8px; }
+.fe-panel-tab {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--fe-radius-sm);
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fe-text-dim);
+  cursor: pointer;
+}
+.fe-panel-tab:hover { color: var(--fe-text); background: var(--fe-bg-input); }
+.fe-panel-tab.active { color: var(--fe-text); border-color: var(--fe-border); background: var(--fe-bg-input); }
+.fe-context-avatar { background: #e9f6f1; color: #1d7a5c; font-size: 14px; }
+.fe-context-pill { background: #eef8f4; border-color: #cfeadf; color: #1d6b51; }
+.fe-context-pill .fe-skill-remove { color: #1d6b51; }
+.fe-node-body .fe-skills-list + .fe-node-section-label { margin-top: 6px; }

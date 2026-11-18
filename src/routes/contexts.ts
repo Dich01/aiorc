@@ -35,6 +35,7 @@ function enrichContext(c: Context, viewerId?: string) {
     ...c,
     files: loadEntityFiles(c.id, CONTEXT_FILES),
     project_attachments: loadProjectAttachmentsForContext(c.id),
+    agent_ids: (db.prepare('SELECT agent_id FROM agent_contexts WHERE context_id = ?').all(c.id) as { agent_id: string }[]).map(r => r.agent_id),
     stars_count: (contextStarsCount.get(c.id) as { n: number }).n,
     forks_count: (contextForksCount.get(c.id) as { n: number }).n,
     is_starred: viewerId ? !!contextStarredBy.get(c.id, viewerId) : undefined,
@@ -100,13 +101,15 @@ router.get('/public', (req: Request, res: Response): void => {
   if (q) { where.push('(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?) OR LOWER(c.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
-  // A context is emitted into every compiled workflow of the projects that
-  // include it, so usage = runs of those projects.
+  // Usage = runs that delivered the context: every run of a project it is
+  // attached to, plus runs where an agent carrying it completed a step.
   const rows = db.prepare(`
     SELECT c.*, u.email as owner_email, u.nickname as owner_nickname,
-           (SELECT COUNT(*) FROM runs r
-              JOIN project_contexts pc ON pc.project_id = r.project_id
-              WHERE pc.context_id = c.id) as usage_runs
+           (SELECT COUNT(*) FROM (
+              SELECT r.id FROM runs r JOIN project_contexts pc ON pc.project_id = r.project_id WHERE pc.context_id = c.id
+              UNION
+              SELECT au.run_id FROM agent_contexts ac JOIN agent_usage au ON au.agent_id = ac.agent_id AND au.source != 'planned'
+              WHERE ac.context_id = c.id)) as usage_runs
     FROM contexts c JOIN users u ON u.id = c.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -121,13 +124,21 @@ router.get('/public', (req: Request, res: Response): void => {
   }));
 });
 
-// GET /contexts — list user's contexts (admin sees all). Optional ?project_id= filter.
+// GET /contexts — list user's contexts (admin sees all). Optional filters:
+//   ?project_id=   contexts attached to that project (the whole-flow ones);
+//   ?for_project=  every context the project's agents can carry: those owned by
+//                  the project's owner (the flow editor's contexts panel).
 router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const admin = isAdmin(req.userId!);
   const projectId = typeof req.query['project_id'] === 'string' ? req.query['project_id'] : '';
+  const forProject = typeof req.query['for_project'] === 'string' ? req.query['for_project'] : '';
 
   let rows: Context[];
-  if (projectId) {
+  if (forProject) {
+    const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(forProject) as { user_id: string } | undefined;
+    if (!project || (!admin && project.user_id !== req.userId)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    rows = db.prepare('SELECT * FROM contexts WHERE user_id = ? ORDER BY name ASC').all(project.user_id) as Context[];
+  } else if (projectId) {
     const ownerClause = admin ? '' : 'AND c.user_id = ?';
     const params: unknown[] = [projectId, projectId];
     if (!admin) params.push(req.userId!, req.userId!);

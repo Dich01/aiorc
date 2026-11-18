@@ -350,7 +350,7 @@
           <div class="an-sub">A context is included in every run of the projects that attach it.</div>
           <div class="an-table-wrap">
             <table class="an-table">
-              <thead><tr><th>Context</th><th class="num">Linked projects</th><th class="num">Runs included</th><th>Last used</th></tr></thead>
+              <thead><tr><th>Context</th><th class="num">Linked projects</th><th class="num">Agents carrying</th><th class="num">Runs included</th><th>Last used</th></tr></thead>
               <tbody id="contexts-tbody"></tbody>
             </table>
           </div>
@@ -674,11 +674,12 @@
         </tr>`).join('');
 
       document.getElementById('contexts-tbody').innerHTML = data.contexts_stats.length === 0
-        ? '<tr><td colspan="4" class="an-empty">No contexts registered.</td></tr>'
+        ? '<tr><td colspan="5" class="an-empty">No contexts registered.</td></tr>'
         : data.contexts_stats.map(c => `
         <tr>
           <td><span class="an-agent-name">${escHtml(c.name)}</span></td>
           <td class="num">${c.projects_linked}</td>
+          <td class="num">${c.agents_carrying}</td>
           <td class="num">${c.runs_included}</td>
           <td>${timeAgo(c.last_used)}</td>
         </tr>`).join('');

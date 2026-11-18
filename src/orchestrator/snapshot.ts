@@ -17,11 +17,14 @@ export interface AgentSnap {
   output_schema: Record<string, unknown> | null;
   allowed_tools: string[];   // external tools this agent may call ("server__tool" or "server__*")
   skill_ids: string[];
+  context_ids?: string[];    // contexts only this agent receives (absent in runs from older builds)
   files: SnapFile[];
 }
 
 export interface SkillSnap { id: string; name: string; description: string; files: SnapFile[] }
-export interface ContextSnap { id: string; name: string; description: string; files: SnapFile[] }
+// scope 'agent': attached to agents only, delivered in their steps. Absent:
+// attached to the project, delivered to the whole flow at the start.
+export interface ContextSnap { id: string; name: string; description: string; files: SnapFile[]; scope?: 'agent' }
 
 export interface ProjectSnap {
   id: string;
@@ -59,11 +62,13 @@ export function captureSnapshot(projectId: string, flow: FlowDocument): RunSnaps
   for (const a of agentRows) {
     const ids = (db.prepare('SELECT skill_id FROM agent_skills WHERE agent_id = ? ORDER BY ordinal ASC').all(a.id) as { skill_id: string }[]).map(r => r.skill_id);
     ids.forEach(i => skillIds.add(i));
+    const contextIds = (db.prepare('SELECT context_id FROM agent_contexts WHERE agent_id = ? ORDER BY ordinal ASC').all(a.id) as { context_id: string }[]).map(r => r.context_id);
     agents.set(a.id, {
       id: a.id, name: a.name, description: a.description,
       output_schema: parseStoredSchema(a.output_schema),
       allowed_tools: parseToolList(a.allowed_tools),
       skill_ids: ids,
+      context_ids: contextIds,
       files: files(loadEntityFiles(a.id, AGENT_FILES)),
     });
   }
@@ -77,7 +82,13 @@ export function captureSnapshot(projectId: string, flow: FlowDocument): RunSnaps
   const contextRows = db.prepare(
     `SELECT c.* FROM project_contexts pc JOIN contexts c ON c.id = pc.context_id WHERE pc.project_id = ? ORDER BY c.name ASC`
   ).all(projectId) as Context[];
-  const contexts = contextRows.map(c => ({ id: c.id, name: c.name, description: c.description, files: files(loadEntityFiles(c.id, CONTEXT_FILES)) }));
+  const contexts: ContextSnap[] = contextRows.map(c => ({ id: c.id, name: c.name, description: c.description, files: files(loadEntityFiles(c.id, CONTEXT_FILES)) }));
+  const projectContextIds = new Set(contexts.map(c => c.id));
+  const agentOnly = [...new Set([...agents.values()].flatMap(a => a.context_ids ?? []))].filter(id => !projectContextIds.has(id));
+  if (agentOnly.length) {
+    const rows = db.prepare(`SELECT * FROM contexts WHERE id IN (${agentOnly.map(() => '?').join(',')}) ORDER BY name ASC`).all(...agentOnly) as Context[];
+    for (const c of rows) contexts.push({ id: c.id, name: c.name, description: c.description, files: files(loadEntityFiles(c.id, CONTEXT_FILES)), scope: 'agent' });
+  }
 
   return {
     flow,

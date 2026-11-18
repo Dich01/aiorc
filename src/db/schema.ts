@@ -421,6 +421,19 @@ CREATE TABLE IF NOT EXISTS agent_skills (
 );
 CREATE INDEX IF NOT EXISTS idx_agent_skills_agent ON agent_skills(agent_id);
 
+-- Contexts attached to one agent, like skills: delivered only in that agent's
+-- step, not to the whole flow (project_contexts are the whole-flow ones).
+CREATE TABLE IF NOT EXISTS agent_contexts (
+  agent_id TEXT NOT NULL,
+  context_id TEXT NOT NULL,
+  ordinal INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (agent_id, context_id),
+  FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (context_id) REFERENCES contexts(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_agent_contexts_agent ON agent_contexts(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_contexts_context ON agent_contexts(context_id);
+
 CREATE TABLE IF NOT EXISTS project_agents (
   project_id TEXT NOT NULL,
   agent_id TEXT NOT NULL,

@@ -106,7 +106,10 @@ test('the scripts and the profile reach the model only with executable files ena
   const { key, token, projectId } = await applied();
   const on = await Run.start(key, { request: 'x' });
   assert.ok(on.text.includes('def classify(profile, base_ref)'), 'the scripts are delivered');
-  assert.ok(on.text.includes('"sensitive_paths"'), 'the profile is delivered');
+  const [shared, step1] = on.text.split('## Step 1');
+  // "app/payments/**" exists only in the example profile.json (the scripts mention "sensitive_paths" too).
+  assert.ok(step1!.includes('app/payments/**'), 'the profile is delivered in the task step');
+  assert.ok(!shared!.includes('app/payments/**'), 'and not to the whole flow');
   await api(`/runs/${on.id}/cancel`, { method: 'POST', token });
 
   await api(`/projects/${projectId}/executable-files`, { method: 'PATCH', token, body: { allow: false } });
@@ -285,7 +288,7 @@ test('outputs that do not come from the scripts are refused', async () => {
   await api(`/runs/${run.id}/cancel`, { method: 'POST', token });
 });
 
-test('a fork keeps agents, skills and flow but not the profile context or executable files', async () => {
+test('a fork keeps agents, skills, flow and the profile on the task agent, but not executable files', async () => {
   const { token, projectId } = await applied();
   const other = await createUser();
   await api(`/projects/${projectId}/visibility`, { method: 'PATCH', token, body: { is_public: true } });
@@ -294,7 +297,12 @@ test('a fork keeps agents, skills and flow but not the profile context or execut
   const f = db.prepare('SELECT id, allow_executable_files FROM projects WHERE id = ?').get(fork.body.id) as { id: string; allow_executable_files: number };
   assert.strictEqual(f.allow_executable_files, 0);
   const contexts = db.prepare('SELECT COUNT(*) AS n FROM project_contexts WHERE project_id = ?').get(f.id) as { n: number };
-  assert.strictEqual(contexts.n, 0, 'the profile stays with the source project');
+  assert.strictEqual(contexts.n, 0, 'nothing is attached to the whole flow');
+  const carried = db.prepare(
+    `SELECT a.name AS agent, c.name AS context FROM project_agents pa JOIN agent_contexts ac ON ac.agent_id = pa.agent_id
+     JOIN agents a ON a.id = pa.agent_id JOIN contexts c ON c.id = ac.context_id WHERE pa.project_id = ?`
+  ).all(f.id) as { agent: string; context: string }[];
+  assert.deepStrictEqual(carried, [{ agent: 'task', context: 'repo-profile' }], 'the profile travels with the task agent, as a copy');
   const skills = db.prepare('SELECT s.name FROM project_skills ps JOIN skills s ON s.id = ps.skill_id WHERE ps.project_id = ? ORDER BY s.name').all(f.id) as { name: string }[];
   assert.deepStrictEqual(skills.map(s => s.name), ['fix-rules', 'harness-scripts', 'review-ground-rules']);
   const start = await mcp(fork.body.api_key, 'workflow.start', { input: { request: 'x' } });

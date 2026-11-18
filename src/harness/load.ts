@@ -32,6 +32,7 @@ export interface HarnessEntity {
 export interface HarnessAgent extends HarnessEntity {
   output_schema: Record<string, unknown> | null;
   skills: string[];
+  contexts: string[];          // contexts only this agent receives
   allowed_tools: string[];
 }
 
@@ -131,7 +132,7 @@ export function loadHarness(dirArg: string): Harness {
   const contexts = loadGroup('contexts', 'CONTEXT.md');
 
   const agents = new Map<string, HarnessAgent>();
-  for (const [name, meta] of Object.entries((doc.agents ?? {}) as Record<string, { description?: string; skills?: unknown; allowed_tools?: unknown }>)) {
+  for (const [name, meta] of Object.entries((doc.agents ?? {}) as Record<string, { description?: string; skills?: unknown; contexts?: unknown; allowed_tools?: unknown }>)) {
     if (!NAME_RE.test(name)) { problems.push(`agents.${name}: names are lowercase letters, digits and "-"`); continue; }
     const adir = path.join(dir, 'agents', name);
     const schemaFile = path.join(adir, 'output.schema.json');
@@ -143,12 +144,14 @@ export function loadHarness(dirArg: string): Harness {
     }
     const agentSkills = asStrings(meta?.skills);
     for (const s of agentSkills) if (!skills.has(s)) problems.push(`agents.${name}: unknown skill "${s}"`);
+    const agentContexts = asStrings(meta?.contexts);
+    for (const c of agentContexts) if (!contexts.has(c)) problems.push(`agents.${name}: unknown context "${c}"`);
     const tools = normalizeToolList(meta?.allowed_tools);
     if (!tools.ok) problems.push(`agents.${name}: ${tools.error}`);
     if (!meta?.description) problems.push(`agents.${name}: description is required`);
     agents.set(name, {
       name, description: String(meta?.description ?? ''), output_schema,
-      skills: agentSkills, allowed_tools: tools.ok ? tools.value : [],
+      skills: agentSkills, contexts: agentContexts, allowed_tools: tools.ok ? tools.value : [],
       files: readEntityFiles(adir, 'AGENT.md', problems, ['output.schema.json']),
     });
   }

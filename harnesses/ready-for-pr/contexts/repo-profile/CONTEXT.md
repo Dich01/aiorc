@@ -10,10 +10,13 @@ The `task` step writes `profile.json` byte for byte to
 not in the repository, so a change under review cannot edit the rules that
 judge it.
 
+It is attached to the `task` agent only: no other step needs it.
+
 **This profile is an example.** It fits the demo repository built by
 `harnesses/ready-for-pr/extras/make_fixture.py` (Python, standard library
-only). A project forked from this one replaces this context with its own
-profile; the fields are described in `harnesses/ready-for-pr/README.md`.
+only). A fork carries a copy: edit it for the repository, or drag another
+profile context onto the `task` agent. The fields are described in
+`harnesses/ready-for-pr/README.md`.
 
 If this context is missing, or `profile.json` is shown as withheld, the
 `task` step stops with `status: "setup-error"`.

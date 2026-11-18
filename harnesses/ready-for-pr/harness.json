@@ -22,6 +22,9 @@
       "description": "Confirms the task and done criteria, writes the harness scripts and profile, commits the change locally and collects the proof that it works.",
       "skills": [
         "harness-scripts"
+      ],
+      "contexts": [
+        "repo-profile"
       ]
     },
     "risk": {
@@ -106,9 +109,7 @@
       "name": "ready-for-pr",
       "description": "Run before opening a pull request: leaves the change checked, reviewed, fixed and explained, with its evidence. Fork it per repository and replace the repo-profile context.",
       "execution_mode": "verified",
-      "contexts": [
-        "repo-profile"
-      ],
+      "contexts": [],
       "flow": {
         "nodes": [
           {

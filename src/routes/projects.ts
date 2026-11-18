@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Project, ProjectInvitation } from '../db/schema';
+import { copyAgentContexts } from '../lib/agentContexts';
 import { copyEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES } from '../lib/entityFiles';
 
 
@@ -511,6 +512,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
 
   // Skill ID dedup map — keyed by source skill id, value is new skill id.
   const skillIdMap = new Map<string, string>();
+  // Same for contexts attached to agents.
+  const contextCopies = new Map<string, string>();
 
   // Run everything in a single transaction so a partial fork is impossible.
   const fork = db.transaction(() => {
@@ -561,6 +564,10 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
         }
         db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(newAgentId, newSkillId, s._ord);
       }
+
+      // Contexts attached to the agent travel with it, like its skills
+      // (project-level contexts follow share_on_fork, below).
+      copyAgentContexts(aid, newAgentId, req.userId!, now, contextCopies);
     }
 
     // Rewrite flow node agent_ids to the new ids.
