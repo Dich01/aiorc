@@ -85,7 +85,7 @@ fork your own project, its agents get a "(fork)" suffix.
   "base_branch": "origin/main",
   "checks": [
     { "name": "types", "command": "npx tsc --noEmit", "timeout_seconds": 300 },
-    { "name": "lint", "command": "npx eslint {changed_files}" },
+    { "name": "lint", "command": "npx eslint {changed_files:*.ts,*.tsx}" },
     { "name": "tests", "command": "npm test" },
     { "name": "secrets", "command": "gitleaks git --log-opts=origin/main..HEAD", "required": true },
     { "name": "mutation", "command": "npx stryker run --mutate {changed_files}", "required": false }
@@ -107,7 +107,7 @@ fork your own project, its agents get a "(fork)" suffix.
 | Field | Meaning | Default |
 |---|---|---|
 | `base_branch` | Branch the change is compared with | `origin/HEAD`, then main/master |
-| `checks` | Commands, in order, cheapest first. The first required failure stops the rest. `{changed_files}` becomes the changed files. `required: false` reports without failing. | none (the run ends at `needs-profile`) |
+| `checks` | Commands, in order, cheapest first. The first required failure stops the rest. `{changed_files}` becomes the changed files; `{changed_files:*.py,*.pyi}` only those matching (a check with no match is skipped). `required: false` reports without failing. | none (the run ends at `needs-profile`) |
 | `sensitive_paths` | Globs that need a person and get all five reviewers | none |
 | `auto_paths` | Globs that need no review when they are all a change touches | docs and markdown |
 | `test_paths`, `ci_paths`, `coverage_config_paths` | Where the weakening detector looks | common layouts |

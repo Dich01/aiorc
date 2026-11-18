@@ -7,7 +7,9 @@ true), "timeout_seconds" (default 900)}. They run in the listed order from
 the repository root; the first required check that fails stops the rest.
 "{changed_files}" in a command is replaced by the files changed against the
 base branch (shell-quoted), so a linter or a mutation tester can run on the
-change only.
+change only. "{changed_files:*.py}" (comma-separated globs) passes only the
+files that match, so a tool never receives a file type it cannot parse. A
+check whose placeholder matches no file is skipped.
 
 When every required check passes, a marker with the exact state that was
 checked (HEAD and the tree of the working copy) is written to
@@ -19,6 +21,7 @@ configured: false when the profile defines no checks: nothing was verified.
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -29,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common  # noqa: E402
 
 TAIL_LINES = 40
+PLACEHOLDER_RE = re.compile(r"\{changed_files(?::([^}]*))?\}")
 
 
 def run_check(check, root, changed, logs_dir):
@@ -40,11 +44,16 @@ def run_check(check, root, changed, logs_dir):
     if not command:
         result.update(status="skipped", exit_code=None, seconds=0, output_tail="no command configured", log_sha256="")
         return result
-    if "{changed_files}" in command:
-        if not changed:
-            result.update(status="skipped", exit_code=None, seconds=0, output_tail="no changed files to pass", log_sha256="")
-            return result
-        command = command.replace("{changed_files}", " ".join(shlex.quote(f) for f in changed))
+    placeholders = PLACEHOLDER_RE.findall(command)
+    if placeholders:
+        for pattern in placeholders:
+            files = [f for f in changed if not pattern or common.matches(f, [p.strip() for p in pattern.split(",") if p.strip()])]
+            if not files:
+                result.update(status="skipped", exit_code=None, seconds=0,
+                              output_tail="no changed files%s to pass" % (" matching " + pattern if pattern else ""), log_sha256="")
+                return result
+            token = "{changed_files:%s}" % pattern if pattern else "{changed_files}"
+            command = command.replace(token, " ".join(shlex.quote(f) for f in files))
     started = time.time()
     try:
         r = subprocess.run(command, shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)

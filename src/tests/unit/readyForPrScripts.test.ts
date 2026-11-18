@@ -82,6 +82,22 @@ test('checks: a profile without commands is reported as not configured', () => {
   assert.deepStrictEqual([r.configured, r.passed], [false, false]);
 });
 
+test('checks: {changed_files:<globs>} passes only the matching files, and skips the check when none match', () => {
+  const dir = fixture('failing-check');
+  write(dir, 'docs/notes.md', 'notes\n');
+  git(dir, 'add', '-A'); git(dir, 'commit', '-qm', 'notes');
+  const args = path.join(dir, '.git', 'aiorc', 'args.txt');
+  const profile = path.join(dir, '.git', 'aiorc', 'filtered.json');
+  fs.writeFileSync(profile, JSON.stringify({ base_branch: 'main', checks: [
+    { name: 'py-only', command: `printf '%s\\n' {changed_files:*.py} > ${args}` },
+    { name: 'sql-only', command: 'false {changed_files:*.sql,migrations/**}' },
+  ] }));
+  const r = py(dir, 'checks.py', '--run-id', 'r1', '--profile', profile);
+  assert.deepStrictEqual(fs.readFileSync(args, 'utf8').trim().split('\n').sort(), ['app/calc.py', 'tests/test_calc.py']);
+  assert.strictEqual(r.results[1].status, 'skipped', 'no changed file matches: the check is skipped, not failed');
+  assert.strictEqual(r.passed, true);
+});
+
 test('detect_weakening: deleted tests, skips, CI and coverage changes are caught; a normal change is not', () => {
   const deleted = py(fixture('weakened-tests'), 'detect_weakening.py');
   assert.strictEqual(deleted.weakened, true);
