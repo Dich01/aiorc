@@ -35,7 +35,7 @@
           <div class="sidebar-section-title">Community</div>
           <nav class="sidebar-nav">
             <a class="sidebar-item" data-key="repository" href="repository.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span></a>
-            <a class="sidebar-item" data-key="issues" href="issues.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span></a>
+            <a class="sidebar-item" data-key="issues" href="issues.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Report a bug or idea</span></a>
           </nav>
           <div class="sidebar-section-title">Help</div>
           <nav class="sidebar-nav">
@@ -59,7 +59,7 @@
     ['benchmarks', 'benchmarks.html', 'Benchmarks'],
     ['compare', 'compare.html', 'Compare'],
     ['repository', 'repository.html', 'Public repository'],
-    ['issues', 'issues.html', 'Issues'],
+    ['issues', 'issues.html', 'Report a bug or idea'],
     ['about', 'index.html#origen', 'About'],
   ];
   function publicNavHTML(active) {
