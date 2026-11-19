@@ -75,8 +75,9 @@ function taskOutput(dir: string, extra: Record<string, unknown> = {}) {
 
 const checksOutput = (dir: string, runId: string) => ({ checks: py(dir, 'checks.py', '--run-id', runId), weakening: py(dir, 'detect_weakening.py') });
 const none = { findings: [], notes: '' };
-const noFix = { applies: false, reproduced_before: null, fixed_after: null, same_config_as_repo: null, how: 'not a bug fix', notes: '' };
-const verified = (findings: unknown[], fix = noFix) => ({ findings, fix_verification: fix, notes: '' });
+interface FixVerification { applies: boolean; reproduced_before: boolean | null; fixed_after: boolean | null; same_config_as_repo: boolean | null; how: string; notes: string }
+const noFix: FixVerification = { applies: false, reproduced_before: null, fixed_after: null, same_config_as_repo: null, how: 'not a bug fix', notes: '' };
+const verified = (findings: unknown[], fix: FixVerification = noFix) => ({ findings, fix_verification: fix, notes: '' });
 const fixerOutput = (kind: 'checks' | 'findings', commits: string[], decisions: unknown[] = [], extra: Record<string, unknown> = {}) =>
   ({ kind, decisions, commits, changed_files: [], stuck: false, summary: 'fixed', notes: '', ...extra });
 const explainOutput = { problem: 'p', behavior: 'b', decisions: [], read_first: [], risks: [], files_in_order: [], evidence: 'tests passed', markdown: '## What and why\n\np' };

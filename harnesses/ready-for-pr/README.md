@@ -81,9 +81,25 @@ first step stops with `setup-error`.
 6. Optional hard limits: `extras/claude-settings.example.json`.
 
 A fork does not copy the eval cases or the executable-files setting. Contexts
-attached to agents travel with the fork; contexts attached to the project only
-when they are marked to travel on fork. If you fork your own project, its
-agents get a "(fork)" suffix.
+are private unless the owner shares them: this harness shares only
+`repo-profile` (`share_on_fork` in `harness.json`), and the fork dialog lets
+you choose whether to copy it. If you fork your own project, its agents get a
+"(fork)" suffix.
+
+## Receive updates from the original
+
+A fork stays linked to the project it came from. When the original changes
+(say a new `harness:apply` of this directory), the fork's owner gets a
+notification and the fork's page shows what changed, with the versions and who
+changed them. "Update everything" takes the whole set at once and keeps what
+the fork made its own: the contexts it attached to its agents, files it added
+to a skill or context, its name, key, settings and description. If the fork
+also edited something the original changed, the update says so before
+replacing it; the fork's earlier version stays in its history and can be
+restored.
+
+Every agent, skill, context and project keeps its versions. A run records the
+version of each piece it used, and the signed export carries it.
 
 ## The profile
 

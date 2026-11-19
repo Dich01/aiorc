@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Version history</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
+  <style>
+    body { background: var(--bg); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    .main-area { flex: 1; min-width: 0; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 40px 32px 64px; }
+    .crumb { font: 600 0.72rem var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 6px; }
+    h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; overflow-wrap: anywhere; }
+    .sub { color: var(--muted); font-size: 0.92rem; margin: 6px 0 24px; }
+    .layout { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
+    .versions { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); overflow: hidden; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+    .versions button { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--border); background: none; padding: 12px 14px; font: inherit; cursor: pointer; color: var(--ink); }
+    .versions li:first-child button { border-top: 0; }
+    .versions button:hover { background: var(--surface-2); }
+    .versions button[aria-current="true"] { background: var(--route-tint); box-shadow: inset 3px 0 0 var(--primary); }
+    .v-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .v-num { font: 600 0.86rem var(--mono); }
+    .v-tag { font: 600 0.66rem var(--mono); text-transform: uppercase; color: var(--success); }
+    .v-when { color: var(--muted); font-size: 0.78rem; }
+    .v-note { color: var(--muted); font-size: 0.82rem; margin-top: 3px; overflow-wrap: anywhere; }
+    .panel { border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .panel-head h2 { font-size: 1rem; margin: 0; }
+    .panel-head .meta { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+    .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .seg button { border: 0; background: none; padding: 6px 12px; font: inherit; font-size: 0.82rem; color: var(--muted); cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+    .seg button:disabled { opacity: 0.45; cursor: default; }
+    select { font: inherit; font-size: 0.82rem; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); color: var(--ink); }
+    .btn-plain { background: var(--card-bg); color: var(--ink); border: 1px solid var(--border); }
+    .btn-plain:hover { background: var(--surface-2); }
+    .summary { padding: 10px 18px; font-size: 0.84rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .summary b.add { color: var(--success); } .summary b.del { color: var(--error); }
+    pre.code { margin: 0; padding: 14px 0; font: 0.8rem/1.55 var(--mono); overflow-x: auto; }
+    pre.code span { display: block; padding: 0 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    pre.code .add { background: #e6f4ec; }
+    pre.code .add::before { content: '+ '; color: var(--success); }
+    pre.code .del { background: #fdecea; text-decoration: line-through; text-decoration-color: rgba(208,52,44,0.35); }
+    pre.code .del::before { content: '- '; color: var(--error); }
+    pre.code .same::before { content: '  '; }
+    pre.code .gap { color: var(--muted); font-style: italic; background: var(--surface-2); }
+    .empty { padding: 48px 24px; text-align: center; color: var(--muted); }
+    .empty strong { display: block; color: var(--ink); margin-bottom: 6px; }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .versions { position: static; max-height: 280px; }
+    }
+    @media (max-width: 640px) { .page { padding: 24px 16px 48px; } }
+  </style>
+</head>
+<body>
+  <div id="shell-mount" data-active=""></div>
+  <div class="main-area">
+    <div class="page">
+      <p class="crumb" id="crumb">Version history</p>
+      <h1 id="name">Loading…</h1>
+      <p class="sub" id="sub"></p>
+      <div id="out"></div>
+    </div>
+  </div>
+
+  <script src="ui-dialogs.js"></script>
+  <script src="notifications.js"></script>
+  <script>
+    if (!localStorage.getItem('token')) location.href = 'index.html#login';
+    SiteShell.mount();
+    const esc = SiteShell.esc;
+    const H = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
+    const q = new URLSearchParams(location.search);
+    const kind = q.get('kind'), id = q.get('id');
+    const KIND = { project: 'Project', agent: 'Agent', skill: 'Skill', context: 'Context' };
+    const cache = new Map();
+    let meta = null, selected = 0, mode = 'changes', against = 0;
+
+    // A version as readable text, one field after another, so two versions
+    // compare line by line.
+    function asText(c, names = {}) {
+      const out = [];
+      const nm = id => names[id] || id;
+      const field = (k, v) => { if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length)) out.push(`${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`); };
+      field('name', c.name); field('description', c.description); field('tags', c.tags);
+      if (kind === 'project') {
+        field('execution mode', c.execution_mode); field('executable files', c.allow_executable_files ? 'allowed' : '');
+        field('public', c.is_public ? 'yes' : 'no');
+        if (c.input_schema) { out.push('', '── input schema ──', ...JSON.stringify(c.input_schema, null, 2).split('\n')); }
+        const flow = c.flow || { nodes: [], edges: [] };
+        out.push('', '── flow: steps ──');
+        for (const n of flow.nodes || []) out.push(`${n.id}  ${n.type || 'agent'}${n.agent_name ? '  ' + n.agent_name : ''}${n.outcome ? '  -> ' + n.outcome : ''}${n.max_visits ? '  max ' + n.max_visits : ''}`);
+        out.push('', '── flow: connections ──');
+        for (const e of flow.edges || []) out.push(`${e.from} -> ${e.to}${e.condition ? '  when ' + JSON.stringify(e.condition) : ''}${e.label ? '  (' + e.label + ')' : ''}`);
+        if ((c.contexts || []).length) { out.push('', '── contexts of the project ──'); for (const x of c.contexts) out.push(`${nm(x.context_id)}${x.share_on_fork ? '  shared with forks' : ''}`); }
+        if ((c.shared_agent_contexts || []).length) { out.push('', '── agent contexts shared with forks ──', ...c.shared_agent_contexts.map(nm)); }
+      } else if (kind === 'agent') {
+        field('tools', (c.allowed_tools || []).join(', ')); field('skills', (c.skill_ids || []).map(nm).join(', ')); field('contexts', (c.context_ids || []).map(nm).join(', '));
+        if (c.output_schema) out.push('', '── output schema ──', ...JSON.stringify(c.output_schema, null, 2).split('\n'));
+      }
+      for (const f of c.files || []) out.push('', `── file ${f.name}${f.is_entry ? ' (main)' : ''} ──`, ...String(f.content || '').split('\n'));
+      return out;
+    }
+
+    // Line diff (longest common subsequence), with unchanged runs folded.
+    function diff(a, b) {
+      const n = a.length, m = b.length;
+      if (n * m > 4e6) return [...a.map(t => ['del', t]), ...b.map(t => ['add', t])];
+      const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+      for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      const r = []; let i = 0, j = 0;
+      while (i < n && j < m) {
+        if (a[i] === b[j]) { r.push(['same', a[i]]); i++; j++; }
+        else if (L[i + 1][j] >= L[i][j + 1]) r.push(['del', a[i++]]);
+        else r.push(['add', b[j++]]);
+      }
+      while (i < n) r.push(['del', a[i++]]);
+      while (j < m) r.push(['add', b[j++]]);
+      return r;
+    }
+
+    function fold(rows, ctx = 3) {
+      const keep = rows.map(() => false);
+      rows.forEach(([t], i) => { if (t !== 'same') for (let k = Math.max(0, i - ctx); k <= Math.min(rows.length - 1, i + ctx); k++) keep[k] = true; });
+      const out = []; let skipped = 0;
+      rows.forEach((r, i) => {
+        if (keep[i]) { if (skipped) { out.push(['gap', `${skipped} unchanged line${skipped === 1 ? '' : 's'}`]); skipped = 0; } out.push(r); }
+        else skipped++;
+      });
+      if (skipped) out.push(['gap', `${skipped} unchanged line${skipped === 1 ? '' : 's'}`]);
+      return out;
+    }
+
+    async function load(v) {
+      if (!cache.has(v)) {
+        const r = await fetch(`/versions/${kind}/${encodeURIComponent(id)}/${v}`, { headers: H() });
+        if (!r.ok) throw new Error('version ' + v);
+        cache.set(v, await r.json());
+      }
+      return cache.get(v);
+    }
+
+    const when = ts => new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+    async function show() {
+      const v = meta.versions.find(x => x.version === selected);
+      document.querySelectorAll('.versions button').forEach(b => b.setAttribute('aria-current', String(Number(b.dataset.v) === selected)));
+      const older = meta.versions.filter(x => x.version < selected).map(x => x.version);
+      if (!against || against >= selected) against = older[0] || 0;
+      if (mode === 'changes' && !older.length) mode = 'content';
+      const cur = await load(selected);
+      let body, summary = '';
+      if (mode === 'content') {
+        body = asText(cur.content, cur.names).map(t => `<span class="same">${esc(t)}</span>`).join('');
+      } else {
+        const prev = await load(against);
+        const rows = diff(asText(prev.content, prev.names), asText(cur.content, cur.names));
+        const add = rows.filter(r => r[0] === 'add').length, del = rows.filter(r => r[0] === 'del').length;
+        summary = add || del ? `<div class="summary">Compared with v${against}: <b class="add">${add} line${add === 1 ? '' : 's'} added</b>, <b class="del">${del} removed</b>.</div>` : `<div class="summary">No differences with v${against}.</div>`;
+        body = fold(rows).map(([t, s]) => `<span class="${t}">${esc(s)}</span>`).join('');
+      }
+      const isCurrent = selected === meta.current;
+      document.getElementById('panel').innerHTML = `
+        <div class="panel-head">
+          <div>
+            <h2>Version ${selected}${isCurrent ? ' (current)' : ''}</h2>
+            <div class="meta">${esc(v.author || 'system')} · ${esc(when(v.created_at))}${v.note ? ' · ' + esc(v.note) : ''}</div>
+          </div>
+          <div class="tools">
+            <div class="seg" role="group" aria-label="View">
+              <button type="button" data-mode="changes" aria-pressed="${mode === 'changes'}" ${older.length ? '' : 'disabled title="This is the first version"'}>Changes</button>
+              <button type="button" data-mode="content" aria-pressed="${mode === 'content'}">Full content</button>
+            </div>
+            ${mode === 'changes' && older.length > 1 ? `<label style="font-size:0.82rem;color:var(--muted)">against <select id="against">${older.map(o => `<option value="${o}" ${o === against ? 'selected' : ''}>v${o}</option>`).join('')}</select></label>` : ''}
+            ${meta.can_restore && !isCurrent ? `<button type="button" class="btn btn-sm btn-primary" id="restore">Restore this version</button>` : ''}
+          </div>
+        </div>
+        ${summary}
+        <pre class="code">${body || '<span class="gap">(empty)</span>'}</pre>`;
+      document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; show(); }));
+      document.getElementById('against')?.addEventListener('change', e => { against = Number(e.target.value); show(); });
+      document.getElementById('restore')?.addEventListener('click', restore);
+    }
+
+    async function restore() {
+      const ok = await uiConfirm(`The ${KIND[kind].toLowerCase()} goes back to what it was in version ${selected}. This is saved as a new version, so nothing is lost and you can undo it the same way.${kind === 'project' ? ' Its flow and settings go back; visibility and attached contexts stay as they are.' : ''}`, { title: `Restore version ${selected}?`, okLabel: 'Restore' });
+      if (!ok) return;
+      const r = await fetch(`/versions/${kind}/${encodeURIComponent(id)}/${selected}/restore`, { method: 'POST', headers: H() });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) { await uiAlert(b.error || 'Could not restore this version.', { title: 'Not restored' }); return; }
+      await init(b.version);
+    }
+
+    async function init(pick) {
+      const out = document.getElementById('out');
+      if (!KIND[kind] || !id) { document.getElementById('name').textContent = 'Nothing to show'; out.innerHTML = '<div class="panel"><div class="empty"><strong>No item selected</strong>Open the history from a project, agent, skill or context.</div></div>'; return; }
+      const r = await fetch(`/versions/${kind}/${encodeURIComponent(id)}`, { headers: H() });
+      if (!r.ok) {
+        document.getElementById('name').textContent = r.status === 403 ? 'No access' : 'Not found';
+        out.innerHTML = `<div class="panel"><div class="empty"><strong>${r.status === 403 ? 'You cannot see this history' : 'This item does not exist'}</strong>${r.status === 403 ? 'The history is visible to the owner and to people the project is shared with.' : 'It may have been deleted.'}</div></div>`;
+        return;
+      }
+      meta = await r.json();
+      document.title = `AIOrc — History of ${meta.name}`;
+      document.getElementById('crumb').textContent = `${KIND[kind]} · version history`;
+      document.getElementById('name').textContent = meta.name;
+      document.getElementById('sub').textContent = `${meta.versions.length} version${meta.versions.length === 1 ? '' : 's'} · owner ${meta.owner}${meta.can_restore ? '' : ' · you can view, only the owner can restore'}`;
+      if (!meta.versions.length) { out.innerHTML = '<div class="panel"><div class="empty"><strong>No versions yet</strong>A version is saved every time this changes.</div></div>'; return; }
+      selected = pick || Number(q.get('v')) || meta.current;
+      if (!meta.versions.some(v => v.version === selected)) selected = meta.current;
+      out.innerHTML = `<div class="layout">
+        <ul class="versions" aria-label="Versions">${meta.versions.map(v => `
+          <li><button type="button" data-v="${v.version}">
+            <div class="v-top"><span class="v-num">v${v.version}</span>${v.version === meta.current ? '<span class="v-tag">current</span>' : ''}</div>
+            <div class="v-when">${esc(v.author || 'system')} · ${esc(when(v.created_at))}</div>
+            ${v.note ? `<div class="v-note">${esc(v.note)}</div>` : ''}
+          </button></li>`).join('')}</ul>
+        <section class="panel" id="panel" aria-live="polite"></section>
+      </div>`;
+      document.querySelectorAll('.versions button').forEach(b => b.addEventListener('click', () => { selected = Number(b.dataset.v); against = 0; mode = 'changes'; show(); }));
+      mode = 'changes'; against = 0;
+      await show();
+    }
+    init();
+  </script>
+</body>
+</html>

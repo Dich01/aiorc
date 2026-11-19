@@ -8,6 +8,8 @@ import { canonicalJson, hashJson } from '../lib/canonicalJson';
 import { newSecret, PROJECT_KEY_PREFIX } from '../lib/secrets';
 import { validateProjectFlow, flowsReferencingAgents } from '../orchestrator';
 import { Harness, HarnessEntity } from './load';
+import { recordVersion, EntityKind } from '../lib/versions';
+import { setContextSharing } from '../lib/forkSync';
 
 export interface ApplyReport {
   hashes: { kind: string; name: string; sha256: string }[];
@@ -34,6 +36,7 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
     throw new Error(`${what} already exists for this owner and is used by ${used.map(n => `"${n}"`).join(', ')}, which this harness does not define. Applying would change it there too: rename it in the harness.`);
   };
 
+  const touched: [EntityKind, string][] = [];
   const tx = db.transaction(() => {
     const upsertSimple = (table: 'skills' | 'contexts', cfg: FileConfig, e: HarnessEntity): string => {
       const row = db.prepare(`SELECT id, description FROM ${table} WHERE user_id = ? AND name = ?`).get(ownerId, e.name) as { id: string; description: string } | undefined;
@@ -56,6 +59,7 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       }
       if (!filesEqual(cfg.table, cfg.fk, id, e.files)) writeEntityFiles(id, e.files, cfg);
       report.hashes.push({ kind: table.slice(0, -1), name: e.name, sha256: hashJson({ description: e.description, files: e.files }) });
+      touched.push([table === 'skills' ? 'skill' : 'context', id]);
       return id;
     };
 
@@ -90,6 +94,7 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
       db.prepare('DELETE FROM agent_contexts WHERE agent_id = ?').run(id);
       wantContexts.forEach((cid, i) => db.prepare('INSERT INTO agent_contexts (agent_id, context_id, ordinal) VALUES (?, ?, ?)').run(id, cid, i));
       agentIds.set(a.name, id);
+      touched.push(['agent', id]);
       report.hashes.push({ kind: 'agent', name: a.name, sha256: hashJson({ description: a.description, output_schema: a.output_schema, allowed_tools: a.allowed_tools, skills: a.skills, ...(a.contexts.length ? { contexts: a.contexts } : {}), files: a.files }) });
     }
 
@@ -110,6 +115,7 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
         if (p.execution_mode) db.prepare('UPDATE projects SET execution_mode = ? WHERE id = ?').run(p.execution_mode, row.id);
       }
       const pid = row.id;
+      touched.push(['project', pid]);
 
       // Agents used by the flow and the project's contexts are linked to it.
       for (const name of p.agents) db.prepare('INSERT OR IGNORE INTO project_agents (project_id, agent_id) VALUES (?, ?)').run(pid, agentIds.get(name)!);
@@ -143,5 +149,14 @@ export function applyHarness(h: Harness, ownerId: string): ApplyReport {
     }
   });
   tx();
+  // One version per entity whose content changed (an unchanged one keeps its
+  // version). Projects last, so their version sees their final contexts and flow.
+  // Which contexts forks get: exactly those the harness lists.
+  for (const p of h.projects) {
+    const pid = (db.prepare('SELECT id FROM projects WHERE user_id = ? AND name = ?').get(ownerId, p.name) as { id: string }).id;
+    setContextSharing(pid, p.share_on_fork.map(n => (db.prepare('SELECT id FROM contexts WHERE user_id = ? AND name = ?').get(ownerId, n) as { id: string }).id));
+  }
+  const order: EntityKind[] = ['skill', 'context', 'agent', 'project'];
+  for (const kind of order) for (const [k, id] of touched) if (k === kind) recordVersion(k, id, ownerId, 'harness apply');
   return report;
 }

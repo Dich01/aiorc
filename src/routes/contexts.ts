@@ -6,6 +6,8 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Context, ContextInvitation } from '../db/schema';
 import { normalizeFiles, writeEntityFiles, loadEntityFiles, CONTEXT_FILES } from '../lib/entityFiles';
+import { recordVersion, notifyForked } from '../lib/versions';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -79,6 +81,13 @@ function replaceContextProjects(
   tx(cleaned);
 
   return { ok: true };
+}
+
+// A context's project attachments are part of each project's version: record
+// every project it is (or was, before this change) attached to.
+function recordProjectsOfContext(contextId: string, before: string[], authorId: string): void {
+  const now = loadProjectAttachmentsForContext(contextId).map(a => a.project_id);
+  for (const pid of new Set([...before, ...now])) recordVersion('project', pid, authorId);
 }
 
 // GET /contexts/public — public contexts with optional filters & sort.
@@ -207,6 +216,8 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }
   }
 
+  recordVersion('context', id, req.userId!, 'created');
+  recordProjectsOfContext(id, [], req.userId!);
   const created = db.prepare('SELECT * FROM contexts WHERE id = ?').get(id) as Context;
   res.status(201).json(enrichContext(created, req.userId!));
 });
@@ -240,11 +251,14 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     ctx.id
   );
 
+  const attachedBefore = loadProjectAttachmentsForContext(ctx.id).map(a => a.project_id);
   if (Array.isArray(project_attachments)) {
     const result = replaceContextProjects(ctx.id, req.userId!, project_attachments);
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
+  recordVersion('context', ctx.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
+  recordProjectsOfContext(ctx.id, attachedBefore, req.userId!);
   const updated = db.prepare('SELECT * FROM contexts WHERE id = ?').get(ctx.id) as Context;
   res.json(enrichContext(updated, req.userId!));
 });
@@ -278,6 +292,7 @@ router.patch('/:id/share-on-fork', requireAuth, (req: AuthRequest, res: Response
   if (result.changes === 0) {
     res.status(404).json({ error: 'Context is not attached to this project' }); return;
   }
+  recordVersion('project', project_id, req.userId!, `context "${ctx.name}" ${share_on_fork ? 'shared with' : 'kept private from'} forks`);
   res.json({ ok: true, share_on_fork });
 });
 
@@ -334,6 +349,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO context_invitations (id, context_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, ctx.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'context', entityName: ctx.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the context "${ctx.name}"`, link: 'dashboard.html?tab=team', entityKind: 'context', entityId: ctx.id });
   res.status(201).json(db.prepare('SELECT * FROM context_invitations WHERE id = ?').get(id));
 });
 
@@ -401,6 +417,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   try { fork(); }
   catch (err) { res.status(500).json({ error: 'Fork failed', detail: String(err) }); return; }
 
+  recordVersion('context', newContextId, req.userId!, `forked from "${source.name}"`);
+  notifyForked('context', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM contexts WHERE id = ?').get(newContextId) as Context;
   res.status(201).json(enrichContext(created, req.userId!));
 });

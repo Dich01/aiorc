@@ -95,7 +95,7 @@
     if (!el) return false;
     const active = el.getAttribute('data-active') || '';
     const signedIn = !!localStorage.getItem('token');
-    if (signedIn) { document.body.classList.add('has-sidebar'); el.outerHTML = sidebarHTML(active); wireSidebar(); }
+    if (signedIn) { document.body.classList.add('has-sidebar'); el.outerHTML = sidebarHTML(active); wireSidebar(); window.AIOrcNotifications?.attach(); }
     else { el.outerHTML = publicNavHTML(active); }
     return signedIn;
   }

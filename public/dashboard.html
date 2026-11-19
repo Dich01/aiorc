@@ -719,7 +719,7 @@ Never skip steps or modify them with your own judgment.</div>
           a teammate built, you had to ask for the files, copy them by hand into your repo and hope your
           Claude followed them the same way. Here that disappears: agents, skills and flows live in one
           place, your AI connects with a token, and if someone improves a crew, everyone running that project gets
-          the improvement on their next run (forks are independent copies).
+          the improvement on their next run. A fork is your own copy: when the original improves you are notified and can take the update in one step.
         </p>
         <p style="margin-bottom:10px">
           <strong>The second: agents don't follow the flows.</strong> They skip steps, invent their own
@@ -1094,6 +1094,7 @@ Never skip steps or modify them with your own judgment.</div>
             ${skillBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=agent&id=${encodeURIComponent(a.id)}" title="Versions of this agent">History</a>
               <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}',${escHtml(JSON.stringify(String(a.name ?? '')))})">Delete</button>
             </div>
           </div>`;
@@ -1364,6 +1365,7 @@ Never skip steps or modify them with your own judgment.</div>
             ${filesBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=skill&id=${encodeURIComponent(s.id)}" title="Versions of this skill">History</a>
               <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}',${escHtml(JSON.stringify(String(s.name ?? '')))})">Delete</button>
             </div>
           </div>
@@ -1716,6 +1718,7 @@ Never skip steps or modify them with your own judgment.</div>
               <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
               <div class="item-card-footer">
                 <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=context&id=${encodeURIComponent(c.id)}" title="Versions of this context">History</a>
                 <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}',${escHtml(JSON.stringify(String(c.name ?? '')))})">Delete</button>
               </div>
             </div>
@@ -1999,11 +2002,12 @@ Never skip steps or modify them with your own judgment.</div>
 
     const TYPE_LABEL_SINGULAR = { project:'Project', agent:'Agent', skill:'Skill' };
     const TYPE_LABEL_PLURAL   = { project:'Projects', agent:'Agents', skill:'Skills' };
-    const TYPE_BASE = { project:'/projects', agent:'/agents', skill:'/skills' };
+    const TYPE_BASE = { project:'/projects', agent:'/agents', skill:'/skills', context:'/contexts' };
     const TYPE_AFTER = {
       project: id => `project.html?id=${encodeURIComponent(id)}`,
       agent:   () => `dashboard.html?tab=agents`,
       skill:   () => `dashboard.html?tab=skills`,
+      context: () => `dashboard.html?tab=contexts`,
     };
 
     async function loadTeam() {
@@ -2160,8 +2164,14 @@ Never skip steps or modify them with your own judgment.</div>
       const list = inRes.ok ? await inRes.json() : [];
       const inv = list.find(i => i.id === invId && i.type === type);
       if (!inv) { await uiAlert('Invitation not found.'); return; }
-      const targetId = inv.project_id || inv.agent_id || inv.skill_id;
-      const res = await authFetch(`${TYPE_BASE[type]}/${targetId}/fork`, { method:'POST' });
+      const targetId = inv.project_id || inv.agent_id || inv.skill_id || inv.context_id;
+      let body;
+      if (type === 'project') {
+        const choice = await AIOrcForkDialog.confirmProjectFork(targetId, localStorage.getItem('token'));
+        if (!choice) return;
+        body = JSON.stringify(choice);
+      }
+      const res = await authFetch(`${TYPE_BASE[type]}/${targetId}/fork`, { method:'POST', ...(body ? { body } : {}) });
       if (!res.ok) {
         const err = await res.json().catch(()=>({}));
         await uiAlert(err.error || 'Could not fork.');
@@ -2190,5 +2200,7 @@ Never skip steps or modify them with your own judgment.</div>
     loadSkills();
     refreshTeamBadge();
   </script>
+  <script src="fork-dialog.js"></script>
+  <script src="notifications.js"></script>
 </body>
 </html>

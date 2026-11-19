@@ -51,6 +51,7 @@ export interface HarnessProject {
   input_schema: Record<string, unknown> | null;
   execution_mode: 'verified' | 'compiled' | null;  // null = not declared: apply leaves the owner's setting alone
   contexts: string[];
+  share_on_fork: string[];     // contexts (of the project or its agents) a fork gets a copy of
   agents: string[];            // agents the flow uses
   flow: FlowDocument;          // node.agent_id holds the agent NAME until apply
   evals: HarnessEval[];
@@ -180,6 +181,8 @@ export function loadHarness(dirArg: string): Harness {
 
     const ctx = asStrings(p.contexts);
     for (const c of ctx) if (!contexts.has(c)) problems.push(`${where}: unknown context "${c}"`);
+    const share = asStrings(p.share_on_fork);
+    for (const c of share) if (!contexts.has(c)) problems.push(`${where}: share_on_fork names unknown context "${c}"`);
 
     // Nodes name their agent with "agent"; validate with the real validator.
     const rawNodes = ((p.flow?.nodes ?? []) as Record<string, unknown>[]).map(n => ({ x: 0, y: 0, ...n, ...(n.type === 'agent' ? { agent_id: String(n.agent ?? ''), agent_name: String(n.agent ?? '') } : {}) }));
@@ -211,7 +214,7 @@ export function loadHarness(dirArg: string): Harness {
         max_extra_findings: e.max_extra_findings ?? null,
       });
     }
-    projects.push({ name, description: String(p.description ?? ''), input_schema, execution_mode, contexts: ctx, agents: used, flow, evals });
+    projects.push({ name, description: String(p.description ?? ''), input_schema, execution_mode, contexts: ctx, share_on_fork: share, agents: used, flow, evals });
   }
 
   if (problems.length) throw new HarnessError(problems);

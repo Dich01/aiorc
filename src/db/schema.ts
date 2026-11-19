@@ -789,4 +789,72 @@ CREATE TABLE IF NOT EXISTS agent_usage (
 CREATE INDEX IF NOT EXISTS idx_agent_usage_project ON agent_usage(project_id);
 CREATE INDEX IF NOT EXISTS idx_agent_usage_agent ON agent_usage(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_usage_run ON agent_usage(run_id);
+
+-- Version history of agents, skills, contexts and projects. A new row is
+-- written only when the content really changed (sha256 differs from the last).
+CREATE TABLE IF NOT EXISTS entity_versions (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,                 -- project | agent | skill | context
+  entity_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  content_json TEXT NOT NULL,         -- canonical JSON of what defines the entity
+  sha256 TEXT NOT NULL,
+  author_user_id TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  UNIQUE (kind, entity_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_versions_entity ON entity_versions(kind, entity_id);
+
+-- Which version of each entity a run used (the snapshot holds the content).
+CREATE TABLE IF NOT EXISTS run_entity_versions (
+  run_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  PRIMARY KEY (run_id, kind, entity_id),
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+);
+
+-- In-app notifications. Unread ones of the same kind for the same project are
+-- updated in place instead of piling up.
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  link TEXT NOT NULL DEFAULT '',
+  project_id TEXT NOT NULL DEFAULT '',
+  entity_kind TEXT NOT NULL DEFAULT '',
+  entity_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  read_at INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read_at);
+
+-- A forked project and the project it came from: which entity of the source
+-- became which entity of the fork, and the source versions last synced.
+CREATE TABLE IF NOT EXISTS fork_links (
+  fork_project_id TEXT PRIMARY KEY,
+  source_project_id TEXT NOT NULL,
+  entity_map_json TEXT NOT NULL DEFAULT '{}',     -- {"agent:<src id>": "<fork id>", ...}
+  base_versions_json TEXT NOT NULL DEFAULT '{}',  -- {"agent:<src id>": 3, "project:<src id>": 5, ...}
+  synced_at INTEGER NOT NULL,
+  FOREIGN KEY (fork_project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_fork_links_source ON fork_links(source_project_id);
+
+-- Whether a context attached to one of a project's agents may be copied by
+-- whoever forks the project. (Project-level contexts use
+-- project_contexts.share_on_fork.)
+CREATE TABLE IF NOT EXISTS project_context_sharing (
+  project_id TEXT NOT NULL,
+  context_id TEXT NOT NULL,
+  share INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (project_id, context_id),
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (context_id) REFERENCES contexts(id) ON DELETE CASCADE
+);
 `;

@@ -22,6 +22,8 @@ function readOutputSchema(raw: unknown): { ok: true; value: string } | { ok: fal
   return err ? { ok: false, error: err } : { ok: true, value: JSON.stringify(schema) };
 }
 import { normalizeFiles, writeEntityFiles, loadEntityFiles, copyEntityFiles, AGENT_FILES, SKILL_FILES } from '../lib/entityFiles';
+import { recordVersion, recordAgentTree, notifyForked } from '../lib/versions';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -302,6 +304,7 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }
   }
 
+  recordVersion('agent', id, req.userId!, 'created');
   const created = db.prepare('SELECT * FROM agents WHERE id = ?').get(id) as Agent;
   res.status(201).json(enrichAgent(created, req.userId!));
 });
@@ -368,6 +371,7 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
+  recordVersion('agent', agent.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM agents WHERE id = ?').get(agent.id) as Agent;
   res.json(enrichAgent(updated, req.userId!));
 });
@@ -438,6 +442,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO agent_invitations (id, agent_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, agent.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'agent', entityName: agent.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the agent "${agent.name}"`, link: 'dashboard.html?tab=team', entityKind: 'agent', entityId: agent.id });
   res.status(201).json(db.prepare('SELECT * FROM agent_invitations WHERE id = ?').get(id));
 });
 
@@ -542,6 +547,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   try { fork(); }
   catch (err) { res.status(500).json({ error: 'Fork failed', detail: String(err) }); return; }
 
+  recordAgentTree(newAgentId, req.userId!, `forked from "${source.name}"`);
+  notifyForked('agent', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM agents WHERE id = ?').get(newAgentId) as Agent;
   res.status(201).json(enrichAgent(created, req.userId!));
 });

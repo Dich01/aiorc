@@ -20,6 +20,10 @@ import adminRouter from './routes/admin';
 import mcpRouter from './mcp/server';
 import auditRouter from './routes/audit';
 import projectApiRouter from './routes/projectApi';
+import versionsRouter from './routes/versions';
+import notificationsRouter from './routes/notifications';
+import { ensureBaselineVersions } from './lib/versions';
+import { ensureForkLinks } from './lib/forkSync';
 
 // Builds the Express app without opening a port, so tests can mount it on an
 // ephemeral port. src/index.ts is the process entry point that listens.
@@ -53,6 +57,8 @@ export function createApp(): express.Express {
   app.use('/mcp', mcpRouter);
   app.use('/audit', auditRouter);
   app.use('/api', projectApiRouter);
+  app.use('/versions', versionsRouter);
+  app.use('/notifications', notificationsRouter);
   // Streamable-HTTP MCP clients may probe GET for a server-sent event stream;
   // this server answers every request inline, so say so explicitly.
   app.get('/mcp', (_req, res) => { res.setHeader('Allow', 'POST'); res.status(405).json({ error: 'Use POST for MCP JSON-RPC requests' }); });
@@ -82,6 +88,11 @@ export function createApp(): express.Express {
 
   return app;
 }
+
+// Every entity gets a first version once, so its state before the first edit
+// is kept (no-op when every entity already has one).
+ensureBaselineVersions();
+ensureForkLinks();
 
 const app = createApp();
 export default app;

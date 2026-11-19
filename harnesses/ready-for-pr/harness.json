@@ -755,6 +755,9 @@
           "expected_findings": [],
           "max_extra_findings": 0
         }
+      ],
+      "share_on_fork": [
+        "repo-profile"
       ]
     }
   ]

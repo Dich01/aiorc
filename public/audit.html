@@ -408,6 +408,13 @@
             ${outs.filter(o => o.step === s.step).map(o => `<details class="run-collapse"><summary>Output of ${escHtml(o.agent || o.node)} (sha256 ${escHtml(String(o.sha256).slice(0, 12))})</summary><pre class="run-pre">${escHtml(JSON.stringify(o.output, null, 2))}</pre></details>`).join('')}`).join('')}
           </div>`);
       }
+      const used = (Array.isArray(run.snapshots) ? run.snapshots : []).filter(x => x.kind !== 'flow' && x.version);
+      if (used.length) {
+        const order = { project: 0, agent: 1, skill: 2, context: 3 };
+        used.sort((a, b) => (order[a.kind] - order[b.kind]) || String(a.name).localeCompare(String(b.name)));
+        parts.push(`<div class="run-section-title">Versions this run used</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${used.map(x => `<a class="pill pill-muted" style="text-decoration:none" href="history.html?kind=${encodeURIComponent(x.kind)}&id=${encodeURIComponent(x.entity_id)}&v=${x.version}" title="Open the ${escHtml(x.kind)} history at this version">${escHtml(x.kind)} ${escHtml(x.name)} v${x.version}</a>`).join('')}</div>`);
+      }
       if (run.mode === 'compiled') {
         const rep = run.self_declared_report;
         parts.push(rep
@@ -433,6 +440,9 @@
     setInterval(() => { if (!document.hidden) load(); }, 10000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
     load();
+    // A notification links to audit.html#<run id>: open that run.
+    if (location.hash.length > 1) openRunDetail(decodeURIComponent(location.hash.slice(1)));
   </script>
+  <script src="notifications.js"></script>
 </body>
 </html>

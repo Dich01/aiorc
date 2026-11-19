@@ -123,22 +123,41 @@ test('model-orchestrated: each agent block carries its own contexts, not the sha
 
 section('agent contexts: forks, harnesses, analytics');
 
-test('a project fork copies the contexts its agents carry; project contexts still follow share_on_fork', async () => {
+test('a project fork copies only the agent contexts the owner shares and the forker picks', async () => {
   const { user, p, arch } = await twoAgentProject();
-  await api(`/projects/${p.id}/visibility`, { method: 'PATCH', token: user.token, body: { is_public: true } });
   const other = await createUser();
-  const fork = await api(`/projects/${p.id}/fork`, { method: 'POST', token: other.token });
-  assert.strictEqual(fork.status, 201, JSON.stringify(fork.body));
-  const carried = db.prepare(
+  const carried = (projectId: string) => db.prepare(
     `SELECT a.name AS agent, c.name AS context, c.user_id, c.forked_from FROM project_agents pa
      JOIN agent_contexts ac ON ac.agent_id = pa.agent_id JOIN agents a ON a.id = pa.agent_id JOIN contexts c ON c.id = ac.context_id
      WHERE pa.project_id = ? ORDER BY a.name`
-  ).all(fork.body.id) as { agent: string; context: string; user_id: string; forked_from: string }[];
-  assert.deepStrictEqual(carried.map(r => [r.agent, r.context]), [['first', 'architecture'], ['second', 'operations']]);
-  assert.ok(carried.every(r => r.user_id === other.id), 'the copies belong to the new owner');
-  assert.strictEqual(carried[0]!.forked_from, arch);
+  ).all(projectId) as { agent: string; context: string; user_id: string; forked_from: string }[];
+
+  // Contexts are private by default: publishing alone shares none.
+  await api(`/projects/${p.id}/visibility`, { method: 'PATCH', token: user.token, body: { is_public: true } });
+  const preview = await api(`/projects/${p.id}/fork-preview`, { token: other.token });
+  assert.strictEqual(preview.status, 200);
+  assert.deepStrictEqual(preview.body.shared, []);
+  assert.strictEqual(preview.body.private_count, 3);
+  const bare = await api(`/projects/${p.id}/fork`, { method: 'POST', token: other.token });
+  assert.strictEqual(bare.status, 201, JSON.stringify(bare.body));
+  assert.deepStrictEqual(carried(bare.body.id), [], 'private contexts stay with the source');
+
+  // The owner shares both agent contexts when publishing; the forker takes one.
+  const sharing = await api(`/projects/${p.id}/contexts-sharing`, { token: user.token });
+  const ids = sharing.body.contexts.filter((c: { scope: string }) => c.scope === 'agent').map((c: { id: string }) => c.id);
+  assert.strictEqual(ids.length, 2);
+  await api(`/projects/${p.id}/visibility`, { method: 'PATCH', token: user.token, body: { is_public: true, shared_context_ids: ids } });
+  const preview2 = await api(`/projects/${p.id}/fork-preview`, { token: other.token });
+  assert.deepStrictEqual(preview2.body.shared.map((c: { name: string; agents: string[] }) => [c.name, c.agents]), [['architecture', ['first']], ['operations', ['second']]]);
+  const third = await createUser();
+  const fork = await api(`/projects/${p.id}/fork`, { method: 'POST', token: third.token, body: { copy_context_ids: [arch] } });
+  assert.strictEqual(fork.status, 201, JSON.stringify(fork.body));
+  const rows = carried(fork.body.id);
+  assert.deepStrictEqual(rows.map(r => [r.agent, r.context]), [['first', 'architecture']]);
+  assert.ok(rows.every(r => r.user_id === third.id), 'the copies belong to the new owner');
+  assert.strictEqual(rows[0]!.forked_from, arch);
   const projectLevel = db.prepare('SELECT COUNT(*) AS n FROM project_contexts WHERE project_id = ?').get(fork.body.id) as { n: number };
-  assert.strictEqual(projectLevel.n, 0, 'the glossary was attached with share_on_fork = false');
+  assert.strictEqual(projectLevel.n, 0, 'the glossary was not shared');
 
   const s = await mcp(fork.body.api_key, 'workflow.start', { request: 'go' });
   assert.ok(s.text.split('## Step 1')[1]!.includes('ARCH-DOC'), 'the forked flow delivers the copied context');

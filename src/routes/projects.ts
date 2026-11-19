@@ -3,8 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Project, ProjectInvitation } from '../db/schema';
-import { copyAgentContexts } from '../lib/agentContexts';
-import { copyEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES } from '../lib/entityFiles';
+import { recordVersion } from '../lib/versions';
+import { forkProject, forkPreview, contextSharing, setContextSharing, upstreamStatus, syncFromUpstream } from '../lib/forkSync';
+import { notify, displayName } from '../lib/notify';
 
 
 export const EXECUTION_MODES = ['verified', 'compiled'];
@@ -174,6 +175,7 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     id, '{"nodes":[],"edges":[]}', Date.now()
   );
 
+  recordVersion('project', id, req.userId!, 'created');
   const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project;
   res.status(201).json({ ...publicProject(created), api_key: key.plaintext });
 });
@@ -199,6 +201,7 @@ router.patch('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     db.prepare('UPDATE projects SET tags = ? WHERE id = ?').run(normalizeTags(tags), project.id);
   }
 
+  recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
@@ -221,6 +224,7 @@ router.patch('/:id/execution-mode', requireAuth, (req: AuthRequest, res: Respons
   }
 
   db.prepare('UPDATE projects SET execution_mode = ? WHERE id = ?').run(mode, project.id);
+  recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
@@ -239,6 +243,10 @@ router.patch('/:id/visibility', requireAuth, (req: AuthRequest, res: Response): 
   if (typeof is_public !== 'boolean') { res.status(400).json({ error: 'is_public boolean is required' }); return; }
 
   db.prepare('UPDATE projects SET is_public = ? WHERE id = ?').run(is_public ? 1 : 0, project.id);
+  // Publishing can also say which contexts a fork gets a copy of.
+  const sharedIds = (req.body as { shared_context_ids?: unknown }).shared_context_ids;
+  if (Array.isArray(sharedIds)) setContextSharing(project.id, sharedIds.map(String));
+  recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
@@ -256,6 +264,7 @@ router.patch('/:id/input-schema', requireAuth, (req: AuthRequest, res: Response)
     if (err) { res.status(400).json({ error: err.replace('output_schema', 'schema') }); return; }
   }
   db.prepare('UPDATE projects SET input_schema = ? WHERE id = ?').run(schema === null ? '' : JSON.stringify(schema), project.id);
+  recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
@@ -271,6 +280,7 @@ router.patch('/:id/executable-files', requireAuth, (req: AuthRequest, res: Respo
   const { allow } = req.body as { allow?: boolean };
   if (typeof allow !== 'boolean') { res.status(400).json({ error: 'allow boolean is required' }); return; }
   db.prepare('UPDATE projects SET allow_executable_files = ? WHERE id = ?').run(allow ? 1 : 0, project.id);
+  recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project;
   res.json(publicProject(updated));
 });
@@ -359,6 +369,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO project_invitations (id, project_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, project.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'project', entityName: project.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the project "${project.name}"`, link: 'dashboard.html?tab=team', entityKind: 'project', entityId: project.id, projectId: project.id });
 
   const created = db.prepare('SELECT * FROM project_invitations WHERE id = ?').get(id);
   res.status(201).json(created);
@@ -479,147 +490,88 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
     try { flow = JSON.parse(flowRow.flow_json); } catch { /* keep empty */ }
   }
 
-  // Compute a non-colliding fork name within the caller's workspace.
-  const baseName = `Fork: ${source.name}`;
-  let candidate = baseName;
-  let n = 2;
-  while (db.prepare('SELECT 1 FROM projects WHERE user_id = ? AND name = ?').get(req.userId!, candidate)) {
-    candidate = `${baseName} (${n++})`;
-  }
+  if (!flow.nodes.length) { res.status(400).json({ error: 'This project has no flow to fork' }); return; }
 
-  const newProjectId = uuidv4();
-  const newKey = newSecret(PROJECT_KEY_PREFIX);
-  const now = Date.now();
+  // Which shared contexts to copy: the caller's choice, or all shared ones.
+  const raw = (req.body as { copy_context_ids?: unknown }).copy_context_ids;
+  const copyIds = Array.isArray(raw) ? raw.map(String) : null;
 
-  // Cache existing names in caller's workspace for collision suffixes on agents/skills.
-  const existingAgentNames = new Set(
-    (db.prepare('SELECT name FROM agents WHERE user_id = ?').all(req.userId!) as { name: string }[]).map(r => r.name)
-  );
-  const existingSkillNames = new Set(
-    (db.prepare('SELECT name FROM skills WHERE user_id = ?').all(req.userId!) as { name: string }[]).map(r => r.name)
-  );
-  const existingContextNames = new Set(
-    (db.prepare('SELECT name FROM contexts WHERE user_id = ?').all(req.userId!) as { name: string }[]).map(r => r.name)
-  );
-  const renameIfNeeded = (name: string, existing: Set<string>): string => {
-    if (!existing.has(name)) { existing.add(name); return name; }
-    let candidate = `${name} (fork)`;
-    let m = 2;
-    while (existing.has(candidate)) candidate = `${name} (fork ${m++})`;
-    existing.add(candidate);
-    return candidate;
-  };
-
-  // Skill ID dedup map — keyed by source skill id, value is new skill id.
-  const skillIdMap = new Map<string, string>();
-  // Same for contexts attached to agents.
-  const contextCopies = new Map<string, string>();
-
-  // Run everything in a single transaction so a partial fork is impossible.
-  const fork = db.transaction(() => {
-    db.prepare(
-      'INSERT INTO projects (id, user_id, name, description, tags, api_key_hash, api_key_hint, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(newProjectId, req.userId!, candidate, source.description, (source as Project).tags ?? '', newKey.hash, newKey.display, 0, source.id, now);
-
-    // Map agent_id → newAgentId so we can rewrite the flow's nodes.
-    const agentIdsInFlow = [...new Set(flow.nodes.filter(n => (n.type ?? 'agent') === 'agent' && n.agent_id).map(n => String(n.agent_id)))];
-    const agentIdMap = new Map<string, string>();
-
-    for (const aid of agentIdsInFlow) {
-      const a = db.prepare('SELECT * FROM agents WHERE id = ?').get(aid) as {
-        id: string; user_id: string; name: string; description: string;
-        tags: string; output_schema: string; allowed_tools: string; created_at: number;
-      } | undefined;
-      if (!a) continue; // orphan reference, skip; the resulting flow will compile with a warning
-      const newAgentId = uuidv4();
-      agentIdMap.set(aid, newAgentId);
-      const newName = renameIfNeeded(a.name, existingAgentNames);
-      db.prepare(
-        'INSERT INTO agents (id, user_id, name, description, tags, output_schema, allowed_tools, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(newAgentId, req.userId!, newName, a.description, a.tags, a.output_schema, a.allowed_tools, a.id, now);
-      copyEntityFiles(a.id, newAgentId, AGENT_FILES);
-      db.prepare('INSERT INTO project_agents (project_id, agent_id) VALUES (?, ?)').run(newProjectId, newAgentId);
-
-      // Clone skills attached to this agent (deduped — same skill could be on multiple agents).
-      const skillRows = db.prepare(`
-        SELECT s.*, ag.ordinal AS _ord
-        FROM agent_skills ag
-        JOIN skills s ON s.id = ag.skill_id
-        WHERE ag.agent_id = ?
-        ORDER BY ag.ordinal ASC
-      `).all(aid) as { id: string; user_id: string; name: string; description: string; content: string; created_at: number; _ord: number }[];
-
-      for (const s of skillRows) {
-        // Reuse skill clone if we already cloned this skill within this fork.
-        let newSkillId = (skillIdMap.get(s.id) as string | undefined);
-        if (!newSkillId) {
-          newSkillId = uuidv4();
-          skillIdMap.set(s.id, newSkillId);
-          const newSkillName = renameIfNeeded(s.name, existingSkillNames);
-          db.prepare(
-            'INSERT INTO skills (id, user_id, name, description, content, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-          ).run(newSkillId, req.userId!, newSkillName, s.description, s.content, now);
-          copyEntityFiles(s.id, newSkillId, SKILL_FILES);
-          db.prepare('INSERT INTO project_skills (project_id, skill_id) VALUES (?, ?)').run(newProjectId, newSkillId);
-        }
-        db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(newAgentId, newSkillId, s._ord);
-      }
-
-      // Contexts attached to the agent travel with it, like its skills
-      // (project-level contexts follow share_on_fork, below).
-      copyAgentContexts(aid, newAgentId, req.userId!, now, contextCopies);
-    }
-
-    // Rewrite flow node agent_ids to the new ids.
-    const rewritten = {
-      nodes: flow.nodes.map(n => (n.type ?? 'agent') === 'agent' && n.agent_id
-        ? { ...n, agent_id: agentIdMap.get(String(n.agent_id)) ?? n.agent_id }
-        : n),
-      edges: flow.edges,
-    };
-    db.prepare('INSERT INTO project_flows (project_id, flow_json, updated_at) VALUES (?, ?, ?)').run(
-      newProjectId, JSON.stringify(rewritten), now
-    );
-
-    // Clone project contexts where share_on_fork = 1. Contexts with share_on_fork = 0
-    // stay private to the source project and don't travel with the fork — this is the
-    // explicit business-knowledge isolation mechanism contexts were built for.
-    const ctxRows = db.prepare(`
-      SELECT c.id, c.name, c.description, c.content
-      FROM project_contexts pc
-      JOIN contexts c ON c.id = pc.context_id
-      WHERE pc.project_id = ? AND pc.share_on_fork = 1
-    `).all(source.id) as { id: string; name: string; description: string; content: string }[];
-
-    for (const c of ctxRows) {
-      const newContextId = uuidv4();
-      const newContextName = renameIfNeeded(c.name, existingContextNames);
-      db.prepare(
-        'INSERT INTO contexts (id, user_id, name, description, content, is_public, forked_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(newContextId, req.userId!, newContextName, c.description, c.content, 0, c.id, now);
-      copyEntityFiles(c.id, newContextId, CONTEXT_FILES);
-      // share_on_fork defaults to 0 in the fork; the new owner re-decides whether their
-      // own fork would propagate this context further.
-      db.prepare('INSERT INTO project_contexts (project_id, context_id, share_on_fork) VALUES (?, ?, ?)').run(newProjectId, newContextId, 0);
-    }
-
-    // If we forked from a pending invitation, mark it accepted.
-    if (invitation && invitation.status === 'pending') {
-      db.prepare('UPDATE project_invitations SET status = ?, responded_at = ?, invitee_user_id = COALESCE(invitee_user_id, ?) WHERE id = ?').run(
-        'accepted', now, req.userId!, invitation.id
-      );
-    }
-  });
-
+  let forked: { id: string; api_key: string };
   try {
-    fork();
+    forked = forkProject(source.id, req.userId!, copyIds);
   } catch (err) {
     res.status(500).json({ error: 'Fork failed', detail: String(err) });
     return;
   }
+  // If we forked from a pending invitation, mark it accepted.
+  if (invitation && invitation.status === 'pending') {
+    db.prepare('UPDATE project_invitations SET status = ?, responded_at = ?, invitee_user_id = COALESCE(invitee_user_id, ?) WHERE id = ?').run(
+      'accepted', Date.now(), req.userId!, invitation.id
+    );
+  }
 
-  const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(newProjectId) as Project;
-  res.status(201).json({ ...publicProject(created), api_key: newKey.plaintext });
+  const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(forked.id) as Project;
+  res.status(201).json({ ...publicProject(created), api_key: forked.api_key });
+});
+
+const isAdminUser = (userId: string) =>
+  (db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role: string } | undefined)?.role === 'admin';
+
+// GET /projects/:id/fork-preview — what a fork would take: the contexts the
+// owner shares and how many stay private. Same access as forking.
+router.get('/:id/fork-preview', requireAuth, (req: AuthRequest, res: Response): void => {
+  const source = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!source) { res.status(404).json({ error: 'Project not found' }); return; }
+  const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
+  const invited = !!db.prepare(
+    `SELECT 1 FROM project_invitations WHERE project_id = ? AND status IN ('pending', 'accepted')
+     AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+  ).get(source.id, req.userId!, me?.email ?? '');
+  if (source.user_id !== req.userId && !source.is_public && !invited) { res.status(403).json({ error: 'You cannot fork this project' }); return; }
+  res.json({ project: { id: source.id, name: source.name }, ...forkPreview(source.id) });
+});
+
+// GET /projects/:id/contexts-sharing — every context of the project (its own
+// and its agents') and whether forks get a copy. Owner or admin.
+router.get('/:id/contexts-sharing', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (!isAdminUser(req.userId!) && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json({ contexts: contextSharing(project.id) });
+});
+
+// PUT /projects/:id/contexts-sharing { shared_context_ids } — exactly these are shared.
+router.put('/:id/contexts-sharing', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (!isAdminUser(req.userId!) && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  const ids = (req.body as { shared_context_ids?: unknown }).shared_context_ids;
+  if (!Array.isArray(ids)) { res.status(400).json({ error: 'shared_context_ids (array) is required' }); return; }
+  setContextSharing(project.id, ids.map(String));
+  recordVersion('project', project.id, req.userId!, 'contexts shared with forks changed');
+  res.json({ contexts: contextSharing(project.id) });
+});
+
+// GET /projects/:id/upstream — for a fork: what changed in the project it came from.
+router.get('/:id/upstream', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (!isAdminUser(req.userId!) && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json(upstreamStatus(project.id));
+});
+
+// POST /projects/:id/upstream/sync — bring the whole fork up to date.
+router.post('/:id/upstream/sync', requireAuth, (req: AuthRequest, res: Response): void => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params['id']) as Project | undefined;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (!isAdminUser(req.userId!) && project.user_id !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return; }
+  try {
+    const r = syncFromUpstream(project.id, req.userId!);
+    db.prepare("UPDATE notifications SET read_at = ? WHERE user_id = ? AND kind = 'upstream_changed' AND project_id = ? AND read_at IS NULL").run(Date.now(), req.userId!, project.id);
+    res.json({ ok: true, ...r, status: upstreamStatus(project.id) });
+  } catch (err) {
+    res.status(400).json({ error: String((err as Error).message ?? err) });
+  }
 });
 
 // DELETE /projects/:id

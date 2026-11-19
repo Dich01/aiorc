@@ -6,6 +6,7 @@ import { ABANDON_THRESHOLD_MS } from '../lib/controlPlane';
 import { buildSignedExport } from '../lib/auditBuild';
 import { cancelRun } from '../orchestrator/engine';
 import { snapshotHashes } from '../orchestrator/snapshot';
+import { notifyRunProblem, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -89,7 +90,11 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     ...run,
     input: parseOrRaw(run.input),
     step_outputs: outputs,
-    snapshots: snapshotHashes(run.id),
+    snapshots: (() => {
+      const v = new Map((db.prepare('SELECT kind, entity_id, version FROM run_entity_versions WHERE run_id = ?').all(run.id) as { kind: string; entity_id: string; version: number }[])
+        .map(r => [`${r.kind}:${r.entity_id}`, r.version]));
+      return snapshotHashes(run.id).map(h => ({ ...h, version: v.get(`${h.kind}:${h.entity_id}`) ?? null }));
+    })(),
     engine_state: engineState,
     eval_reasons: evalReasons,
     eval_case: evalCase,
@@ -111,6 +116,7 @@ router.post('/:id/cancel', requireAuth, (req: AuthRequest, res: Response): void 
     res.status(400).json({ error: `Run is already ${run.status}` }); return;
   }
   cancelRun(run.id);
+  notifyRunProblem(run.id, `was cancelled by ${displayName(req.userId!)}`, req.userId!);
   res.json({ id: run.id, status: 'cancelled' });
 });
 
