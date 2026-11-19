@@ -132,7 +132,7 @@
       <div class="wrap">
         <div class="sec-head">
           <h2>Review quality</h2>
-          <p class="sec-note">Each bar is the share over every graded run of that mode: 3 repetitions of 33 cases. Higher is better on all six.<sup>1</sup></p>
+          <p class="sec-note">Each bar is a share over the three repetitions of that mode; the label under it says which runs it covers. Higher is better on all six.<sup>1</sup></p>
         </div>
         <div class="legend"><span><i class="sw sw-server"></i>Server-orchestrated (default)</span><span><i class="sw sw-model"></i>Model-orchestrated (megaprompt)</span></div>
         <div class="chart" id="chart-quality" role="img" aria-label="Review quality by mode, six metrics"></div>
@@ -143,7 +143,7 @@
       <div class="wrap">
         <div class="sec-head">
           <h2>Speed and cost</h2>
-          <p class="sec-note">Model-orchestrated skips one round trip per step. Most input tokens are cache reads, so fewer tokens move the bill much less than the count suggests.<sup>2</sup></p>
+          <p class="sec-note">Model-orchestrated skips one round trip per step. The input token counts include cached input, which is billed at a much lower rate, so fewer tokens move the bill much less than the count suggests.<sup>2</sup></p>
         </div>
         <div class="grid-2">
           <div class="panel"><h3>Time per run</h3><p class="sub-h">Every run is a dot; the dark bar is the median. Lower is faster.</p><div class="chart" id="chart-time"></div></div>
@@ -156,7 +156,7 @@
       <div class="wrap">
         <div class="sec-head">
           <h2>Full comparison</h2>
-          <p class="sec-note">Bold marks the better value where the two differ beyond a single run.</p>
+          <p class="sec-note">Bold marks the better value for evidence and efficiency. Detection differs by at most one run, so it is not marked.</p>
         </div>
         <div class="cmp-wrap">
           <table class="cmp" id="cmp">
@@ -191,15 +191,15 @@
       <div class="wrap">
         <div class="sec-head"><h2>Methodology</h2><p class="sec-note">How the runs were set up and graded, and what they cannot tell you.</p></div>
         <ol>
-          <li><b>Setup.</b> Each case is one commit on a throwaway copy of a private production codebase, which is not named here; the original repository was only read, never changed. Two AIOrc projects with an identical review harness reviewed the same commits at the same time, one per mode: scope, six reviewers in parallel, verifier, PR proposal and release gate. Client: Claude Code in headless mode, default model, read-only tools, 3 cases in parallel per mode, 3 repetitions.</li>
-          <li><b>Speed and cost</b> are wall-clock seconds from start to signed export, and Claude Code's own <code>total_cost_usd</code> and token counts. Both modes ran concurrently on the same machine.</li>
-          <li><b>Suites.</b> <b>Base</b>: 13 cases, a single-file defect each (10) or a clean change (3). <b>Complex</b>: 20 cases (15 defect, 5 clean) with two defects in one change, defects that only show across files, subtle domain and logic errors (limits, signed authorizations, time windows) and defects buried in large refactors; its clean changes correctly touch security-sensitive code.</li>
-          <li><b>Grading.</b> Every signed export is verified first. A server-orchestrated run is graded from its last validated step; a model-orchestrated run from its self-declared report, whose hash is checked against the chain but never against what actually ran. A defect counts as found when a final finding matches its file, category and minimum severity; a run passes when it reaches an End, every seeded defect is found and extra findings stay within 3 (defect) or 1 (clean).</li>
-          <li><b>Blocked</b> means the release gate ended the run at <code>changes-requested</code>. <b>Within schema</b> counts final findings that carry every required field of the harness finding schema; the server rejects the others in server-orchestrated mode.</li>
-          <li><b>The one miss</b> (case C09, one model-orchestrated repetition) is a grading artefact: the model reported the secret moving into the query string, at high severity in the right file, but filed it under <code>secrets</code> instead of <code>security</code>.</li>
-          <li><b>What the numbers cannot show.</b> Detection was equal, but in a model-orchestrated run nothing on the record proves the reviewers ran: the report says they did. Server-orchestrated runs carry a validated, hash-chained output for every step.</li>
+          <li><b>Setup.</b> Each case is one commit on a throwaway copy of a private production codebase, which is not named here; the original repository was only read, never changed. Two AIOrc projects with an identical review harness reviewed the same commits, one per mode: scope, six reviewers in parallel, verifier, PR proposal and release gate. Client: Claude Code in headless mode, default model, read-only tools, 3 cases in parallel per mode, 3 repetitions.</li>
+          <li><b>Speed and cost</b> are wall-clock seconds from start to signed export, and Claude Code's own <code>total_cost_usd</code> and token counts. Both modes ran on the same machine, from the same seeded clones.</li>
+          <li><b>Suites.</b> <b>Base</b>: 13 cases, a single-file defect each (10) or a clean change (3). <b>Complex</b>: 20 cases (15 defect, 5 clean) with two defects in one change, defects that only show across files, subtle domain and logic errors (limits, signed authorizations, time windows) and defects buried in large refactors; three of its five clean changes correctly touch security-sensitive code.</li>
+          <li><b>Grading.</b> Every signed export is verified first. A server-orchestrated run is graded from its last validated step; a model-orchestrated run from its self-declared report, whose hash is checked against the chain but never against what actually ran. A defect counts as found when a final finding matches its file, category and minimum severity; a run passes when it reaches an End (for a model-orchestrated run, when it files its report), every seeded defect is found and extra findings stay within 3 (defect) or 1 (clean).</li>
+          <li><b>Blocked</b> means the release gate ended the run at <code>changes-requested</code>. <b>Within schema</b> counts final findings that have every required field of the harness finding schema, no unknown fields and an allowed value in every enumerated field; the server rejects the others in server-orchestrated mode.</li>
+          <li><b>The one miss</b> (case C09, one model-orchestrated repetition) is a grading artefact: the model reported the secret moving into the query string, at high severity in the right file, but filed it under <code>secrets</code> instead of <code>security</code>. Both findings of that run were also outside the finding schema.</li>
+          <li><b>What the numbers cannot show.</b> Detection was nearly equal (87 of 87 defects vs 86 of 87), but in a model-orchestrated run nothing on the record proves the reviewers ran: the report says they did. Server-orchestrated runs carry a validated, hash-chained output for every step.</li>
           <li><b>Limits.</b> Three repetitions per case and mode; model output is not deterministic, so differences of a few seconds or one finding are within noise. The defects were written for the benchmark, and the complex answer key was reviewed for being defensible, not by the codebase's maintainers.</li>
-          <li><b>Data.</b> The anonymised results behind this page, one row per graded run: <a href="benchmarks/code-review-2026-11-09.json">code-review-2026-11-09.json</a>. The codebase, its file paths and the exact seeded changes are not published.</li>
+          <li><b>Data.</b> The results behind this page, one row per graded run, derived from the graded exports by <code>aggregate.py</code> and then anonymised: <a href="benchmarks/code-review-2026-11-09.json">code-review-2026-11-09.json</a>. The codebase, its file paths and the exact seeded changes are not published.</li>
         </ol>
       </div>
     </section>
@@ -359,12 +359,12 @@
         ['Defects found, complex suite', '19 defects in 15 changes, 3 repetitions', S('complex').detected + ' / ' + S('complex').expected, M('complex').detected + ' / ' + M('complex').expected, 0],
         ['Defect changes blocked', 'Release gate said changes-requested', pct(S().blocked / S().defectRuns), pct(M().blocked / M().defectRuns), 0],
         ['Clean changes blocked', 'False positives at the release gate', S().cleanBlocked + ' / ' + S().cleanRuns, M().cleanBlocked + ' / ' + M().cleanRuns, 0],
-        ['Cases passed', 'Every defect found, extra findings within the limit', S().pass + ' / ' + S().runs, M().pass + ' / ' + M().runs, 0],
+        ['Runs passed', 'Every defect found, extra findings within the limit', S().pass + ' / ' + S().runs, M().pass + ' / ' + M().runs, 0],
         ['group', 'Evidence'],
         ['Agent outputs validated by the server', 'Schema-checked and hash-chained, per step', intf(S().verified), intf(M().verified), 1],
-        ['Findings within schema', 'Final findings with every required field', pct(1 - S().invalid / S().findings), pct(1 - M().invalid / M().findings), 1],
+        ['Findings within schema', 'Required fields, no unknown fields, allowed values', pct(1 - S().invalid / S().findings), pct(1 - M().invalid / M().findings), 1],
         ['Transitions checked against the graph', 'Illegal moves rejected while the run happens', '<span class="chip yes">Yes</span>', '<span class="chip no">No</span>', 1],
-        ['Accepted by the CI review runners', 'publish.mjs, aiorc-review.sh', '<span class="chip yes">Yes</span>', '<span class="chip no">Opt-in only</span>', 1],
+        ['Accepted by the CI review runners', 'aiorc-review.sh, publish.mjs', '<span class="chip yes">Yes</span>', '<span class="chip no">publish.mjs only, opt-in</span>', 1],
         ['group', 'Efficiency'],
         ['Median time per run', 'Wall clock, start to signed export', Math.round(S().medianS) + ' s', Math.round(M().medianS) + ' s', 2],
         ['Mean cost per run', 'Claude Code total_cost_usd', usd(S().cost), usd(M().cost), 2],

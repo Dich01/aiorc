@@ -464,7 +464,6 @@
         <a href="benchmarks.html">Benchmarks</a>
         <a href="compare.html">Compare</a>
         <a href="repository.html">Public repository</a>
-        <a href="issues.html">Report a bug or idea</a>
         <a href="#origen">About</a>
       </div>
       <div class="nav-cta">
@@ -483,7 +482,7 @@
         <div>
           <p class="hero-quote">“One developer builds a flow... everyone uses it.”</p>
           <p class="hero-subtitle">
-            Your AI agents skip steps and ignore the process you defined. AIOrc fixes that at the root: in the default server-orchestrated mode, a server drives execution one step at a time and rejects anything your workflow doesn't allow, so agents can't skip a step or take a transition the graph does not allow. Design the process once, share it with your team or the community, and, when you need it, audit every run as signed evidence.
+            Your AI agents skip steps and ignore the process you defined. AIOrc fixes that at the root: in the default server-orchestrated mode, a server drives execution one step at a time and rejects any step or transition your graph does not allow, so agents can't skip a step or go off the graph. Design the process once, share it with your team or the community, and, when you need it, export any run as signed evidence.
           </p>
         </div>
         <div class="hero-actions">
@@ -540,8 +539,8 @@
             <ol id="register">
               <li data-step="0"><time>14:02:07</time><span><b>workflow.start</b> · graph validated · 3 agents snapshotted</span></li>
               <li data-step="1"><time>14:02:08</time><span>step 1 · <b>task-planner</b> dispatched</span></li>
-              <li data-step="2" class="rej"><time>14:02:19</time><span>task-planner → END · <b>rejected</b> · transition not in graph</span></li>
-              <li data-step="3" class="ok"><time>14:02:19</time><span>task-planner → security-qa · <b>accepted</b> · when: plan touches auth</span></li>
+              <li data-step="2" class="rej"><time>14:02:19</time><span>task-planner → END · <b>rejected</b> · not in graph · not recorded</span></li>
+              <li data-step="3" class="ok"><time>14:02:19</time><span>task-planner → security-qa · <b>accepted</b> · chosen by the agent · edge checked against the graph</span></li>
               <li data-step="4"><time>14:02:33</time><span>step 2 · <b>security-qa</b> · output valid against schema</span></li>
               <li data-step="5"><time>14:02:41</time><span>step 3 · <b>code-reviewer</b> · { verdict: 'PASS', score: 9 }</span></li>
               <li data-step="6" class="seal"><time>14:02:42</time><span><b>run complete</b> · hash chain intact · export Ed25519-signed</span></li>
@@ -559,7 +558,7 @@
       <div class="section-head">
         <h2 class="display">Design it once. Run it verified. Prove what happened.</h2>
         <p class="lede">
-          Building agents is the easy part. The hard part is knowing they followed the right process. AIOrc turns a visual workflow into a contract the server enforces, and a record you can audit. No new tool for your team: it works through the AI clients they already use.
+          Building agents is the easy part. The hard part is knowing they followed the right process. AIOrc turns a visual workflow into a contract the server enforces, and a record you can audit. No new tool for your team: it works through Claude Code, which they already use.
         </p>
       </div>
       <ol class="route">
@@ -571,7 +570,7 @@
         <li class="route-stop">
           <span class="route-n">02</span>
           <h3>Connect once</h3>
-          <p>Each teammate connects their AI client (Claude Code, Cursor…) with their own personal token and one committed <code>.mcp.json</code> entry. No new app to learn: the workflow shows up where they already work.</p>
+          <p>Each teammate connects Claude Code with one <code>.mcp.json</code> entry that runs <code>mcp-bridge.js</code> with Node, and their own personal token exported as <code>AIORC_TOKEN</code>, so the committed file holds no secret. No new app to learn: the workflow shows up where they already work.</p>
         </li>
         <li class="route-stop">
           <span class="route-n">03</span>
@@ -581,7 +580,7 @@
         <li class="route-stop">
           <span class="route-n">04</span>
           <h3>Audit &amp; govern</h3>
-          <p>Every server-orchestrated run is recorded step by step, and every run is exportable as signed, tamper-evident evidence. Pause any project instantly, see which agents actually run, and prove the process was followed.</p>
+          <p>Every server-orchestrated run is recorded step by step, and the project owner or an admin can export any run as signed, tamper-evident evidence. Pause any project instantly, see which agents actually run, and prove the process was followed.</p>
         </li>
       </ol>
     </div>
@@ -608,7 +607,7 @@
       <div class="cap-group">
         <div class="cap-group-name"><h3>Govern</h3><p>Know who ran what, and prove it.</p></div>
         <div class="cap-list">
-          <div class="cap"><h4>Signed audit trails</h4><p>Every run is reconstructable step by step: who ran it, which transitions it took and why. Export any run as Ed25519-signed JSON with a hash-chained event log: tamper-evident evidence, aligned with EU AI Act logging requirements.</p></div>
+          <div class="cap"><h4>Signed audit trails</h4><p>Every server-orchestrated run is reconstructable step by step: who ran it (verified when they connect with a personal token), which transitions it took and how each one was decided. Export any run as Ed25519-signed JSON with a hash-chained event log: tamper-evident evidence, aligned with EU AI Act logging requirements.</p></div>
           <div class="cap"><h4>Live usage analytics</h4><p>Which agents, skills and contexts actually run, per project and per teammate, minute by minute. Graph-aware skip detection separates real failures from branches not taken.</p></div>
           <div class="cap"><h4>A history for every piece</h4><p>Every agent, skill, context and project keeps its versions: who changed what and when. Compare two versions line by line and restore an earlier one without losing the later ones. Each run records the version of every piece it used, and the signed export carries it.</p></div>
           <div class="cap"><h4>Multi-project with auth</h4><p>Project keys and personal tokens, user and admin roles, per-project invitations, run history and an admin panel. Not a paid tier.</p></div>
@@ -621,7 +620,7 @@
           <div class="cap"><h4>Agents in markdown</h4><p>Define each agent as a <code>.md</code> file. Its content is frozen when a run starts and handed to the model as that step's instructions.</p></div>
           <div class="cap"><h4>Reusable skills</h4><p>Package specific capabilities as skills and share them across projects and teams. Build on what already works.</p></div>
           <div class="cap"><h4>Contexts: domain apart from capability</h4><p>Business knowledge lives in Contexts, not inside agents. The same generic crew serves every project: inject the domain, reuse the capability. Contexts are private by default; when you publish a project you choose which ones others may copy.</p></div>
-          <div class="cap"><h4>Forks that keep up with the original</h4><p>Fork a project and make it yours: add your contexts, extend a skill. When the original improves you are told what changed, and one click brings the whole project up to date while keeping what you added. People a project is shared with get changes at once.</p></div>
+          <div class="cap"><h4>Forks that keep up with the original</h4><p>Fork a project and make it yours: add your contexts, extend a skill. When the original improves you are told what changed, and one click brings the whole project up to date. What you added stays; edits you made to pieces from the original are replaced, and you are warned first. People a project is shared with get changes at once.</p></div>
           <div class="cap"><h4>Notifications that matter</h4><p>A shared project changed, the original of your fork moved on, someone invited you or forked your work, a run was capped or failed, an issue got a reply. One place in the menu, with a red dot until you read it.</p></div>
           <div class="cap"><h4>One connection per project</h4><p>Each project is one MCP connection. Workflow tools and the external MCP servers you register are exposed through it: proxied, namespaced and logged, and callable only during a server-orchestrated run by an agent allowed to use them.</p></div>
         </div>
@@ -635,7 +634,7 @@
       <div class="section-head">
         <h2 class="display">The engine, under the hood</h2>
         <p class="lede">
-          In server-orchestrated mode the engine keeps the state machine on the server. It freezes the agents a run uses, dispatches one step at a time, validates every output against the agent's schema, decides rule-based transitions and checks every other one against the graph, and writes every event to a hash chain that exports as Ed25519-signed evidence.
+          In server-orchestrated mode the engine keeps the state machine on the server. It freezes the agents a run uses, dispatches one step at a time, validates every output against the agent's output schema (any JSON object, if the agent defines none), decides rule-based transitions and checks every other one against the graph, and writes every event to a hash chain that exports as Ed25519-signed evidence.
         </p>
       </div>
       <div class="stages">
@@ -644,23 +643,37 @@
         <div class="stage"><span class="stage-label">OUTPUT</span><div class="stage-title">One step</div><div class="stage-desc">Context + skills + the agent's instructions + its output schema</div></div>
         <div class="stage"><span class="stage-label">EXECUTION</span><div class="stage-title">Target model</div><div class="stage-desc">Claude executes the step; the server validates the output and decides or checks the next one</div></div>
       </div>
-      <div class="arch-diagram"><span class="dim">// Step 2 as the server sends it — sample fragment</span>
+      <div class="arch-diagram"><span class="dim">// Step 2 as the server sends it — abridged sample</span>
 
 <span class="hl">## Step 2: execute this agent now</span>
+
 <span class="hl">### Agent: security-qa</span>
-Review the change for auth and tenant-isolation defects.
+**Maximum invocations:** 3
+**Description:** Review the change for auth and tenant-isolation defects.
 
 <span class="ok">**Output contract for node `secqa`:**</span> hand back one JSON value
 that validates against this JSON Schema. Outputs that do not
 validate are rejected and the step stays open.
-{ "verdict": "PASS | FAIL", "findings": [ ... ] }
+```json
+{
+  "type": "object",
+  "required": ["verdict", "findings"],
+  "properties": {
+    "verdict": { "enum": ["PASS", "FAIL"] },
+    "findings": { "type": "array" }
+  }
+}
+```
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <span class="hl">## When you are done</span>
-Call `workflow.next` with {"runId": "7f3a…", "step": 2, "outputs": [...]}.
+
+Call `workflow.next` with `{"runId": "7f3a…", "step": 2,
+"outputs": [{"node": "secqa", "output": { ... }}]}`. Do not send `transition`.
 The server picks the next step from your output:
-- if verdict eq "FAIL" → fix
-- `ok` → code-reviewer <span class="dim">(default)</span></div>
+- if verdict eq "FAIL" → task-planner
+- `ok` → code-reviewer <span class="dim">(default)</span>
+
+Do not execute any other agent of the flow on your own. The server hands you each step.</div>
     </div>
   </section>
 
@@ -701,7 +714,7 @@ The server picks the next step from your output:
       <div class="who-list">
         <div class="who-row"><h3>Collaborating teams</h3><p>Share flows and agents with your teammates. Every team member builds on what others have already tested, without starting from scratch on each project.</p></div>
         <div class="who-row"><h3>Skills as team assets</h3><p>Package specific capabilities as reusable skills. A well-defined skill becomes available to all projects and developers on the team.</p></div>
-        <div class="who-row"><h3>Flow community</h3><p>Explore flows and skills published by other users in the community repository. Fork what already works, adapt it, and keep receiving its improvements.</p></div>
+        <div class="who-row"><h3>Flow community</h3><p>Browse the flows and skills other users publish in the community repository; you get their full content by forking them. Adapt what works, and a forked project can take the original's improvements in one click.</p></div>
         <div class="who-row"><h3>Multiple projects, same know-how</h3><p>Keep a library of specialized agents and deploy it across different projects. Team knowledge accumulates, not repeats.</p></div>
         <div class="who-row"><h3>Development pipelines</h3><p>Planner → Developer → Code Reviewer → Security QA. Deterministic CI flows any team member can run with one command.</p></div>
         <div class="who-row"><h3>Standardized processes</h3><p>Define the process once, execute it consistently. From code review to content generation, with the same agents and the same rules every time.</p></div>
@@ -796,7 +809,6 @@ The server picks the next step from your output:
             <a href="faq.html#referencias">References</a>
             <a href="benchmarks.html">Benchmarks</a>
             <a href="compare.html">How AIOrc compares</a>
-            <a href="issues.html">Report a bug or idea</a>
           </div>
           <div class="footer-col">
             <h4>ACCESS</h4>

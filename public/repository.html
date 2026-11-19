@@ -355,7 +355,7 @@
 
     // The server sends the full content only to the owner, an admin or someone
     // invited; anyone else gets the card with content_hidden set.
-    const HIDDEN_HINT = (kind) => `<div class="rc-modal-hint">Fork this ${kind} to see its full content. Only its owner and the people it is shared with can read it here.</div>`;
+    const HIDDEN_HINT = (kind) => `<div class="rc-modal-hint">Anyone can fork this public ${kind}; its full content is in your copy once you fork it. This page shows its card only.</div>`;
 
     window.viewAgentContent = async function(id, name) {
       if (!isLoggedIn) {

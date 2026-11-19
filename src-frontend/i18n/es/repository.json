@@ -139,16 +139,16 @@
       "es": "$1 contextos públicos"
     },
     {
-      "re": "^Fork this agent to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
-      "es": "Haz un fork de este agente para ver su contenido completo. Aquí solo pueden leerlo su propietario y las personas con quienes lo comparte."
+      "re": "^Anyone can fork this public agent; its full content is in your copy once you fork it\\. This page shows its card only\\.$",
+      "es": "Cualquiera puede hacer un fork de este agente público; su contenido completo queda en tu copia al hacer el fork. Aquí se muestra solo su ficha."
     },
     {
-      "re": "^Fork this skill to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
-      "es": "Haz un fork de esta skill para ver su contenido completo. Aquí solo pueden leerla su propietario y las personas con quienes la comparte."
+      "re": "^Anyone can fork this public skill; its full content is in your copy once you fork it\\. This page shows its card only\\.$",
+      "es": "Cualquiera puede hacer un fork de esta skill pública; su contenido completo queda en tu copia al hacer el fork. Aquí se muestra solo su ficha."
     },
     {
-      "re": "^Fork this context to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
-      "es": "Haz un fork de este contexto para ver su contenido completo. Aquí solo pueden leerlo su propietario y las personas con quienes lo comparte."
+      "re": "^Anyone can fork this public context; its full content is in your copy once you fork it\\. This page shows its card only\\.$",
+      "es": "Cualquiera puede hacer un fork de este contexto público; su contenido completo queda en tu copia al hacer el fork. Aquí se muestra solo su ficha."
     }
   ]
 }

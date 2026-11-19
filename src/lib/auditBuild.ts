@@ -27,9 +27,13 @@ export function buildSignedExport(runId: string): SignedExport | null {
   const reportRow = db.prepare('SELECT report_json FROM run_reports WHERE run_id = ?').get(runId) as { report_json: string } | undefined;
   const selfDeclared: unknown = reportRow ? JSON.parse(reportRow.report_json) : null;
 
+  // The engine that ran it, as recorded in its run.started event; the exporting
+  // server's version only for runs that predate that field.
+  const started = events.find(e => e.type === 'run.started')?.payload as { engine_version?: string } | undefined;
+
   const payload: ExportPayload = {
     format: EXPORT_FORMAT,
-    engine_version: ENGINE_VERSION,
+    engine_version: started?.engine_version || ENGINE_VERSION,
     run: {
       id: run.id, project_id: run.project_id, project_name: run.project_name, mode: run.mode || 'stepped',
       status: run.status, outcome: run.outcome || null, end_node: run.end_node || null, created_at: run.created_at,

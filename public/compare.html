@@ -86,7 +86,7 @@
     <div class="wrap">
       <p class="hero-kicker">How it compares · November 2026</p>
       <h1>A review bot reads the pull request. A harness on AIOrc gets the change ready before it exists.</h1>
-      <p class="hero-lede">AIOrc is the platform: it stores a company's agents, skills and contexts, runs their workflows one step at a time from the server, and signs a record of every run. What a workflow does is up to the harness you build on it. Ours is <b>ready-for-pr</b>: before a pull request is opened it runs the repository's own checks, several reviewers, a verifier that tries to prove each finding wrong, a capped fix loop, and writes the pull request with its evidence. We tested it with AIOrc on two production Python repositories, a payments library and the web platform that uses it.</p>
+      <p class="hero-lede">AIOrc is the platform: it stores a company's agents, skills and contexts, runs their workflows from the server, one step at a time by default, and signs a record of every run. What a workflow does is up to the harness you build on it. Ours is <b>ready-for-pr</b>: before a pull request is opened it runs the repository's own checks, several reviewers, a verifier that tries to prove each finding wrong, a capped fix loop, and writes the pull request with its evidence. We tested it with AIOrc on two production Python repositories, a payments library and the web platform that uses it.</p>
     </div>
   </section>
 
@@ -100,11 +100,11 @@
         <div class="three">
           <div>
             <h3>The server keeps the order</h3>
-            <p>The model gets one step at a time. A step only counts when its output matches the agent's schema, and the server, not the model, decides where the run goes next. Skipping a reviewer is refused while it is being attempted, not discovered in a log afterwards.</p>
+            <p>In the default server-orchestrated mode the model gets one step at a time. A step only counts when its output matches the agent's schema. The server decides every rule-based transition and refuses any move that is not in the graph. Skipping a reviewer is refused while it is being attempted, not discovered in a log afterwards. A project can switch to model-orchestrated mode instead: faster, but its record is a self-declared report.</p>
           </div>
           <div>
             <h3>Evidence you can verify offline</h3>
-            <p>Every run is an append-only, hash-chained event log, exported and signed with Ed25519. An auditor needs the export and a public key, nothing else. Change one output and the chain breaks.</p>
+            <p>Every run is an append-only, hash-chained event log, exported and signed with Ed25519. An auditor needs only the export, the public key and AIOrc's open-source verifier. Change one output and the chain breaks.</p>
           </div>
           <div>
             <h3>One shared library</h3>
@@ -133,17 +133,17 @@
             </thead>
             <tbody>
               <tr class="group"><td colspan="5">The platform</td></tr>
-              <tr><td class="row">Step order enforced by a server</td><td class="us"><span class="tag y">Yes</span></td><td><span class="tag n">Not exposed</span></td><td><span class="tag n">No</span></td><td><span class="tag y">Yes</span>Moira checks each step against a JSON Schema<sup>3</sup></td></tr>
+              <tr><td class="row">Step order enforced by a server</td><td class="us"><span class="tag y">Yes</span>In the default mode; model-orchestrated mode is opt-in</td><td><span class="tag n">Not exposed</span></td><td><span class="tag n">No</span></td><td><span class="tag y">Yes</span>Moira checks each step against a JSON Schema<sup>3</sup></td></tr>
               <tr><td class="row">Signed, verifiable record of each run</td><td class="us"><span class="tag y">Yes</span>Ed25519 over a hash chain</td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td></tr>
               <tr><td class="row">Shared library of agents, skills, contexts</td><td class="us"><span class="tag y">Yes</span>Registry, versions, forks that update from the original, per-agent contexts, usage analytics</td><td><span class="tag n">No</span></td><td><span class="tag p">Per repo</span>Review rules files</td><td><span class="tag p">Catalog</span>Moira</td></tr>
-              <tr><td class="row">Model and client</td><td class="us">Any MCP client and model</td><td>Claude</td><td>The vendor's choice</td><td>Any</td></tr>
+              <tr><td class="row">Model and client</td><td class="us">Claude Code</td><td>Claude</td><td>The vendor's choice</td><td>Any</td></tr>
               <tr class="group"><td colspan="5">With the ready-for-pr harness</td></tr>
               <tr><td class="row">When it runs</td><td class="us">On the developer's machine, before the PR</td><td>When the PR is opened<sup>1</sup></td><td>On the PR</td><td>Whenever you wire it</td></tr>
-              <tr><td class="row">Runs your tests, types and lint</td><td class="us"><span class="tag y">Yes</span>The repository's own commands, cheapest first</td><td><span class="tag n">No</span>Reviews the diff</td><td><span class="tag p">Partly</span>Some run linters or security scans</td><td><span class="tag n">Not built in</span></td></tr>
-              <tr><td class="row">Several reviewers, findings verified</td><td class="us"><span class="tag y">Yes</span>Up to five reviewers, then a verifier that writes a failing test</td><td><span class="tag y">Yes</span>Agent team, findings verified and ranked<sup>1</sup></td><td><span class="tag p">Varies</span></td><td><span class="tag n">Not built in</span></td></tr>
+              <tr><td class="row">Runs your tests, types and lint</td><td class="us"><span class="tag y">Yes</span>The repository's own commands, in the order the profile lists them (cheapest first by convention)</td><td><span class="tag n">No</span>Reviews the diff</td><td><span class="tag p">Partly</span>Some run linters or security scans</td><td><span class="tag n">Not built in</span></td></tr>
+              <tr><td class="row">Several reviewers, findings verified</td><td class="us"><span class="tag y">Yes</span>Two or five reviewers depending on risk, then a verifier that tries to refute each finding and reproduces the serious ones with a test</td><td><span class="tag y">Yes</span>Agent team, findings verified and ranked<sup>1</sup></td><td><span class="tag p">Varies</span></td><td><span class="tag n">Not built in</span></td></tr>
               <tr><td class="row">Fixes and re-reviews</td><td class="us"><span class="tag y">Yes</span>Capped at three rounds, later rounds see only the new diff</td><td><span class="tag n">No</span>Comments only</td><td><span class="tag p">Some</span>Suggested patches</td><td><span class="tag n">Not built in</span></td></tr>
               <tr><td class="row">Risk decides the path</td><td class="us"><span class="tag y">Yes</span>A fixed rule over paths and size, not the author's opinion</td><td><span class="tag p">Depth</span>Bigger PRs get more agents<sup>1</sup></td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td></tr>
-              <tr><td class="row">Cost per review</td><td class="us">About US$4–7 of model tokens in our runs<sup>5</sup></td><td>US$15–25 on average<sup>1</sup></td><td>Per seat, roughly US$30–40 a month<sup>2</sup></td><td>Your own compute</td></tr>
+              <tr><td class="row">Cost per review</td><td class="us">Under US$1 to about US$6.40 of model tokens, in the author's runs<sup>5</sup></td><td>US$15–25 on average<sup>1</sup></td><td>Per seat, roughly US$30–40 a month<sup>2</sup></td><td>Your own compute</td></tr>
             </tbody>
           </table>
         </div>
@@ -163,14 +163,13 @@
               <li><b>Teams where agents write a lot of the code</b> and reviewers cannot keep up.</li>
               <li><b>Regulated or audited work</b>, where "the AI reviewed it" needs a record someone else can check.</li>
               <li><b>Several teams, one process.</b> The flow is defined once and forked per repository, with each team's own checks and documents.</li>
-              <li><b>Mixed tools.</b> Claude Code today, another MCP client tomorrow, same flow.</li>
             </ul>
           </div>
           <div class="card honest">
             <h3>Where we are behind</h3>
             <ul>
               <li><b>No independent measure of detection quality yet.</b> Every benchmark in this market is run by a vendor and they disagree with each other.<sup>2</sup> Ours is too: we publish it on the <a href="benchmarks.html">benchmarks page</a> with that caveat.</li>
-              <li><b>In ready-for-pr, the model runs the checks.</b> AIOrc checks the shape of each result and the hash of the script that produced it, not that it really ran. The official result is still your CI.</li>
+              <li><b>In ready-for-pr, the model runs the checks.</b> AIOrc checks the shape of each result, including that it carries the script's SHA-256, and records it in the chain. It does not check that the hash matches the script it delivered, or that the script really ran. The official result is still your CI.</li>
               <li><b>A clean review can still fix the wrong cause.</b> In one of our test runs every reviewer passed a fix for the cause the task named, while a likelier cause stayed untouched. The harness now treats the task's diagnosis as a hypothesis and asks for the original failure to be reproduced with the repository's real configuration; we have not measured yet how often that catches it.</li>
               <li><b>Early.</b> One maintainer, SQLite, single node.</li>
             </ul>
@@ -186,7 +185,7 @@
           <li>Vendor comparisons that disagree: <a href="https://www.greptile.com/content-library/best-ai-code-review-tools">Greptile</a>, <a href="https://macroscope.com/content/best-code-review-tools-2026">Macroscope</a>. Pricing as reported there.</li>
           <li><a href="https://github.com/moira-mcp/moira">Moira</a> (Apache-2.0). It states the same limit we do: schema validation checks the structure of a response, not that the work happened.</li>
           <li><a href="https://opensource.microsoft.com/blog/2026/05/14/conductor-deterministic-orchestration-for-multi-agent-ai-workflows/">Microsoft Conductor</a>. On audit trails in MCP not being part of the core spec yet: <a href="https://bex.co/blog/2026/09/23/mcp-enterprise-readiness-audit-trails-sso-gateway">bex.co</a>.</li>
-          <li>The ready-for-pr harness run with Claude Code through AIOrc on two production Python repositories (a payments library and the web platform that uses it), November 2026: under US$1 when the flow stops early (a weakened test, a fix the agent refused to force), about US$4 for a normal change with one fix round, and about US$6.40 for a sensitive change with five reviewers and two rounds.</li>
+          <li>The author's own runs of the ready-for-pr harness, with Claude Code through AIOrc, on two production Python repositories (a payments library and the web platform that uses it), November 2026: under US$1 when the flow stops early (a weakened test, a fix the agent refused to force), about US$4 for a normal change with one fix round, and about US$6.40 for a sensitive change with five reviewers and two rounds. The run data is not published.</li>
         </ol>
       </div>
     </section>

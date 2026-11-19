@@ -75,7 +75,10 @@ export function captureSnapshot(projectId: string, flow: FlowDocument): RunSnaps
 
   const skills = new Map<string, SkillSnap>();
   if (skillIds.size) {
-    const rows = db.prepare(`SELECT * FROM skills WHERE id IN (${[...skillIds].map(() => '?').join(',')})`).all(...skillIds) as Skill[];
+    const order = [...skillIds];
+    // In the order the agents list them (selection order), not database order.
+    const rows = (db.prepare(`SELECT * FROM skills WHERE id IN (${order.map(() => '?').join(',')})`).all(...order) as Skill[])
+      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     for (const s of rows) skills.set(s.id, { id: s.id, name: s.name, description: s.description, files: files(loadEntityFiles(s.id, SKILL_FILES)) });
   }
 

@@ -59,7 +59,6 @@
     ['benchmarks', 'benchmarks.html', 'Benchmarks'],
     ['compare', 'compare.html', 'Compare'],
     ['repository', 'repository.html', 'Public repository'],
-    ['issues', 'issues.html', 'Report a bug or idea'],
     ['about', 'index.html#origen', 'About'],
   ];
   function publicNavHTML(active) {
