@@ -266,11 +266,6 @@
     const params = new URLSearchParams(window.location.search);
     const issueId = params.get('id');
     if (issueId) loadDetail(issueId); else loadList();
-    // issues.html?new=1 (the "Report a bug or idea" menu item) opens the form at once.
-    if (params.get('new') === '1') {
-      if (isLoggedIn) setTimeout(() => window.openReportModal && window.openReportModal(), 0);
-      history.replaceState(null, '', 'issues.html');
-    }
 
     // ── List view ──
     let currentStatus = 'all';
