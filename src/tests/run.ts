@@ -29,6 +29,7 @@ import './integration/compiled.test';
 import './integration/readyForPr.test';
 import './integration/agentContexts.test';
 import './integration/versions.test';
+import './integration/privacy.test';
 
 
 runAll()

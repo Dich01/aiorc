@@ -353,6 +353,10 @@
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContentModal(); });
 
+    // The server sends the full content only to the owner, an admin or someone
+    // invited; anyone else gets the card with content_hidden set.
+    const HIDDEN_HINT = (kind) => `<div class="rc-modal-hint">Fork this ${kind} to see its full content. Only its owner and the people it is shared with can read it here.</div>`;
+
     window.viewAgentContent = async function(id, name) {
       if (!isLoggedIn) {
         openContentModal(name, 'Public agent', `<div class="rc-modal-hint">Log in and fork this agent to see its full content. The name and description are available in the public list; the agent body stays private until you copy it to your workspace.</div>`);
@@ -371,14 +375,15 @@
         const usageMeta = listItem && typeof listItem.usage_runs === 'number'
           ? ` · executed in ${listItem.usage_runs} run(s), ${listItem.usage_invocations || 0} invocation(s)`
           : '';
-        const meta = (a.owner_nickname ? `by @${esc(a.owner_nickname)}` : '') + (a.is_public ? ' · public' : '') + usageMeta;
+        const ownerNick = a.owner_nickname || (itemsById[id] && itemsById[id].owner_nickname);
+        const meta = (ownerNick ? `by @${esc(ownerNick)}` : '') + (a.is_public ? ' · public' : '') + usageMeta;
         const body = `
           <div style="margin-bottom:14px">
             <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Skills</div>
             <div class="pc-badges">${skillsHtml}</div>
           </div>
-          <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
-          <div class="rc-modal-content">${esc(a.content || '(no content)')}</div>`;
+          ${a.content_hidden ? HIDDEN_HINT('agent') : `<div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
+          <div class="rc-modal-content">${esc(a.content || '(no content)')}</div>`}`;
         openContentModal(a.name, meta, body);
       } catch (err) {
         openContentModal(name, '', `<div class="rc-modal-hint">Could not load content: ${esc(err.message)}</div>`);
@@ -399,11 +404,12 @@
         const ctxUsageMeta = ctxItem && typeof ctxItem.usage_runs === 'number'
           ? ` · included in ${ctxItem.usage_runs} run(s)`
           : '';
-        const meta = (c.owner_nickname ? `by @${esc(c.owner_nickname)}` : '') + (c.is_public ? ' · public' : '') + ctxUsageMeta;
+        const ownerNick = c.owner_nickname || (itemsById[id] && itemsById[id].owner_nickname);
+        const meta = (ownerNick ? `by @${esc(ownerNick)}` : '') + (c.is_public ? ' · public' : '') + ctxUsageMeta;
         const body = `
           ${c.description ? `<div style="margin-bottom:14px;font-size:0.86rem;color:var(--text);line-height:1.5">${esc(c.description)}</div>` : ''}
-          <div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
-          <div class="rc-modal-content">${esc(c.content || '(no content)')}</div>`;
+          ${c.content_hidden ? HIDDEN_HINT('context') : `<div style="font-size:0.74rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:6px">Content</div>
+          <div class="rc-modal-content">${esc(c.content || '(no content)')}</div>`}`;
         openContentModal(c.name, meta, body);
       } catch (err) {
         openContentModal(name, '', `<div class="rc-modal-hint">Could not load content: ${esc(err.message)}</div>`);
@@ -424,7 +430,12 @@
         const skillUsageMeta = skillItem && typeof skillItem.usage_runs === 'number'
           ? ` · executed in ${skillItem.usage_runs} run(s), ${skillItem.usage_invocations || 0} invocation(s)`
           : '';
-        const meta = (s.owner_nickname ? `by @${esc(s.owner_nickname)}` : '') + (s.is_public ? ' · public' : '') + skillUsageMeta;
+        const ownerNick = s.owner_nickname || (itemsById[id] && itemsById[id].owner_nickname);
+        const meta = (ownerNick ? `by @${esc(ownerNick)}` : '') + (s.is_public ? ' · public' : '') + skillUsageMeta;
+        if (s.content_hidden) {
+          openContentModal(s.name, meta, `${s.description ? `<div style="margin-bottom:14px;font-size:0.86rem;color:var(--text);line-height:1.5">${esc(s.description)}</div>` : ''}${HIDDEN_HINT('skill')}`);
+          return;
+        }
         const files = Array.isArray(s.files) && s.files.length > 0
           ? s.files.slice().sort((a, b) => (b.is_entry ? 1 : 0) - (a.is_entry ? 1 : 0) || (a.ordinal ?? 0) - (b.ordinal ?? 0))
           : [{ name: 'SKILL.md', description: '', content: s.content || '', is_entry: 1 }];

@@ -8,6 +8,8 @@ import { Context, ContextInvitation } from '../db/schema';
 import { normalizeFiles, writeEntityFiles, loadEntityFiles, CONTEXT_FILES } from '../lib/entityFiles';
 import { recordVersion, notifyForked } from '../lib/versions';
 import { notify, displayName } from '../lib/notify';
+import { canReadContent, withoutContent } from '../lib/access';
+import { flowsReferencingAgents } from '../orchestrator';
 
 const router = Router();
 
@@ -172,19 +174,11 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   const ctx = db.prepare('SELECT * FROM contexts WHERE id = ?').get(req.params['id']) as Context | undefined;
   if (!ctx) { res.status(404).json({ error: 'Context not found' }); return; }
 
-  const admin = isAdmin(req.userId!);
-  const isOwn = ctx.user_id === req.userId;
-  if (!admin && !isOwn) {
-    if (!ctx.is_public) {
-      const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
-      const invited = me ? db.prepare(
-        'SELECT 1 FROM context_invitations WHERE context_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-      ).get(ctx.id, 'revoked', req.userId!, me.email) : null;
-      if (!invited) { res.status(403).json({ error: 'Forbidden' }); return; }
-    }
-  }
-
-  res.json(enrichContext(ctx, req.userId!));
+  // Content: owner, admin or a live invitation. A public context shows only its
+  // card to anyone else; its content is read by forking it.
+  if (canReadContent('context', ctx.id, req.userId!)) { res.json(enrichContext(ctx, req.userId!)); return; }
+  if (!ctx.is_public) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json(withoutContent(enrichContext(ctx, req.userId!)));
 });
 
 // POST /contexts — create context
@@ -305,8 +299,8 @@ router.post('/:id/star', requireAuth, (req: AuthRequest, res: Response): void =>
   if (!isOwn && !ctx.is_public) {
     const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
     const invited = me ? db.prepare(
-      'SELECT 1 FROM context_invitations WHERE context_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-    ).get(ctx.id, 'revoked', req.userId!, me.email) : null;
+      `SELECT 1 FROM context_invitations WHERE context_id = ? AND status IN ('pending', 'accepted') AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+    ).get(ctx.id, req.userId!, me.email) : null;
     if (!invited) { res.status(403).json({ error: 'Cannot star this context' }); return; }
   }
 
@@ -438,8 +432,13 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
      JOIN project_flows f ON f.project_id = p.id
      WHERE pc.context_id = ? AND f.flow_json != '{"nodes":[],"edges":[]}'`
   ).all(ctx.id) as { project_id: string; name: string }[];
+  // ...or to an agent that a saved flow uses: the next run would lose it silently.
+  const carriers = (db.prepare('SELECT agent_id FROM agent_contexts WHERE context_id = ?').all(ctx.id) as { agent_id: string }[]).map(r => r.agent_id);
+  for (const p of carriers.length ? flowsReferencingAgents(carriers) : []) {
+    if (!usedBy.some(u => u.project_id === p.project_id)) usedBy.push(p);
+  }
   if (usedBy.length > 0) {
-    res.status(409).json({ error: `This context is attached to ${usedBy.map(p => `"${p.name}"`).join(', ')}, which have flows. Detach it first.`, projects: usedBy });
+    res.status(409).json({ error: `This context is attached to ${usedBy.map(p => `"${p.name}"`).join(', ')}, which have flows (directly or through one of their agents). Detach it first.`, projects: usedBy });
     return;
   }
 
