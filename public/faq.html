@@ -149,6 +149,7 @@
         <li><a href="#garantias">What the server guarantees, and what it does not</a></li>
         <li><a href="#auditoria">Audit chain and verification</a></li>
         <li><a href="#harness">Harnesses and review runners</a></li>
+        <li><a href="#versiones">Versions, forks and notifications</a></li>
         <li><a href="#limitaciones">Limitations</a></li>
         <li><a href="#eu-ai-act">Audit logging and the EU AI Act</a></li>
         <li><a href="#eval-gating">Gating agent changes with evals</a></li>
@@ -220,7 +221,7 @@
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="snapshots">Instructions frozen per run</h2>
-    <p>At <code>workflow.start</code> the server copies the flow, the project settings and every agent, skill and context the run uses into <code>run_snapshots</code>, each with its SHA-256. Steps are rendered from that copy, so editing an agent mid-run changes nothing for runs already in flight. Deleting an entity that a saved flow depends on is refused with 409.</p>
+    <p>At <code>workflow.start</code> the server copies the flow, the project settings and every agent, skill and context the run uses into <code>run_snapshots</code>, each with its SHA-256. Steps are rendered from that copy, so editing an agent mid-run changes nothing for runs already in flight. The run also records the version number of each entity, so the history shows exactly what it ran with. Deleting an entity that a saved flow depends on is refused with 409.</p>
     <p>Non-Markdown files attached to agents, skills or contexts (scripts, configs) are withheld from the prompt unless the project explicitly enables them.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
@@ -236,6 +237,14 @@
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="harness">Harnesses and review runners</h2>
     <p>A harness is a directory: <code>harness.json</code> (projects, flows, evals), one folder per agent with <code>AGENT.md</code> and <code>output.schema.json</code>, plus skills and contexts. <code>npm run harness:apply</code> validates it with the server's own validators and loads it idempotently, so harness changes go through pull requests. The reference <code>code-review</code> harness reviews a change before a pull request (locally, with a script or a git hook) and after it (a GitHub Actions template that verifies the signed export before publishing an advisory check).</p>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <h2 id="versiones">Versions, forks and notifications</h2>
+    <p><strong>Versions.</strong> Agents, skills, contexts and projects keep a numbered history. A save that changes the content (its instructions, files, schema, tools, attached skills and contexts; for a project its flow, settings and which contexts it shares) records a new version with its author and an optional <code>version_note</code>; a save that changes nothing records nothing. <code>harness:apply</code> records one version per entity it changed. The history page compares any two versions line by line, and the owner or an admin can restore an earlier one, which is saved as a new version. Everyone with access to a project can read the history of its pieces. API: <code>GET /versions/:kind/:id</code>, <code>GET /versions/:kind/:id/:version</code>, <code>POST /versions/:kind/:id/:version/restore</code>.</p>
+    <p><strong>Runs.</strong> <code>workflow.start</code> records which version of each frozen entity the run used. The run detail in Audit links each one to its history, and the export manifest carries a <code>version</code> per entity. Verifiers ignore the field, so older exports still verify.</p>
+    <p><strong>Forks.</strong> A forked project stays linked to its source: the fork knows which of its agents, skills and contexts came from which, and the versions it took. When the source changes, the fork's owner is notified and <code>GET /projects/:id/upstream</code> lists the changes, including any the fork had also edited. <code>POST /projects/:id/upstream/sync</code> applies them all at once: new content for the copied pieces, new agents copied in, agents removed from the source taken out of the flow (not deleted). It keeps what the fork made its own: contexts it attached to its agents or project, files it added to a skill or context, its name, key, settings and description.</p>
+    <p><strong>Contexts and forks.</strong> Contexts hold business knowledge and are private by default. The owner chooses which ones a fork may copy when publishing the project, or later in Settings (<code>PUT /projects/:id/contexts-sharing</code>; harnesses declare it with <code>share_on_fork</code>). Before forking, <code>GET /projects/:id/fork-preview</code> lists the shared contexts and counts the private ones; the fork takes the ones chosen in <code>copy_context_ids</code>.</p>
+    <p><strong>Notifications.</strong> In the app, with a red dot in the menu: a change to a project shared with you (never to the person who made it), a change in the source of your fork, an invitation, a fork of your work, a run of your project that was capped, failed or cancelled by someone else, and a new issue (to admins), a comment on or the closing of your issue. Unread notifications of the same kind for the same project are grouped into one. API: <code>GET /notifications</code>, <code>GET /notifications/unread-count</code>, <code>POST /notifications/:id/read</code>, <code>POST /notifications/read-all</code>.</p>
 
     <!-- ─────────────────────────────────────────────────────────────────── -->
     <h2 id="limitaciones">Limitations</h2>

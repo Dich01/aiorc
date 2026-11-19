@@ -107,7 +107,7 @@
           </div>
           <div>
             <h3>One shared library</h3>
-            <p>Agents, skills and contexts live in a registry the whole company shares, forks and versions. A context goes only to the agent that needs it, so a security reviewer reads your infrastructure notes and nobody else pays for them.</p>
+            <p>Agents, skills and contexts live in a registry the whole company shares, forks and versions. A context goes only to the agent that needs it, so a security reviewer reads your infrastructure notes and nobody else pays for them. A fork is told when the original improves and updates in one step, keeping its own contexts.</p>
           </div>
         </div>
       </div>
@@ -134,7 +134,7 @@
               <tr class="group"><td colspan="5">The platform</td></tr>
               <tr><td class="row">Step order enforced by a server</td><td class="us"><span class="tag y">Yes</span></td><td><span class="tag n">Not exposed</span></td><td><span class="tag n">No</span></td><td><span class="tag y">Yes</span>Moira checks each step against a JSON Schema<sup>3</sup></td></tr>
               <tr><td class="row">Signed, verifiable record of each run</td><td class="us"><span class="tag y">Yes</span>Ed25519 over a hash chain</td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td></tr>
-              <tr><td class="row">Shared library of agents, skills, contexts</td><td class="us"><span class="tag y">Yes</span>Registry, forks, per-agent contexts, usage analytics</td><td><span class="tag n">No</span></td><td><span class="tag p">Per repo</span>Review rules files</td><td><span class="tag p">Catalog</span>Moira</td></tr>
+              <tr><td class="row">Shared library of agents, skills, contexts</td><td class="us"><span class="tag y">Yes</span>Registry, versions, forks that update from the original, per-agent contexts, usage analytics</td><td><span class="tag n">No</span></td><td><span class="tag p">Per repo</span>Review rules files</td><td><span class="tag p">Catalog</span>Moira</td></tr>
               <tr><td class="row">Model and client</td><td class="us">Any MCP client and model</td><td>Claude</td><td>The vendor's choice</td><td>Any</td></tr>
               <tr class="group"><td colspan="5">With the ready-for-pr harness</td></tr>
               <tr><td class="row">When it runs</td><td class="us">On the developer's machine, before the PR</td><td>When the PR is opened<sup>1</sup></td><td>On the PR</td><td>Whenever you wire it</td></tr>

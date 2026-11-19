@@ -607,6 +607,7 @@
         <div class="cap-list">
           <div class="cap"><h4>Signed audit trails</h4><p>Every run is reconstructable step by step: who ran it, which transitions it took and why. Export any run as Ed25519-signed JSON with a hash-chained event log: tamper-evident evidence, aligned with EU AI Act logging requirements.</p></div>
           <div class="cap"><h4>Live usage analytics</h4><p>Which agents, skills and contexts actually run, per project and per teammate, minute by minute. Graph-aware skip detection separates real failures from branches not taken.</p></div>
+          <div class="cap"><h4>A history for every piece</h4><p>Every agent, skill, context and project keeps its versions: who changed what and when. Compare two versions line by line and restore an earlier one without losing the later ones. Each run records the version of every piece it used, and the signed export carries it.</p></div>
           <div class="cap"><h4>Multi-project with auth</h4><p>Project keys and personal tokens, user and admin roles, per-project invitations, run history and an admin panel. Not a paid tier.</p></div>
         </div>
       </div>
@@ -616,7 +617,9 @@
         <div class="cap-list">
           <div class="cap"><h4>Agents in markdown</h4><p>Define each agent as a <code>.md</code> file. Its content is frozen when a run starts and handed to the model as that step's instructions.</p></div>
           <div class="cap"><h4>Reusable skills</h4><p>Package specific capabilities as skills and share them across projects and teams. Build on what already works.</p></div>
-          <div class="cap"><h4>Contexts: domain apart from capability</h4><p>Business knowledge lives in Contexts, not inside agents. The same generic crew serves every project: inject the domain, reuse the capability.</p></div>
+          <div class="cap"><h4>Contexts: domain apart from capability</h4><p>Business knowledge lives in Contexts, not inside agents. The same generic crew serves every project: inject the domain, reuse the capability. Contexts are private by default; when you publish a project you choose which ones others may copy.</p></div>
+          <div class="cap"><h4>Forks that keep up with the original</h4><p>Fork a project and make it yours: add your contexts, extend a skill. When the original improves you are told what changed, and one click brings the whole project up to date while keeping what you added. People a project is shared with get changes at once.</p></div>
+          <div class="cap"><h4>Notifications that matter</h4><p>A shared project changed, the original of your fork moved on, someone invited you or forked your work, a run was capped or failed, an issue got a reply. One place in the menu, with a red dot until you read it.</p></div>
           <div class="cap"><h4>One connection per project</h4><p>Each project is one MCP connection. Workflow tools and the external MCP servers you register are exposed through it: proxied, namespaced and logged, and callable only during a server-orchestrated run by an agent allowed to use them.</p></div>
         </div>
       </div>
@@ -695,7 +698,7 @@ The server picks the next step from your output:
       <div class="who-list">
         <div class="who-row"><h3>Collaborating teams</h3><p>Share flows and agents with your teammates. Every team member builds on what others have already tested, without starting from scratch on each project.</p></div>
         <div class="who-row"><h3>Skills as team assets</h3><p>Package specific capabilities as reusable skills. A well-defined skill becomes available to all projects and developers on the team.</p></div>
-        <div class="who-row"><h3>Flow community</h3><p>Explore flows and skills published by other users in the community repository. Adapt what already works and contribute your own.</p></div>
+        <div class="who-row"><h3>Flow community</h3><p>Explore flows and skills published by other users in the community repository. Fork what already works, adapt it, and keep receiving its improvements.</p></div>
         <div class="who-row"><h3>Multiple projects, same know-how</h3><p>Keep a library of specialized agents and deploy it across different projects. Team knowledge accumulates, not repeats.</p></div>
         <div class="who-row"><h3>Development pipelines</h3><p>Planner → Developer → Code Reviewer → Security QA. Deterministic CI flows any team member can run with one command.</p></div>
         <div class="who-row"><h3>Standardized processes</h3><p>Define the process once, execute it consistently. From code review to content generation, with the same agents and the same rules every time.</p></div>
