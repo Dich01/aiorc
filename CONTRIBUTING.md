@@ -69,10 +69,20 @@ Likewise: `.env`, `.jwt-secret`, `.audit-ed25519.key` and any `*.key` or `*.pem`
 ## Pull requests
 
 1. Open an issue first for anything larger than a bugfix, so we can agree on the approach before you spend time.
-2. Branch off `development`, not `main`.
+2. Branch off `development`, not `main`, and open the pull request against `development`.
 3. Keep the PR focused on one thing. Unrelated cleanups are welcome, but as separate PRs.
 4. Explain what changed and how you verified it. If it touches the orchestrator, say which test covers the new behavior.
 5. Add or update tests for behavior changes.
+
+## How changes reach `main`
+
+Every change takes the same path, and CI runs at each step:
+
+1. A work branch (`feature/...` or `fix/...`) off `development`, merged into `development` by pull request.
+2. `development` promoted to `staging` by pull request, to try the combined changes before release.
+3. `staging` promoted to `main` by pull request. `main` only receives changes that went through `staging`.
+
+No pull request goes from a work branch straight to `staging` or `main`.
 
 ## Areas where help is most useful
 
