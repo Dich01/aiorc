@@ -68,7 +68,7 @@
       <div id="info-tab-config" class="info-tab-panel">
         <div class="info-block">
           <h4>1. <code style="font-size:0.85em">.mcp.json</code> file at the root of the target project</h4>
-          <p>Tells your MCP client (for example Claude Code) how to connect to the AIOrc server.</p>
+          <p>Tells Claude Code how to connect to the AIOrc server.</p>
           <div class="info-code" id="mcp-config-snippet">{
   "mcpServers": {
     "aiorc-&lt;project&gt;": {
@@ -103,7 +103,7 @@ Never skip steps or modify them with your own judgment.</div>
         </div>
 
         <div class="info-note">
-          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path, <code>aiorc-&lt;project&gt;</code> with the server name and <code>&lt;project id&gt;</code> with the project id. Each person exports their own personal token (<code>export AIORC_TOKEN=aiorc_pat_...</code>, created in their profile): Claude Code reads it from the environment, so the file can be committed. In other clients, put the token value in the file and do not commit it. The project's <em>Connect AI</em> tab generates both snippets for you.
+          Replace <code>/absolute/path/to/AIOrc/mcp-bridge.js</code> with the real path, <code>aiorc-&lt;project&gt;</code> with the server name and <code>&lt;project id&gt;</code> with the project id. Each person exports their own personal token (<code>export AIORC_TOKEN=aiorc_pat_...</code>, created in their profile): Claude Code reads it from the environment, so the file can be committed. The project's <em>Connect AI</em> tab generates both snippets for you.
         </div>
       </div>
 

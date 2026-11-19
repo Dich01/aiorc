@@ -130,7 +130,6 @@
     "No results for that search.": "No hay resultados para esa búsqueda.",
     "Could not load projects.": "No se pudieron cargar los proyectos.",
     "No projects yet": "Todavía no hay proyectos",
-    "A project holds a crew of agents, the skills they use and the flow that connects them. Your AI client connects to it over MCP with one token.": "Un proyecto reúne un conjunto de agentes, las skills que usan y el flujo que los conecta. Tu cliente de IA se conecta a él por MCP con un token.",
     "Create a project": "Crear un proyecto",
     "Fork one from the public repository": "Haz un fork de uno del repositorio público",
     "Could not delete the project.": "No se pudo eliminar el proyecto.",
@@ -206,7 +205,8 @@
     "Invitation not found.": "No se encontró la invitación.",
     "Could not fork.": "No se pudo hacer el fork.",
     "Ignore this invitation?": "¿Ignorar esta invitación?",
-    "Could not ignore.": "No se pudo ignorar."
+    "Could not ignore.": "No se pudo ignorar.",
+    "A project holds a crew of agents, the skills they use and the flow that connects them. Claude Code connects to it over MCP with one token.": "Un proyecto reúne un conjunto de agentes, las skills que usan y el flujo que los conecta. Claude Code se conecta a él por MCP con un token."
   },
   "html": {
     "A context is one document. Upload your file (for example <code>architecture.md</code>): it becomes the main document and, if they are empty, it fills the name and the description. You can add more files to the same context. Everything in it is delivered to whoever receives the context. Non-Markdown files (scripts, configs) are withheld unless the project owner enables executable files through the API (PATCH /projects/:id/executable-files).": "Un contexto es un documento. Sube tu archivo (por ejemplo <code>architecture.md</code>): se convierte en el documento principal y, si están vacíos, completa el nombre y la descripción. Puedes agregar más archivos al mismo contexto. Todo lo que contiene se entrega a quien recibe el contexto. Los archivos que no son Markdown (scripts, configuraciones) se retienen a menos que el propietario del proyecto habilite los archivos ejecutables mediante la API (PATCH /projects/:id/executable-files).",

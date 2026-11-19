@@ -135,7 +135,7 @@
   <main class="main-area">
   <article class="article">
     <h1 class="article-title">AIOrc: a server-driven control plane for agent workflows over MCP</h1>
-    <p class="article-deck">AIOrc stores a team's agents, skills and contexts, and exposes each project's workflow graph to any MCP client. The server never calls a model. By default it hands the client one step at a time, refuses to advance until each step's output matches the agent's JSON Schema, decides rule-based transitions itself and checks every other one against the graph, and writes each event to an append-only hash chain that exports as Ed25519-signed evidence.</p>
+    <p class="article-deck">AIOrc stores a team's agents, skills and contexts, and exposes each project's workflow graph to Claude Code over MCP. The server never calls a model. By default it hands the client one step at a time, refuses to advance until each step's output matches the agent's JSON Schema, decides rule-based transitions itself and checks every other one against the graph, and writes each event to an append-only hash chain that exports as Ed25519-signed evidence.</p>
 
     <div class="toc">
       <div class="toc-title">Contents</div>
@@ -177,7 +177,7 @@
       <tbody>
         <tr><td>HTTP server</td><td>Express 4 + TypeScript</td><td>Multi-tenant REST API and the MCP endpoint at <code>/mcp</code> (JSON-RPC 2.0 over HTTP)</td></tr>
         <tr><td>Database</td><td>SQLite via better-sqlite3 (WAL)</td><td>Versioned schema; runs, snapshots, step outputs and the append-only <code>run_events</code> chain</td></tr>
-        <tr><td>Auth</td><td>bcrypt + JWT; SHA-256-hashed keys</td><td>Sessions for people; project keys (<code>aiorc_pk_</code>) and personal access tokens (<code>aiorc_pat_</code>) for MCP clients and runners</td></tr>
+        <tr><td>Auth</td><td>bcrypt + JWT; SHA-256-hashed keys</td><td>Sessions for people; project keys (<code>aiorc_pk_</code>) and personal access tokens (<code>aiorc_pat_</code>) for Claude Code and runners</td></tr>
         <tr><td>Validation</td><td>Ajv (JSON Schema)</td><td>Tool arguments, run inputs, and every step output against the agent's <code>output_schema</code></td></tr>
         <tr><td>Graph rules</td><td><code>src/shared/flow.ts</code></td><td>Flow model, rule evaluation and full graph validation, shared by the server and the editor</td></tr>
         <tr><td>Signing</td><td>Ed25519 (<code>node:crypto</code>)</td><td>Audit exports; public key at <code>GET /audit/keys</code></td></tr>
@@ -273,7 +273,7 @@
     <p>Evals turn "I think this change improved the agent" into a measurable verdict. The recommended working pattern:</p>
     <ol>
       <li>Define 3-10 eval cases per flow (in the harness files, or Usage analytics → Evals): a fixed input, the exact End it must reach, the agents that must complete a step, and for review flows the findings a seeded bug must produce (<code>{file, category, min_severity}</code>) with a cap on extra findings.</li>
-      <li>Before changing an agent or the flow, run the suite from any MCP client: call <code>workflow.eval</code>, then <code>workflow.start</code> with each case id. Eval runs always execute server-orchestrated, and the server grades each run from its event chain; the model never grades its own work.</li>
+      <li>Before changing an agent or the flow, run the suite from Claude Code: call <code>workflow.eval</code>, then <code>workflow.start</code> with each case id. Eval runs always execute server-orchestrated, and the server grades each run from its event chain; the model never grades its own work.</li>
       <li>Change the agent. Run the suite again.</li>
       <li>Compare pass rates in the Evals table. A drop means the change broke a path your team depends on — fix it before anyone else hits it.</li>
     </ol>

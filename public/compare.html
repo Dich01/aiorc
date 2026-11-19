@@ -136,7 +136,7 @@
               <tr><td class="row">Step order enforced by a server</td><td class="us"><span class="tag y">Yes</span>In the default mode; model-orchestrated mode is opt-in</td><td><span class="tag n">Not exposed</span></td><td><span class="tag n">No</span></td><td><span class="tag y">Yes</span>Moira checks each step against a JSON Schema<sup>3</sup></td></tr>
               <tr><td class="row">Signed, verifiable record of each run</td><td class="us"><span class="tag y">Yes</span>Ed25519 over a hash chain</td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td><td><span class="tag n">No</span></td></tr>
               <tr><td class="row">Shared library of agents, skills, contexts</td><td class="us"><span class="tag y">Yes</span>Registry, versions, forks that update from the original, per-agent contexts, usage analytics</td><td><span class="tag n">No</span></td><td><span class="tag p">Per repo</span>Review rules files</td><td><span class="tag p">Catalog</span>Moira</td></tr>
-              <tr><td class="row">Model and client</td><td class="us">Any MCP client and model</td><td>Claude</td><td>The vendor's choice</td><td>Any</td></tr>
+              <tr><td class="row">Model and client</td><td class="us">Claude Code</td><td>Claude</td><td>The vendor's choice</td><td>Any</td></tr>
               <tr class="group"><td colspan="5">With the ready-for-pr harness</td></tr>
               <tr><td class="row">When it runs</td><td class="us">On the developer's machine, before the PR</td><td>When the PR is opened<sup>1</sup></td><td>On the PR</td><td>Whenever you wire it</td></tr>
               <tr><td class="row">Runs your tests, types and lint</td><td class="us"><span class="tag y">Yes</span>The repository's own commands, in the order the profile lists them (cheapest first by convention)</td><td><span class="tag n">No</span>Reviews the diff</td><td><span class="tag p">Partly</span>Some run linters or security scans</td><td><span class="tag n">Not built in</span></td></tr>
@@ -163,7 +163,6 @@
               <li><b>Teams where agents write a lot of the code</b> and reviewers cannot keep up.</li>
               <li><b>Regulated or audited work</b>, where "the AI reviewed it" needs a record someone else can check.</li>
               <li><b>Several teams, one process.</b> The flow is defined once and forked per repository, with each team's own checks and documents.</li>
-              <li><b>Mixed tools.</b> Claude Code today, another MCP client tomorrow, same flow.</li>
             </ul>
           </div>
           <div class="card honest">

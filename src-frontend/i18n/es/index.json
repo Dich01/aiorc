@@ -20,7 +20,6 @@
     "RUN REGISTER": "REGISTRO DE LA EJECUCIÓN",
     "Illustrative run. Real runs export as signed JSON.": "Ejecución ilustrativa. Las ejecuciones reales se exportan como JSON firmado.",
     "Design it once. Run it verified. Prove what happened.": "Diséñalo una vez. Ejecútalo verificado. Demuestra lo que pasó.",
-    "Building agents is the easy part. The hard part is knowing they followed the right process. AIOrc turns a visual workflow into a contract the server enforces, and a record you can audit. No new tool for your team: it works through the AI clients they already use.": "Construir agentes es la parte fácil. Lo difícil es saber que siguieron el proceso correcto. AIOrc convierte un flujo visual en un contrato que el servidor hace cumplir y en un registro que puedes auditar. Tu equipo no necesita una herramienta nueva: funciona a través de los clientes de IA que ya usa.",
     "Design the flow": "Diseña el flujo",
     "Connect agents in the visual Flow Builder. Branch with natural-language conditions on the edges, fork with Parallel nodes, iterate with back-edges.": "Conecta agentes en el Flow Builder visual. Ramifica con condiciones en lenguaje natural sobre las conexiones, divide el trabajo con nodos Parallel e itera con conexiones de retorno.",
     "Connect once": "Conéctate una vez",
@@ -156,7 +155,8 @@
     "when: plan touches auth": "si el plan toca auth",
     "not in graph": "fuera del grafo",
     "START": "INICIO",
-    "END": "FIN"
+    "END": "FIN",
+    "Building agents is the easy part. The hard part is knowing they followed the right process. AIOrc turns a visual workflow into a contract the server enforces, and a record you can audit. No new tool for your team: it works through Claude Code, which they already use.": "Construir agentes es la parte fácil. Lo difícil es saber que siguieron el proceso correcto. AIOrc convierte un flujo visual en un contrato que el servidor hace cumplir y en un registro que puedes auditar. Tu equipo no necesita una herramienta nueva: funciona a través de Claude Code, que ya usa."
   },
   "html": {
     "AI<span>Orc</span> makes your AI agents follow the workflow you define, instead of skipping steps and going off-script.": "AI<span>Orc</span> hace que tus agentes de IA sigan el flujo que defines, en lugar de saltarse pasos y salirse del guion.",
