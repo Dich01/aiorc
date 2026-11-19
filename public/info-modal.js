@@ -61,6 +61,7 @@
           <li class="info-step"><div class="info-step-num">5</div><span><strong>Save</strong> — The flow is validated and persisted. If there are structural errors, they are listed in a dialog and saving is blocked.</span></li>
           <li class="info-step"><div class="info-step-num">6</div><span><strong>Configure the target project</strong> — Add <code>.mcp.json</code> + rule in <code>CLAUDE.md</code> (next tab).</span></li>
           <li class="info-step"><div class="info-step-num">7</div><span><strong>Done</strong> — When Claude receives a task it calls <code>workflow.start</code>. In <strong>server-orchestrated mode</strong> (default) the server hands it one step at a time, validating each output and deciding or checking each transition, until the flow reaches an End. In <strong>model-orchestrated mode</strong> it receives the whole flow at once and finishes with <code>workflow.report</code>, a self-declared report.</span></li>
+          <li class="info-step"><div class="info-step-num">8</div><span><strong>Share and keep it current</strong> — Invite teammates from the project's Settings: they get every change at once and a notification. Publishing it lets others fork it; you choose which contexts they may copy. Every change is versioned (Version history) and forks are notified when the original improves, then update in one step from their project page.</span></li>
         </ol>
       </div>
 

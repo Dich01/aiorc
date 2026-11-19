@@ -32,6 +32,7 @@ export interface HarnessEntity {
 export interface HarnessAgent extends HarnessEntity {
   output_schema: Record<string, unknown> | null;
   skills: string[];
+  contexts: string[];          // contexts only this agent receives
   allowed_tools: string[];
 }
 
@@ -50,6 +51,7 @@ export interface HarnessProject {
   input_schema: Record<string, unknown> | null;
   execution_mode: 'verified' | 'compiled' | null;  // null = not declared: apply leaves the owner's setting alone
   contexts: string[];
+  share_on_fork: string[];     // contexts (of the project or its agents) a fork gets a copy of
   agents: string[];            // agents the flow uses
   flow: FlowDocument;          // node.agent_id holds the agent NAME until apply
   evals: HarnessEval[];
@@ -131,7 +133,7 @@ export function loadHarness(dirArg: string): Harness {
   const contexts = loadGroup('contexts', 'CONTEXT.md');
 
   const agents = new Map<string, HarnessAgent>();
-  for (const [name, meta] of Object.entries((doc.agents ?? {}) as Record<string, { description?: string; skills?: unknown; allowed_tools?: unknown }>)) {
+  for (const [name, meta] of Object.entries((doc.agents ?? {}) as Record<string, { description?: string; skills?: unknown; contexts?: unknown; allowed_tools?: unknown }>)) {
     if (!NAME_RE.test(name)) { problems.push(`agents.${name}: names are lowercase letters, digits and "-"`); continue; }
     const adir = path.join(dir, 'agents', name);
     const schemaFile = path.join(adir, 'output.schema.json');
@@ -143,12 +145,14 @@ export function loadHarness(dirArg: string): Harness {
     }
     const agentSkills = asStrings(meta?.skills);
     for (const s of agentSkills) if (!skills.has(s)) problems.push(`agents.${name}: unknown skill "${s}"`);
+    const agentContexts = asStrings(meta?.contexts);
+    for (const c of agentContexts) if (!contexts.has(c)) problems.push(`agents.${name}: unknown context "${c}"`);
     const tools = normalizeToolList(meta?.allowed_tools);
     if (!tools.ok) problems.push(`agents.${name}: ${tools.error}`);
     if (!meta?.description) problems.push(`agents.${name}: description is required`);
     agents.set(name, {
       name, description: String(meta?.description ?? ''), output_schema,
-      skills: agentSkills, allowed_tools: tools.ok ? tools.value : [],
+      skills: agentSkills, contexts: agentContexts, allowed_tools: tools.ok ? tools.value : [],
       files: readEntityFiles(adir, 'AGENT.md', problems, ['output.schema.json']),
     });
   }
@@ -177,6 +181,8 @@ export function loadHarness(dirArg: string): Harness {
 
     const ctx = asStrings(p.contexts);
     for (const c of ctx) if (!contexts.has(c)) problems.push(`${where}: unknown context "${c}"`);
+    const share = asStrings(p.share_on_fork);
+    for (const c of share) if (!contexts.has(c)) problems.push(`${where}: share_on_fork names unknown context "${c}"`);
 
     // Nodes name their agent with "agent"; validate with the real validator.
     const rawNodes = ((p.flow?.nodes ?? []) as Record<string, unknown>[]).map(n => ({ x: 0, y: 0, ...n, ...(n.type === 'agent' ? { agent_id: String(n.agent ?? ''), agent_name: String(n.agent ?? '') } : {}) }));
@@ -208,7 +214,7 @@ export function loadHarness(dirArg: string): Harness {
         max_extra_findings: e.max_extra_findings ?? null,
       });
     }
-    projects.push({ name, description: String(p.description ?? ''), input_schema, execution_mode, contexts: ctx, agents: used, flow, evals });
+    projects.push({ name, description: String(p.description ?? ''), input_schema, execution_mode, contexts: ctx, share_on_fork: share, agents: used, flow, evals });
   }
 
   if (problems.length) throw new HarnessError(problems);

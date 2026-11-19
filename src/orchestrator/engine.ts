@@ -21,6 +21,20 @@ import {
 } from './index';
 import { captureSnapshot, loadSnapshot, persistSnapshot, RunSnapshot } from './snapshot';
 import { appendEvent } from '../lib/runEvents';
+import { EntityKind, recordVersion, versionNumber } from '../lib/versions';
+import { notifyRunProblem } from '../lib/notify';
+
+// Which version of each entity this run used. An entity without history yet
+// (created outside the API) gets its first version here.
+function recordRunVersions(runId: string, hashes: { kind: string; entity_id: string }[]): void {
+  const ins = db.prepare('INSERT OR IGNORE INTO run_entity_versions (run_id, kind, entity_id, version) VALUES (?, ?, ?, ?)');
+  for (const h of hashes) {
+    if (!['project', 'agent', 'skill', 'context'].includes(h.kind)) continue;
+    const kind = h.kind as EntityKind;
+    const v = versionNumber(kind, h.entity_id) || recordVersion(kind, h.entity_id, '', 'baseline');
+    if (v) ins.run(runId, kind, h.entity_id, v);
+  }
+}
 import {
   EngineState,
   RunStatus,
@@ -87,8 +101,12 @@ function runStatusColumn(state: EngineState): string {
 }
 
 function persistState(runId: string, state: EngineState): void {
+  const before = (db.prepare('SELECT status FROM runs WHERE id = ?').get(runId) as { status: string } | undefined)?.status;
   db.prepare('UPDATE runs SET engine_state = ?, status = ?, outcome = ?, end_node = ?, last_activity_at = ? WHERE id = ?')
     .run(JSON.stringify(state), runStatusColumn(state), state.outcome ?? '', state.end_node ?? '', Date.now(), runId);
+  if ((state.status === 'capped' || state.status === 'failed') && before !== state.status) {
+    notifyRunProblem(runId, state.status === 'capped' ? `stopped: ${state.outcome}` : `failed: ${state.outcome}`);
+  }
 }
 
 // Grade a finished eval run from the event chain only (never from the
@@ -276,6 +294,7 @@ export function startRun(projectId: string, input: Record<string, unknown>, who:
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?)`
     ).run(runId, projectId, canonicalJson(input), canonicalJson(flow), who.caller?.userId ?? '', who.caller?.email ?? '', who.declaredCaller, mode, evalCaseId, mode === 'compiled' ? 'delivered' : 'running', now, now);
     const hashes = persistSnapshot(runId, snap);
+    recordRunVersions(runId, hashes);
     appendEvent(runId, 'run.started', {
       project_id: projectId,
       engine_version: ENGINE_VERSION,

@@ -13,6 +13,7 @@ import './unit/mcpServers.test';
 import './unit/outbound.test';
 import './unit/skipAnalysis.test';
 import './unit/reportedUsage.test';
+import './unit/readyForPrScripts.test';
 
 
 // Integration tests: the real app on an ephemeral port.
@@ -25,6 +26,9 @@ import './integration/harness.test';
 import './integration/runners.test';
 import './integration/membership.test';
 import './integration/compiled.test';
+import './integration/readyForPr.test';
+import './integration/agentContexts.test';
+import './integration/versions.test';
 
 
 runAll()

@@ -54,6 +54,27 @@
     /* ── Tabs ─────────────────────────────────────────────────────────────── */
     .tab-bar { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0; }
     /* Onboarding checklist */
+    .upstream-card { border:1px solid #c7d2fe; background:#f5f7ff; border-radius:10px; padding:16px 18px; margin-bottom:20px; }
+    .upstream-card[hidden] { display:none; }
+    .upstream-head { display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+    .upstream-title { font-weight:700; font-size:0.95rem; color:var(--text); }
+    .upstream-sub { font-size:0.84rem; color:var(--muted); margin-top:3px; line-height:1.5; }
+    .upstream-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .upstream-list { list-style:none; margin:14px 0 0; padding:0; border-top:1px solid #dfe5ff; }
+    .upstream-list li { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #e8ecfd; font-size:0.84rem; flex-wrap:wrap; }
+    .upstream-list .what { color:var(--text); }
+    .upstream-list .what b { font-weight:600; }
+    .upstream-list .ver { color:var(--muted); font-family:var(--mono); font-size:0.78rem; }
+    .upstream-list .warn { color:#92400e; font-size:0.78rem; }
+    .upstream-note { font-size:0.8rem; color:var(--muted); margin-top:10px; line-height:1.5; }
+    .ctx-choices { border:1px solid var(--border); border-radius:8px; max-height:240px; overflow-y:auto; margin-top:8px; background:#fff; }
+    .ctx-choice { display:flex; gap:10px; align-items:flex-start; padding:9px 12px; border-top:1px solid var(--border); cursor:pointer; font-size:0.85rem; }
+    .ctx-choice:first-child { border-top:0; }
+    .ctx-choice input { margin-top:3px; width:16px; height:16px; flex-shrink:0; }
+    .ctx-choice .ctx-name { font-weight:600; color:var(--text); }
+    .ctx-choice .ctx-where { font-size:0.76rem; color:var(--muted); margin-top:1px; }
+    .history-link { margin-left:8px; font-size:0.8rem; color:var(--primary); text-decoration:none; white-space:nowrap; }
+    .history-link:hover { text-decoration:underline; }
     .onboard-card { background:linear-gradient(135deg, rgba(67,97,238,0.06), rgba(124,58,237,0.06)); border:1px solid #c7d2fe; border-radius:12px; padding:16px 20px; margin-bottom:18px; }
     .onboard-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
     .onboard-title { font-weight:700; font-size:0.95rem; color:var(--text); }
@@ -434,8 +455,8 @@
       <a class="sidebar-item" href="repository.html" title="Public repository">
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span>
       </a>
-      <a class="sidebar-item" href="issues.html" title="Issues">
-        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span>
+      <a class="sidebar-item" href="issues.html" title="Report a bug or idea">
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Report a bug or idea</span>
       </a>
     </nav>
 
@@ -448,6 +469,7 @@
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span>
       </a>
       <a class="sidebar-item" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
+      <a class="sidebar-item" href="compare.html" title="How AIOrc compares"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v14M4 6h12"/><path d="M4 6 2 11a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/></svg></span><span class="sidebar-item-label">Compare</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -477,6 +499,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Fork: the project it came from has changes -->
+    <div class="upstream-card" id="upstream-card" hidden aria-live="polite"></div>
 
     <!-- Onboarding checklist: shows until the project ran at least once -->
     <div class="onboard-card" id="onboard-card" style="display:none">
@@ -714,6 +739,26 @@
         <div id="visibility-status" style="margin-top:10px;font-size:0.82rem"></div>
       </div>
 
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">Contexts shared with forks</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:4px">
+          Contexts hold your business knowledge, so they are private by default. A checked context is offered as a copy to whoever forks this project; the rest stay here, and the fork is told its agents will need their own.
+        </p>
+        <div id="sharing-list"></div>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+          <button class="btn btn-sm btn-primary" id="save-sharing-btn" disabled>Save</button>
+          <span id="sharing-status" style="font-size:0.82rem;color:var(--muted)"></span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title" style="font-size:1rem;margin-bottom:6px">Version history</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px">
+          Every change to the flow and settings is saved as a version. The history is visible to everyone the project is shared with; you can compare versions and restore an earlier one.
+        </p>
+        <a class="btn btn-sm btn-ghost" id="project-history-link" href="#">Open the project history</a>
+      </div>
+
       <div class="card">
         <div class="card-title" style="font-size:1rem;margin-bottom:6px">Project key</div>
         <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">
@@ -920,7 +965,7 @@
 
   <!-- Public visibility confirmation modal -->
   <div class="content-modal" id="public-confirm-modal" onclick="if(event.target===this)closePublicConfirm()">
-    <div class="content-box" style="max-width:480px">
+    <div class="content-box" style="max-width:540px">
       <button class="content-close" onclick="closePublicConfirm()">×</button>
       <h2 style="color:#dc2626;display:flex;align-items:center;gap:10px">
         <span style="background:#fee2e2;color:#dc2626;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.2 17.5 16.5h-15z"/><path d="M10 8.5v3.5M10 14.2h.01"/></svg></span>
@@ -937,6 +982,7 @@
           <li>See the project listed in the <em>Public repository</em>.</li>
           <li>Without a token, the project ID only exposes the eval suite.</li>
         </ul>
+        <div id="public-contexts" style="margin-bottom:14px"></div>
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:0.85rem;color:#92400e">
           You can revert it at any time from this same screen.
         </div>
@@ -1346,10 +1392,12 @@
       await applyMode('verified');
     }
 
-    async function applyVisibility(makePublic) {
+    async function applyVisibility(makePublic, sharedContextIds) {
+      const body = { is_public: makePublic };
+      if (Array.isArray(sharedContextIds)) body.shared_context_ids = sharedContextIds;
       const res = await authFetch(`/projects/${projectId}/visibility`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_public: makePublic })
+        body: JSON.stringify(body)
       });
       if (!res.ok) {
         await uiAlert('Could not change visibility.');
@@ -1363,6 +1411,130 @@
     function openPublicConfirm() {
       document.getElementById('public-confirm-modal').classList.add('open');
       document.body.style.overflow = 'hidden';
+      const box = document.getElementById('public-contexts');
+      box.innerHTML = '';
+      authFetch(`/projects/${projectId}/contexts-sharing`).then(r => r.ok ? r.json() : { contexts: [] }).then(({ contexts }) => {
+        if (!contexts.length) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div style="font-weight:600;font-size:0.88rem">Which contexts can people who fork it take?</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Unchecked contexts stay private: forks run without them and are told so.</div>
+          ${contextChoicesHTML(contexts, contexts.filter(c => c.shared).map(c => c.id), 'pub')}`;
+      }).catch(() => {});
+    }
+
+    // ── Contexts shared with forks ────────────────────────────────────────────
+    function contextChoicesHTML(rows, checkedIds, prefix) {
+      const checked = new Set(checkedIds);
+      return `<div class="ctx-choices">${rows.map(c => `
+        <label class="ctx-choice">
+          <input type="checkbox" data-ctx-${prefix}="${esc(c.id)}" ${checked.has(c.id) ? 'checked' : ''} />
+          <span><span class="ctx-name">${esc(c.name)}</span>
+          <span class="ctx-where" style="display:block">${c.scope === 'project' ? 'Whole project' : 'Agent' + (c.agents.length === 1 ? ' ' : 's ') + esc(c.agents.join(', '))}${c.description ? ' · ' + esc(c.description) : ''}</span></span>
+        </label>`).join('')}</div>`;
+    }
+    const checkedContexts = prefix => [...document.querySelectorAll(`[data-ctx-${prefix}]`)].filter(i => i.checked).map(i => i.getAttribute(`data-ctx-${prefix}`));
+
+    let sharingSaved = '';
+    async function loadSharing() {
+      const list = document.getElementById('sharing-list');
+      const r = await authFetch(`/projects/${projectId}/contexts-sharing`);
+      if (!r.ok) { list.innerHTML = ''; return; }
+      const { contexts } = await r.json();
+      if (!contexts.length) {
+        list.innerHTML = '<div style="font-size:0.83rem;color:var(--muted);font-style:italic;margin-top:8px">This project has no contexts yet.</div>';
+        document.getElementById('save-sharing-btn').style.display = 'none';
+        return;
+      }
+      document.getElementById('save-sharing-btn').style.display = '';
+      list.innerHTML = contextChoicesHTML(contexts, contexts.filter(c => c.shared).map(c => c.id), 'set');
+      sharingSaved = checkedContexts('set').sort().join(',');
+      document.getElementById('save-sharing-btn').disabled = true;
+      list.querySelectorAll('input').forEach(i => i.addEventListener('change', () => {
+        document.getElementById('save-sharing-btn').disabled = checkedContexts('set').sort().join(',') === sharingSaved;
+        document.getElementById('sharing-status').textContent = '';
+      }));
+    }
+    async function saveSharing() {
+      const btn = document.getElementById('save-sharing-btn');
+      btn.disabled = true;
+      const r = await authFetch(`/projects/${projectId}/contexts-sharing`, { method: 'PUT', body: JSON.stringify({ shared_context_ids: checkedContexts('set') }) });
+      if (!r.ok) { btn.disabled = false; await uiAlert('Could not save which contexts are shared.'); return; }
+      await loadSharing();
+      const n = checkedContexts('set').length;
+      document.getElementById('sharing-status').textContent = `Saved. ${n} context${n === 1 ? '' : 's'} offered to forks.`;
+      loadContexts();
+    }
+
+    // ── History links ─────────────────────────────────────────────────────────
+    function addHistoryLink(kind, id) {
+      const meta = document.getElementById('modal-meta');
+      const a = document.createElement('a');
+      a.className = 'history-link';
+      a.href = `history.html?kind=${kind}&id=${encodeURIComponent(id)}`;
+      a.textContent = 'Version history';
+      meta.appendChild(document.createTextNode(meta.textContent ? ' · ' : ''));
+      meta.appendChild(a);
+    }
+
+    // ── Fork: changes in the project it came from ────────────────────────────
+    const KIND_LABEL = { agent: ['agent', 'agents'], skill: ['skill', 'skills'], context: ['context', 'contexts'], project: ['flow and settings', 'flow and settings'] };
+    async function loadUpstream() {
+      const card = document.getElementById('upstream-card');
+      const r = await authFetch(`/projects/${projectId}/upstream`);
+      if (!r.ok) { card.hidden = true; return; }
+      const up = await r.json();
+      if (!up.linked || !up.changes.length) {
+        // Arrived from a notice whose changes were already taken (or undone).
+        if (up.linked && location.hash === '#updates') {
+          card.innerHTML = `<div class="upstream-title">Up to date</div><div class="upstream-sub">This fork already has everything from <a href="history.html?kind=project&id=${encodeURIComponent(up.source.id)}">${esc(up.source.name)}</a>. Nothing to update.</div>`;
+          card.hidden = false;
+        } else card.hidden = true;
+        return;
+      }
+      const counts = {};
+      for (const c of up.changes) counts[c.kind] = (counts[c.kind] || 0) + 1;
+      const parts = Object.entries(counts).map(([k, n]) => k === 'project' ? KIND_LABEL.project[0] : `${n} ${KIND_LABEL[k][n === 1 ? 0 : 1]}`);
+      const overwrites = up.changes.filter(c => c.local_changes);
+      const removed = up.changes.filter(c => c.change === 'removed');
+      const verb = { changed: 'changed', added: 'new', removed: 'removed from the original' };
+      card.innerHTML = `
+        <div class="upstream-head">
+          <div>
+            <div class="upstream-title">The original project has changes</div>
+            <div class="upstream-sub"><a href="history.html?kind=project&id=${encodeURIComponent(up.source.id)}">${esc(up.source.name)}</a> by ${esc(up.source.owner)} changed: ${esc(parts.join(', '))}.</div>
+          </div>
+          <div class="upstream-actions">
+            <button class="btn btn-sm btn-ghost" id="upstream-toggle" aria-expanded="false" aria-controls="upstream-details">See changes</button>
+            <button class="btn btn-sm btn-primary" id="upstream-sync">Update everything</button>
+          </div>
+        </div>
+        <div id="upstream-details" hidden>
+          <ul class="upstream-list">${up.changes.map(c => `
+            <li>
+              <span class="what">${c.kind === 'project' ? 'Flow and settings ' + esc(verb[c.change]) : `${esc(c.kind.charAt(0).toUpperCase() + c.kind.slice(1))} <b>${esc(c.name)}</b> ${esc(verb[c.change])}`}${c.local_changes ? ` <span class="warn">· you changed it too; your edits to it are replaced</span>` : ''}</span>
+              <span class="ver">${c.change === 'changed' ? `<a href="history.html?kind=${c.kind}&id=${encodeURIComponent(c.source_id)}&v=${c.to}">v${c.from} → v${c.to}</a>` : ''}${c.by ? ' · ' + esc(c.by) : ''}</span>
+            </li>`).join('')}</ul>
+          <div class="upstream-note">Updating takes every change at once and keeps what is yours: the contexts you attached, files you added to a skill or context, the project's name, key and settings.${removed.length ? ' Agents removed from the original leave your flow but are not deleted.' : ''}</div>
+        </div>`;
+      card.hidden = false;
+      if (location.hash === '#updates') card.scrollIntoView({ block: 'start' });
+      document.getElementById('upstream-toggle').addEventListener('click', e => {
+        const d = document.getElementById('upstream-details');
+        d.hidden = !d.hidden;
+        e.target.setAttribute('aria-expanded', String(!d.hidden));
+        e.target.textContent = d.hidden ? 'See changes' : 'Hide changes';
+      });
+      document.getElementById('upstream-sync').addEventListener('click', async e => {
+        const msg = overwrites.length
+          ? `You also changed ${overwrites.map(c => '"' + c.name + '"').join(', ')}. Updating replaces those edits with the original's version (they stay in the history, so you can restore them).`
+          : 'Every change from the original is applied at once. Your own contexts, added files, name, key and settings stay as they are.';
+        if (!await uiConfirm(msg, { title: 'Update from the original?', okLabel: 'Update everything' })) return;
+        e.target.disabled = true; e.target.textContent = 'Updating…';
+        const res = await authFetch(`/projects/${projectId}/upstream/sync`, { method: 'POST' });
+        const b = await res.json().catch(() => ({}));
+        if (!res.ok) { e.target.disabled = false; e.target.textContent = 'Update everything'; await uiAlert(b.error || 'Could not update.', { title: 'Not updated' }); return; }
+        await uiAlert(`${b.updated} updated${b.added ? `, ${b.added} new agent${b.added === 1 ? '' : 's'} added` : ''}. The flow editor reloads with the new version.`, { title: 'Up to date' });
+        location.reload();
+      });
     }
     function closePublicConfirm() {
       document.getElementById('public-confirm-modal').classList.remove('open');
@@ -1472,10 +1644,15 @@
     document.getElementById('save-tags-btn').addEventListener('click', saveTags);
     document.getElementById('tags-input').addEventListener('input', e => renderTagsPreview(e.target.value));
     document.getElementById('confirm-public-btn').addEventListener('click', async () => {
+      const hasChoices = !!document.querySelector('[data-ctx-pub]');
+      const ids = hasChoices ? checkedContexts('pub') : undefined;
       document.getElementById('public-confirm-modal').classList.remove('open');
       document.body.style.overflow = '';
-      await applyVisibility(true);
+      await applyVisibility(true, ids);
+      loadSharing();
     });
+    document.getElementById('save-sharing-btn').addEventListener('click', saveSharing);
+    document.getElementById('project-history-link').href = `history.html?kind=project&id=${encodeURIComponent(projectId)}`;
 
     // ── Invitations / Share with ─────────────────────────────────────────────
     const STATUS_LABEL = { pending: 'pending', accepted: 'accepted', declined: 'declined', revoked: 'revoked' };
@@ -1599,6 +1776,7 @@
 
         document.getElementById('modal-title').textContent = a.name;
         document.getElementById('modal-meta').textContent  = subtitle;
+        addHistoryLink('agent', a.id);
 
         const skillsHtml = skills.length === 0
           ? '<div style="font-size:0.83rem;color:var(--muted);font-style:italic">Drag skills onto the node to associate them.</div>'
@@ -1672,6 +1850,7 @@
         // Build accordion-style read-only viewer. Entry expanded by default.
         document.getElementById('modal-title').textContent = s.name;
         document.getElementById('modal-meta').textContent  = files.length > 1 ? ('Skill · ' + files.length + ' files') : 'Skill';
+        addHistoryLink('skill', id);
         const html = '<div class="skill-files-readonly skill-files-list">' + files.map((f, idx) => {
           const isEntry = !!f.is_entry;
           const tag = isEntry ? '<span class="skill-file-tag">entry</span>' : '';
@@ -1726,7 +1905,7 @@
     }
 
     async function showContextContent(id, name) {
-      try { const c=await(await authFetch(`/contexts/${id}`)).json(); openModal(c.name,'Context',c.content||'(no content)'); }
+      try { const c=await(await authFetch(`/contexts/${id}`)).json(); openModal(c.name,'Context',c.content||'(no content)'); addHistoryLink('context', id); }
       catch { openModal(name,'','Error loading.'); }
     }
 
@@ -2884,6 +3063,8 @@
     async function init() {
       await Promise.all([loadProject(), loadAgents(), loadSkills(), loadContexts()]);
       updateOnboarding();
+      loadUpstream().catch(() => {});
+      loadSharing().catch(() => {});
       // Flow editor is now handled by React (flow-editor.js) — no renderPalette/loadFlow needed
     }
     init().catch(console.error);
@@ -3190,5 +3371,6 @@ Never skip steps or modify them with your own judgment.</div>
     </div>
   </div>
 <script>if (localStorage.getItem('userRole') === 'admin') { const a = document.getElementById('sb-admin'); if (a) a.style.display = ''; }</script>
+  <script src="notifications.js"></script>
 </body>
 </html>

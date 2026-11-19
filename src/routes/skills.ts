@@ -6,6 +6,8 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Skill, SkillFile, SkillInvitation } from '../db/schema';
 import { flowsReferencingAgents } from '../orchestrator';
+import { recordVersion, notifyForked } from '../lib/versions';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -287,6 +289,7 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }
   }
 
+  recordVersion('skill', id, req.userId!, 'created');
   const created = db.prepare('SELECT * FROM skills WHERE id = ?').get(id) as Skill;
   res.status(201).json(enrichSkill(created, req.userId!));
 });
@@ -326,6 +329,7 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
+  recordVersion('skill', skill.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM skills WHERE id = ?').get(skill.id) as Skill;
   res.json(enrichSkill(updated, req.userId!));
 });
@@ -396,6 +400,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO skill_invitations (id, skill_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, skill.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'skill', entityName: skill.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the skill "${skill.name}"`, link: 'dashboard.html?tab=team', entityKind: 'skill', entityId: skill.id });
   res.status(201).json(db.prepare('SELECT * FROM skill_invitations WHERE id = ?').get(id));
 });
 
@@ -465,6 +470,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   try { fork(); }
   catch (err) { res.status(500).json({ error: 'Fork failed', detail: String(err) }); return; }
 
+  recordVersion('skill', newSkillId, req.userId!, `forked from "${source.name}"`);
+  notifyForked('skill', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM skills WHERE id = ?').get(newSkillId) as Skill;
   res.status(201).json(enrichSkill(created, req.userId!));
 });

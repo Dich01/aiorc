@@ -18,6 +18,8 @@ export function buildSignedExport(runId: string): SignedExport | null {
   let input: unknown = null;
   try { input = JSON.parse(run.input); } catch { input = run.input; }
   const hashes = snapshotHashes(runId);
+  const versions = new Map((db.prepare('SELECT kind, entity_id, version FROM run_entity_versions WHERE run_id = ?').all(runId) as { kind: string; entity_id: string; version: number }[])
+    .map(r => [`${r.kind}:${r.entity_id}`, r.version]));
   const events = loadEvents(runId);
   const steps = (db.prepare('SELECT step, node_id, agent_name, output_json, sha256 FROM run_step_outputs WHERE run_id = ? ORDER BY step, node_id').all(runId) as { step: number; node_id: string; agent_name: string; output_json: string; sha256: string }[])
     .map(o => ({ step: o.step, node: o.node_id, agent: o.agent_name, sha256: o.sha256, output: JSON.parse(o.output_json) as unknown }));
@@ -42,7 +44,12 @@ export function buildSignedExport(runId: string): SignedExport | null {
     input_sha256: sha256(canonicalJson(input)),
     manifest: {
       flow_sha256: hashes.find(h => h.kind === 'flow')?.sha256 ?? '',
-      entities: hashes.filter(h => h.kind !== 'flow').map(h => ({ kind: h.kind, id: h.entity_id, name: h.name, sha256: h.sha256 })),
+      entities: hashes.filter(h => h.kind !== 'flow').map(h => {
+        // The version is informational: it is signed with the payload but not
+        // part of the event chain, and verifiers ignore it.
+        const v = versions.get(`${h.kind}:${h.entity_id}`);
+        return { kind: h.kind, id: h.entity_id, name: h.name, sha256: h.sha256, ...(v ? { version: v } : {}) };
+      }),
     },
     steps,
     self_declared_report: selfDeclared,

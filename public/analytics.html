@@ -194,8 +194,8 @@
       <a class="sidebar-item" href="repository.html" title="Public repository">
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span>
       </a>
-      <a class="sidebar-item" href="issues.html" title="Issues">
-        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span>
+      <a class="sidebar-item" href="issues.html" title="Report a bug or idea">
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Report a bug or idea</span>
       </a>
     </nav>
 
@@ -208,6 +208,7 @@
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span>
       </a>
       <a class="sidebar-item" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
+      <a class="sidebar-item" href="compare.html" title="How AIOrc compares"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v14M4 6h12"/><path d="M4 6 2 11a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/></svg></span><span class="sidebar-item-label">Compare</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -350,7 +351,7 @@
           <div class="an-sub">A context is included in every run of the projects that attach it.</div>
           <div class="an-table-wrap">
             <table class="an-table">
-              <thead><tr><th>Context</th><th class="num">Linked projects</th><th class="num">Runs included</th><th>Last used</th></tr></thead>
+              <thead><tr><th>Context</th><th class="num">Linked projects</th><th class="num">Agents carrying</th><th class="num">Runs included</th><th>Last used</th></tr></thead>
               <tbody id="contexts-tbody"></tbody>
             </table>
           </div>
@@ -674,11 +675,12 @@
         </tr>`).join('');
 
       document.getElementById('contexts-tbody').innerHTML = data.contexts_stats.length === 0
-        ? '<tr><td colspan="4" class="an-empty">No contexts registered.</td></tr>'
+        ? '<tr><td colspan="5" class="an-empty">No contexts registered.</td></tr>'
         : data.contexts_stats.map(c => `
         <tr>
           <td><span class="an-agent-name">${escHtml(c.name)}</span></td>
           <td class="num">${c.projects_linked}</td>
+          <td class="num">${c.agents_carrying}</td>
           <td class="num">${c.runs_included}</td>
           <td>${timeAgo(c.last_used)}</td>
         </tr>`).join('');
@@ -941,5 +943,6 @@
 
     reload();
   </script>
+  <script src="notifications.js"></script>
 </body>
 </html>

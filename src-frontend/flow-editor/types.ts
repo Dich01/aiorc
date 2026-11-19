@@ -36,6 +36,13 @@ export interface AgentSummary {
   description: string;
   output_schema?: Record<string, unknown> | null;
   skills?: SkillSummary[];
+  contexts?: ContextSummary[];
+}
+
+export interface ContextSummary {
+  id: string;
+  name: string;
+  description: string;
 }
 
 export interface SkillSummary {
@@ -51,8 +58,11 @@ export interface AgentNodeData extends Record<string, unknown> {
   agentName: string;
   maxInvocations: number;
   skills?: SkillSummary[];
+  contexts?: ContextSummary[];
   onDropSkill?: (agentId: string, skillId: string) => void;
   onRemoveSkill?: (agentId: string, skillId: string) => void;
+  onDropContext?: (agentId: string, contextId: string) => void;
+  onRemoveContext?: (agentId: string, contextId: string) => void;
   onShowContent?: (agentId: string, agentName: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   onEditMaxInvocations?: (nodeId: string) => void;

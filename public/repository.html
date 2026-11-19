@@ -220,7 +220,7 @@
         <h1 class="repo-title">AIOrc Community</h1>
         <p class="repo-deck">
           Explore projects, agents, skills and contexts that other users have made public.
-          Fork what's useful — everything is copied to your workspace so you can modify it without affecting the original.
+          Fork what's useful: you get your own copy to change without affecting the original, and when the original improves you are told and can take the update in one step. Contexts are copied only when their owner shares them.
         </p>
       </section>
 
@@ -498,10 +498,16 @@
     window.forkOn = async function(type, id, btnEl) {
       if (!isLoggedIn) { window.location.href = 'index.html'; return; }
       const labels = { projects:'project', agents:'agent', skills:'skill', contexts:'context' };
-      if (!await uiConfirm(`Fork this ${labels[type]} to your workspace? You'll get an editable copy.`)) return;
+      let body;
+      if (type === 'projects') {
+        btnEl.disabled = true;   // while the dialog loads what the fork would take
+        const choice = await AIOrcForkDialog.confirmProjectFork(id, localStorage.getItem('token')).finally(() => { btnEl.disabled = false; });
+        if (!choice) return;
+        body = JSON.stringify(choice);
+      } else if (!await uiConfirm(`Fork this ${labels[type]} to your workspace? You'll get an editable copy.`)) return;
       btnEl.disabled = true;
       try {
-        const res = await authedFetch(`${TYPE_PATHS[type].base}/${id}/fork`, { method:'POST' });
+        const res = await authedFetch(`${TYPE_PATHS[type].base}/${id}/fork`, { method:'POST', ...(body ? { body } : {}) });
         if (!res.ok) {
           const err = await res.json().catch(()=>({}));
           await uiAlert(err.error || 'Could not fork.');
@@ -800,5 +806,7 @@
     preloadCounts();
     load();
   </script>
+  <script src="fork-dialog.js"></script>
+  <script src="notifications.js"></script>
 </body>
 </html>

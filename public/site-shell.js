@@ -35,13 +35,14 @@
           <div class="sidebar-section-title">Community</div>
           <nav class="sidebar-nav">
             <a class="sidebar-item" data-key="repository" href="repository.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span></a>
-            <a class="sidebar-item" data-key="issues" href="issues.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span></a>
+            <a class="sidebar-item" data-key="issues" href="issues.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Report a bug or idea</span></a>
           </nav>
           <div class="sidebar-section-title">Help</div>
           <nav class="sidebar-nav">
             <button class="sidebar-item" onclick="openInfoModal()"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8.1 8.1a2 2 0 1 1 2.7 1.9c-.5.2-.8.6-.8 1.1v.4M10 13.9h.01"/></svg></span><span class="sidebar-item-label">How to use AIOrc</span></button>
             <a class="sidebar-item" data-key="docs" href="faq.html"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span></a>
       <a class="sidebar-item" data-key="benchmarks" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
+      <a class="sidebar-item" data-key="compare" href="compare.html" title="How AIOrc compares"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v14M4 6h12"/><path d="M4 6 2 11a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/></svg></span><span class="sidebar-item-label">Compare</span></a>
           </nav>
           <div class="sidebar-footer">
             <div class="sidebar-user" style="font-weight:600">${userNickname ? '@' + esc(userNickname) : esc(userEmail)}</div>
@@ -56,7 +57,9 @@
   const PUBLIC_LINKS = [
     ['docs', 'faq.html', 'Documentation'],
     ['benchmarks', 'benchmarks.html', 'Benchmarks'],
+    ['compare', 'compare.html', 'Compare'],
     ['repository', 'repository.html', 'Public repository'],
+    ['issues', 'issues.html', 'Report a bug or idea'],
     ['about', 'index.html#origen', 'About'],
   ];
   function publicNavHTML(active) {
@@ -93,7 +96,7 @@
     if (!el) return false;
     const active = el.getAttribute('data-active') || '';
     const signedIn = !!localStorage.getItem('token');
-    if (signedIn) { document.body.classList.add('has-sidebar'); el.outerHTML = sidebarHTML(active); wireSidebar(); }
+    if (signedIn) { document.body.classList.add('has-sidebar'); el.outerHTML = sidebarHTML(active); wireSidebar(); window.AIOrcNotifications?.attach(); }
     else { el.outerHTML = publicNavHTML(active); }
     return signedIn;
   }

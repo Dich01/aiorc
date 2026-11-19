@@ -23,7 +23,7 @@ export interface ExportPayload {
   review: { repo: string | null; base_sha: string | null; head_sha: string | null; pr_number: number | null; diff_sha256: string | null };
   input: unknown;
   input_sha256: string;
-  manifest: { flow_sha256: string; entities: { kind: string; id: string; name: string; sha256: string }[] };
+  manifest: { flow_sha256: string; entities: { kind: string; id: string; name: string; sha256: string; version?: number }[] };
   steps: { step: number; node: string; agent: string; sha256: string; output: unknown }[];
   self_declared_report: unknown;   // compiled runs only: the model's own report, NOT verified; null otherwise
   events: RunEvent[];

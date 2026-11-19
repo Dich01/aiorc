@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "required": ["checks", "weakening"],
+  "properties": {
+    "checks": {
+      "type": "object",
+      "required": ["configured", "passed", "failed_check", "results", "state", "marker_written", "profile_loaded", "script"],
+      "properties": {
+        "configured": { "type": "boolean" },
+        "passed": { "type": "boolean" },
+        "failed_check": { "type": ["string", "null"] },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "command", "required", "status", "exit_code"],
+            "properties": { "status": { "enum": ["passed", "failed", "unavailable", "timeout", "skipped", "not-run"] } }
+          }
+        },
+        "state": { "type": "object", "required": ["head_sha", "worktree_tree", "dirty"] },
+        "marker_written": { "type": "boolean" },
+        "profile_loaded": { "type": "boolean" },
+        "script": { "$include": "../../schemas/script.schema.json" }
+      },
+      "additionalProperties": false
+    },
+    "weakening": {
+      "type": "object",
+      "required": ["weakened", "items", "assertions", "base_sha", "head_sha", "script"],
+      "properties": {
+        "weakened": { "type": "boolean" },
+        "items": { "type": "array" },
+        "assertions": { "type": "object" },
+        "base_sha": { "type": "string" },
+        "head_sha": { "type": "string" },
+        "script": { "$include": "../../schemas/script.schema.json" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

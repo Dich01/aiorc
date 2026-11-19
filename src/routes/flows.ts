@@ -3,6 +3,7 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Project, ProjectFlow } from '../db/schema';
 import { normalizeFlow, validateProjectFlow } from '../orchestrator';
+import { recordVersion } from '../lib/versions';
 
 const router = Router({ mergeParams: true });
 
@@ -69,7 +70,8 @@ router.put('/', requireAuth, (req: AuthRequest, res: Response): void => {
     db.prepare('INSERT INTO project_flows (project_id, flow_json, updated_at) VALUES (?, ?, ?)').run(project.id, flowJson, now);
   }
 
-  res.json({ project_id: project.id, flow, updated_at: now });
+  const version = recordVersion('project', project.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
+  res.json({ project_id: project.id, flow, updated_at: now, version });
 });
 
 export default router;

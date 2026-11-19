@@ -23,6 +23,7 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 - **Server-orchestrated execution** (the default): the server hands the model **one step at a time**. Each agent declares an output schema; a step counts as completed only when its output validates. Rule edges are evaluated by the server on that output; natural-language edges are chosen by exact edge id. Invocation caps, fork joins and step numbers are enforced, and a run only completes at an End node. Projects that need speed over guarantees can switch to **model-orchestrated mode**: the whole flow in one response, finished with a self-declared report that is labelled as such everywhere.
 - **Usage analytics**: live dashboards of which agents, skills, projects and contexts actually complete steps, and who runs them.
 - **Evals**: test cases per flow, graded from the run's event chain: the exact End reached, the agents that completed a step, and field-by-field matches on the final findings. The model never grades its own work.
+- **Versions and updates**: every agent, skill, context and project keeps its history (compare, restore), each run records the versions it used, forks are told when their original changes and update in one step, and people a project is shared with are notified of changes.
 - **Harnesses as files**: a whole review setup (agents, skills, contexts, flows, evals) lives in a directory, is validated by the server's own validators and applied with one command, so changes go through pull requests.
 - **Admin panel**: platform KPIs, adoption funnel, per-user activity, top projects, community engagement and system health.
 
@@ -42,6 +43,7 @@ When a company adopts AI seriously, prompts and agents scatter across repos, not
 | Usage analytics | Live chart (1m to all-time ranges), breakdowns by agent/project/skill/context, per-user attribution, run detail with every step and output |
 | Admin panel | Users, KPIs, adoption funnel, signups, top projects, community and system health (admin role only) |
 | Community layer | Stars, forks, invitations, issues with voting — an internal app store for your company's agents |
+| Versions and notifications | History per agent/skill/context/project with compare and restore; forks linked to their original and updated in one step, keeping their own contexts and files; contexts private unless shared on publish; in-app notifications for changes, invitations, forks, failed runs and issues |
 
 ## How it compares
 
@@ -176,6 +178,11 @@ against it, and checks the Ed25519 signature.
 - `harnesses/code-review/`: reference harness with two projects,
   `code-review-pre-pr` and `code-review-post-pr`. Prompts are skeletons; the
   structure (schemas, rules, fork, verifier, evals) is complete.
+- `harnesses/ready-for-pr/`: language-agnostic local harness that leaves a
+  change ready for its pull request (fixed-rule risk, the repository's checks,
+  weakening detector, parallel reviewers, verifier, capped fix loop,
+  explanation). Fork it per repository and attach that repository's profile.
+  See [its README](harnesses/ready-for-pr/README.md).
 - `runners/`: the pre-PR script and hook, and the GitHub Actions template.
   See [runners/README.md](runners/README.md).
 

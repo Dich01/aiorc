@@ -312,14 +312,19 @@ router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
      GROUP BY s.id ORDER BY invocations DESC, s.name ASC`
   ).all(...entityArgs([]).concat(isAdmin ? [] : [req.userId!]));
 
+  // A context reaches a run through its project (whole flow) or through an
+  // agent that carries it and completed a step there.
   const contextsStats = db.prepare(
     `SELECT c.id, c.name,
-            COUNT(DISTINCT pc.project_id) AS projects_linked,
-            COUNT(r.id) AS runs_included,
+            (SELECT COUNT(*) FROM project_contexts pc WHERE pc.context_id = c.id) AS projects_linked,
+            (SELECT COUNT(*) FROM agent_contexts ac WHERE ac.context_id = c.id) AS agents_carrying,
+            COUNT(DISTINCT r.id) AS runs_included,
             MAX(r.created_at) AS last_used
      FROM contexts c
-     LEFT JOIN project_contexts pc ON pc.context_id = c.id
-     LEFT JOIN runs r ON r.project_id = pc.project_id
+     LEFT JOIN (SELECT pc.context_id AS cid, r0.id AS rid FROM project_contexts pc JOIN runs r0 ON r0.project_id = pc.project_id
+        UNION
+        SELECT ac.context_id, u0.run_id FROM agent_contexts ac JOIN agent_usage u0 ON u0.agent_id = ac.agent_id AND u0.source != 'planned') cr ON cr.cid = c.id
+     LEFT JOIN runs r ON r.id = cr.rid
        ${projectFilterJoin} ${sinceFilterRuns}
      ${isAdmin ? '' : 'WHERE c.user_id = ?'}
      GROUP BY c.id ORDER BY runs_included DESC, c.name ASC`
@@ -431,10 +436,12 @@ router.get('/timeseries', requireAuth, (req: AuthRequest, res: Response): void =
                JOIN skills s ON s.id = ask.skill_id
                JOIN runs r ON r.id = u.run_id JOIN projects p ON p.id = u.project_id
                ${whereSql} AND u.source != 'planned' GROUP BY bucket, s.name`,
-      contexts: `SELECT ${bucketOf('r.created_at')} AS bucket, c.name AS name, COUNT(*) AS value
-                 FROM runs r
-                 JOIN project_contexts pc ON pc.project_id = r.project_id
-                 JOIN contexts c ON c.id = pc.context_id
+      contexts: `SELECT ${bucketOf('r.created_at')} AS bucket, c.name AS name, COUNT(DISTINCT r.id) AS value
+                 FROM (SELECT pc.context_id AS cid, r0.id AS rid FROM project_contexts pc JOIN runs r0 ON r0.project_id = pc.project_id
+        UNION
+        SELECT ac.context_id, u0.run_id FROM agent_contexts ac JOIN agent_usage u0 ON u0.agent_id = ac.agent_id AND u0.source != 'planned') cr
+                 JOIN runs r ON r.id = cr.rid
+                 JOIN contexts c ON c.id = cr.cid
                  JOIN projects p ON p.id = r.project_id
                  ${whereSql} GROUP BY bucket, c.name`,
     };

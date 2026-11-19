@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["round", "blocking", "blocking_ids", "findings", "dropped", "counts", "script"],
+  "properties": {
+    "round": { "type": "integer", "minimum": 1 },
+    "blocking": { "type": "boolean" },
+    "blocking_ids": { "type": "array", "items": { "type": "string" } },
+    "findings": { "type": "array", "maxItems": 200, "items": { "$include": "../../schemas/finding.schema.json" } },
+    "dropped": { "type": "array" },
+    "counts": { "type": "object" },
+    "script": { "$include": "../../schemas/script.schema.json" }
+  },
+  "additionalProperties": false
+}

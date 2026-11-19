@@ -29,14 +29,14 @@ import NodeConfigModal, { type NodeConfigMode } from './popover/NodeConfigModal'
 import ValidationModal from './popover/ValidationModal';
 
 import {
-  fetchFlow, saveFlow, fetchProjectAgents, fetchProjectSkills,
-  attachSkillToAgent, detachSkillFromAgent
+  fetchFlow, saveFlow, fetchProjectAgents, fetchProjectSkills, fetchAvailableContexts,
+  attachSkillToAgent, detachSkillFromAgent, attachContextToAgent, detachContextFromAgent
 } from './api';
 import { toReactFlow, toBackend } from './conversion';
 import { validateFlow } from '../../src/shared/flow';
 import type { AgentInfo, FlowDocument } from '../../src/shared/flow';
 import type {
-  AgentSummary, SkillSummary, AnyNodeData, AgentNodeData, EndNodeData, ParallelNodeData, EdgeData
+  AgentSummary, SkillSummary, ContextSummary, AnyNodeData, AgentNodeData, EndNodeData, ParallelNodeData, EdgeData
 } from './types';
 
 const nodeTypes = {
@@ -59,6 +59,7 @@ function FlowEditorInner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<EdgeData>>([]);
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [contexts, setContexts] = useState<ContextSummary[]>([]);
   const [saving, setSaving] = useState(false);
   const [paletteVisible, setPaletteVisible] = useState(true);
   const [skillsVisible, setSkillsVisible] = useState(true);
@@ -76,6 +77,11 @@ function FlowEditorInner() {
   const handleShowSkillContent = useCallback((skillId: string, skillName: string) => {
     const w = window as Window & { showSkillContent?: (id: string, name: string) => void };
     if (typeof w.showSkillContent === 'function') w.showSkillContent(skillId, skillName);
+  }, []);
+
+  const handleShowContextContent = useCallback((contextId: string, contextName: string) => {
+    const w = window as Window & { showContextContent?: (id: string, name: string) => void };
+    if (typeof w.showContextContent === 'function') w.showContextContent(contextId, contextName);
   }, []);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
@@ -128,6 +134,16 @@ function FlowEditorInner() {
     setAgents(newAgents);
   }, []);
 
+  const handleDropContextOnAgent = useCallback(async (agentId: string, contextId: string) => {
+    await attachContextToAgent(agentId, contextId);
+    setAgents(await fetchProjectAgents());
+  }, []);
+
+  const handleRemoveContextFromAgent = useCallback(async (agentId: string, contextId: string) => {
+    await detachContextFromAgent(agentId, contextId);
+    setAgents(await fetchProjectAgents());
+  }, []);
+
   const handleEditEdge = useCallback((edgeId: string) => {
     setEdges((prev) => {
       const e = prev.find((x) => x.id === edgeId);
@@ -146,14 +162,20 @@ function FlowEditorInner() {
           const resolvedSkills: SkillSummary[] = (agent?.skills ?? []).map((s) => ({
             id: s.id, name: s.name, description: s.description,
           }));
+          const resolvedContexts: ContextSummary[] = (agent?.contexts ?? []).map((c) => ({
+            id: c.id, name: c.name, description: c.description,
+          }));
           return {
             ...n,
             data: {
               ...d,
               agentName: agent?.name || d.agentName,
               skills: resolvedSkills,
+              contexts: resolvedContexts,
               onDropSkill: handleDropSkillOnAgent,
               onRemoveSkill: handleRemoveSkillFromAgent,
+              onDropContext: handleDropContextOnAgent,
+              onRemoveContext: handleRemoveContextFromAgent,
               onShowContent: handleShowAgentContent,
               onDeleteNode: handleDeleteNode,
               onEditMaxInvocations: handleEditMaxInvocations,
@@ -178,7 +200,7 @@ function FlowEditorInner() {
         return n;
       })
     );
-  }, [agents, setNodes, handleDropSkillOnAgent, handleRemoveSkillFromAgent, handleShowAgentContent, handleDeleteNode, handleEditMaxInvocations, handleEditEndOutcome, handleEditParallelLabel]);
+  }, [agents, setNodes, handleDropSkillOnAgent, handleRemoveSkillFromAgent, handleDropContextOnAgent, handleRemoveContextFromAgent, handleShowAgentContent, handleDeleteNode, handleEditMaxInvocations, handleEditEndOutcome, handleEditParallelLabel]);
 
   useEffect(() => {
     setEdges((prev) =>
@@ -192,10 +214,11 @@ function FlowEditorInner() {
 
   // Initial load
   useEffect(() => {
-    Promise.all([fetchFlow(), fetchProjectAgents(), fetchProjectSkills()]).then(
-      ([flow, agentList, skillList]) => {
+    Promise.all([fetchFlow(), fetchProjectAgents(), fetchProjectSkills(), fetchAvailableContexts()]).then(
+      ([flow, agentList, skillList, contextList]) => {
         setAgents(agentList);
         setSkills(skillList);
+        setContexts(contextList);
         const { nodes: rfNodes, edges: rfEdges } = toReactFlow(flow.nodes, flow.edges);
         setNodes(rfNodes);
         setEdges(rfEdges);
@@ -238,8 +261,11 @@ function FlowEditorInner() {
           agentName: fullAgent.name,
           maxInvocations: 10,
           skills: skillsForAgent,
+          contexts: (fullAgent.contexts ?? []).map((c) => ({ id: c.id, name: c.name, description: c.description })),
           onDropSkill: handleDropSkillOnAgent,
           onRemoveSkill: handleRemoveSkillFromAgent,
+          onDropContext: handleDropContextOnAgent,
+          onRemoveContext: handleRemoveContextFromAgent,
           onShowContent: handleShowAgentContent,
           onDeleteNode: handleDeleteNode,
           onEditMaxInvocations: handleEditMaxInvocations,
@@ -247,7 +273,7 @@ function FlowEditorInner() {
       };
       setNodes((ns) => [...ns, newNode]);
     },
-    [screenToFlowPosition, agents, setNodes, handleDropSkillOnAgent, handleRemoveSkillFromAgent, handleShowAgentContent, handleDeleteNode, handleEditMaxInvocations]
+    [screenToFlowPosition, agents, setNodes, handleDropSkillOnAgent, handleRemoveSkillFromAgent, handleDropContextOnAgent, handleRemoveContextFromAgent, handleShowAgentContent, handleDeleteNode, handleEditMaxInvocations]
   );
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -421,9 +447,11 @@ function FlowEditorInner() {
         {skillsVisible && (
           <SkillsPanel
             skills={skills}
+            contexts={contexts}
             visible={skillsVisible}
             onToggle={() => setSkillsVisible(false)}
-            onShowContent={handleShowSkillContent}
+            onShowSkill={handleShowSkillContent}
+            onShowContext={handleShowContextContent}
           />
         )}
       </div>

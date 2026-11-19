@@ -252,8 +252,8 @@
       <a class="sidebar-item" href="repository.html" title="Public repository">
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c1.9 2.1 2.7 4.4 2.7 7s-.8 4.9-2.7 7c-1.9-2.1-2.7-4.4-2.7-7S8.1 5.1 10 3z"/></svg></span><span class="sidebar-item-label">Public repository</span>
       </a>
-      <a class="sidebar-item" href="issues.html" title="Issues">
-        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Issues</span>
+      <a class="sidebar-item" href="issues.html" title="Report a bug or idea">
+        <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg></span><span class="sidebar-item-label">Report a bug or idea</span>
       </a>
     </nav>
 
@@ -266,6 +266,7 @@
         <span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.8h6.5L15 6.3v10.9H5z"/><path d="M11.5 2.8v3.5H15M7.6 10h4.8M7.6 13h4.8"/></svg></span><span class="sidebar-item-label">Documentation</span>
       </a>
       <a class="sidebar-item" href="benchmarks.html" title="Benchmarks"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5h13"/><path d="M5.5 16.5V11M10 16.5V6M14.5 16.5V8.5"/></svg></span><span class="sidebar-item-label">Benchmarks</span></a>
+      <a class="sidebar-item" href="compare.html" title="How AIOrc compares"><span class="sidebar-item-glyph"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v14M4 6h12"/><path d="M4 6 2 11a2.5 2.5 0 0 0 4 0zM16 6l-2 5a2.5 2.5 0 0 0 4 0z"/></svg></span><span class="sidebar-item-label">Compare</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -325,9 +326,12 @@
         <div class="page-header">
           <div class="page-header-text">
             <h1>Contexts</h1>
-            <span class="page-subtitle">Documentation and business know-how that applies to the whole flow. When attaching to a project, you decide whether it travels with future forks.</span>
+            <span class="page-subtitle">Documentation and business know-how, one document per context. Attach it to a project and every agent of the flow receives it; drag it onto an agent in the flow editor and only that agent receives it.</span>
           </div>
-          <button class="btn btn-primary" onclick="openContextModal(null)">+ New context</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="importContextFiles()" title="Create one context per Markdown file">Import .md files</button>
+            <button class="btn btn-primary" onclick="openContextModal(null)">+ New context</button>
+          </div>
         </div>
         <div id="contexts-error" class="alert alert-error hidden"></div>
         <input type="text" id="search-contexts" class="tab-search" placeholder="Search contexts by name, description or tags…" autocomplete="off" />
@@ -536,7 +540,7 @@
       </div>
       <div class="form-group">
         <label>Files</label>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">CONTEXT.md holds the main documentation and is always loaded. Add more files to split it up (e.g. glossary.md). Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin:0 0 8px">A context is one document. Upload your file (for example <code>architecture.md</code>): it becomes the main document and, if they are empty, it fills the name and the description. You can add more files to the same context. Everything in it is delivered to whoever receives the context. Non-Markdown files (scripts, configs) are withheld unless the project enables executable files.</p>
         <div id="context-files-list" class="skill-files-list"></div>
         <div id="context-files-drop" class="files-dropzone">
           <span class="files-dropzone-inner"><svg class="i" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5V4M6 8l4-4 4 4M4 16.5h12"/></svg> Drop files here or <span class="files-dropzone-link">click to upload</span></span>
@@ -716,7 +720,7 @@ Never skip steps or modify them with your own judgment.</div>
           a teammate built, you had to ask for the files, copy them by hand into your repo and hope your
           Claude followed them the same way. Here that disappears: agents, skills and flows live in one
           place, your AI connects with a token, and if someone improves a crew, everyone running that project gets
-          the improvement on their next run (forks are independent copies).
+          the improvement on their next run. A fork is your own copy: when the original improves you are notified and can take the update in one step.
         </p>
         <p style="margin-bottom:10px">
           <strong>The second: agents don't follow the flows.</strong> They skip steps, invent their own
@@ -742,7 +746,7 @@ Never skip steps or modify them with your own judgment.</div>
         </div>
         <p style="font-size:0.82rem;color:var(--muted);margin-top:12px">
           This is an evolving prototype: what helps me most is that you use it, break it and tell me about it.
-          Any blocker or idea, file it in <a href="issues.html">Issues</a> — early feedback is what decides
+          Any blocker or idea, file it in <a href="issues.html">Report a bug or idea</a> — early feedback is what decides
           where this goes.
         </p>
         <p style="font-size:0.86rem;margin-top:14px">
@@ -1091,6 +1095,7 @@ Never skip steps or modify them with your own judgment.</div>
             ${skillBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openAgentModal('${a.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=agent&id=${encodeURIComponent(a.id)}" title="Versions of this agent">History</a>
               <button class="btn btn-sm btn-ghost" onclick="deleteAgent('${a.id}',${escHtml(JSON.stringify(String(a.name ?? '')))})">Delete</button>
             </div>
           </div>`;
@@ -1361,6 +1366,7 @@ Never skip steps or modify them with your own judgment.</div>
             ${filesBadge}
             <div class="item-card-footer">
               <button class="btn btn-sm btn-primary" onclick="openSkillModal('${s.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=skill&id=${encodeURIComponent(s.id)}" title="Versions of this skill">History</a>
               <button class="btn btn-sm btn-ghost" onclick="deleteSkill('${s.id}',${escHtml(JSON.stringify(String(s.name ?? '')))})">Delete</button>
             </div>
           </div>
@@ -1413,7 +1419,7 @@ Never skip steps or modify them with your own judgment.</div>
         host.innerHTML = files.map((f, idx) => {
           const isEntry = !!f.is_entry;
           const isOpen  = idx === openIdx;
-          const tag = isEntry ? '<span class="skill-file-tag">entry · always loaded</span>' : '';
+          const tag = isEntry ? `<span class="skill-file-tag">${opts.entryLabel || 'entry · always loaded'}</span>` : '';
           const removeBtn = isEntry ? '' : `<button type="button" class="skill-file-remove" title="Remove file" onclick="event.stopPropagation();FILE_EDITORS['${key}'].removeFile(${idx})">×</button>`;
           const descPreview = !isOpen && f.description ? `<span class="skill-file-desc-preview">${escHtml(f.description)}</span>` : '';
           return `
@@ -1487,6 +1493,15 @@ Never skip steps or modify them with your own judgment.</div>
             if (e) { e.content = content; openIdx = files.indexOf(e); }
             continue;
           }
+          // Contexts: the first document uploaded into an empty context becomes
+          // its main document, instead of a second file next to an empty one.
+          const entry = files.find(f => f.is_entry);
+          if (opts.adoptUpload && entry && !entry.content.trim() && /\.(md|markdown|txt)$/i.test(name)) {
+            entry.content = content;
+            openIdx = files.indexOf(entry);
+            opts.adoptUpload(file.name, content);
+            continue;
+          }
           if (!ENTITY_FILE_RE.test(name)) { await uiAlert(`"${file.name}" has an unsupported name. Use letters, digits, ".", "_", "-" and a file extension.`); continue; }
           const ex = files.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
           if (ex >= 0) { files[ex].content = content; openIdx = ex; }
@@ -1512,7 +1527,15 @@ Never skip steps or modify them with your own judgment.</div>
 
     createFileEditor('skill',   { listId: 'skill-files-list',   dropId: 'skill-files-drop',   entryName: 'SKILL.md' });
     createFileEditor('agent',   { listId: 'agent-files-list',   dropId: 'agent-files-drop',   entryName: 'AGENT.md' });
-    createFileEditor('context', { listId: 'context-files-list', dropId: 'context-files-drop', entryName: 'CONTEXT.md' });
+    createFileEditor('context', {
+      listId: 'context-files-list', dropId: 'context-files-drop', entryName: 'CONTEXT.md', entryLabel: 'main document',
+      adoptUpload: (fileName, content) => {
+        const nameEl = document.getElementById('context-name');
+        const descEl = document.getElementById('context-desc');
+        if (!nameEl.value.trim()) nameEl.value = contextNameFromFile(fileName);
+        if (!descEl.value.trim()) descEl.value = contextDescriptionFrom(content, fileName);
+      },
+    });
 
     async function openSkillModal(id) {
       currentSkillId = id || null;
@@ -1683,9 +1706,11 @@ Never skip steps or modify them with your own judgment.</div>
       grid.innerHTML = items.map(c => {
           const atts = c.project_attachments || [];
           const shareCount = atts.filter(a => a.share_on_fork).length;
-          const summary = atts.length
-            ? `${atts.length} project${atts.length === 1 ? '' : 's'} · ${shareCount} travel${shareCount === 1 ? 's' : ''} on fork`
-            : 'Not attached';
+          const agentCount = (c.agent_ids || []).length;
+          const parts = [];
+          if (atts.length) parts.push(`${atts.length} project${atts.length === 1 ? '' : 's'} · ${shareCount} travel${shareCount === 1 ? 's' : ''} on fork`);
+          if (agentCount) parts.push(`${agentCount} agent${agentCount === 1 ? '' : 's'}`);
+          const summary = parts.length ? parts.join(' · ') : 'Not attached';
           return `
             <div class="item-card">
               <div class="item-card-name">${escHtml(c.name)}</div>
@@ -1694,6 +1719,7 @@ Never skip steps or modify them with your own judgment.</div>
               <div style="font-size:0.74rem;color:var(--muted);margin-top:6px">${summary}</div>
               <div class="item-card-footer">
                 <button class="btn btn-sm btn-primary" onclick="openContextModal('${c.id}')">Edit</button>
+              <a class="btn btn-sm btn-ghost" href="history.html?kind=context&id=${encodeURIComponent(c.id)}" title="Versions of this context">History</a>
                 <button class="btn btn-sm btn-ghost" onclick="deleteContext('${c.id}',${escHtml(JSON.stringify(String(c.name ?? '')))})">Delete</button>
               </div>
             </div>
@@ -1844,6 +1870,49 @@ Never skip steps or modify them with your own judgment.</div>
       if (res.ok) loadContextInvitations(currentContextId);
       else await uiAlert('Could not revoke.');
     };
+    // "architecture.md" -> "architecture"
+    function contextNameFromFile(fileName) {
+      return String(fileName).replace(/\.(md|markdown|txt)$/i, '').trim().replace(/\s+/g, '-').slice(0, 100) || 'context';
+    }
+    // The first Markdown heading, or else the first line of text.
+    function contextDescriptionFrom(content, fileName) {
+      const lines = String(content).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const heading = lines.find(l => /^#{1,3}\s+\S/.test(l));
+      const text = (heading || lines[0] || '').replace(/^#+\s*/, '').replace(/[*_`]/g, '').trim();
+      return (text || `Imported from ${fileName}`).slice(0, 200);
+    }
+
+    // One context per Markdown file. A name that already exists is skipped, never overwritten.
+    function importContextFiles() {
+      const input = document.createElement('input');
+      input.type = 'file'; input.multiple = true; input.accept = '.md,.markdown,.txt,text/markdown,text/plain';
+      input.addEventListener('change', async () => {
+        const existing = new Set(allContextsCache.map(c => c.name.toLowerCase()));
+        const created = [], skipped = [], failed = [];
+        for (const file of Array.from(input.files || [])) {
+          const content = await new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(String(e.target.result || '')); r.readAsText(file); });
+          const name = contextNameFromFile(file.name);
+          if (!content.trim()) { failed.push(`${file.name} (empty)`); continue; }
+          if (existing.has(name.toLowerCase())) { skipped.push(name); continue; }
+          try {
+            const res = await authFetch('/contexts', { method: 'POST', body: JSON.stringify({
+              name, description: contextDescriptionFrom(content, file.name),
+              files: [{ name: 'CONTEXT.md', description: `Imported from ${file.name}`, content, is_entry: true }],
+            }) });
+            if (res.ok) { created.push(name); existing.add(name.toLowerCase()); }
+            else failed.push(`${file.name} (${((await res.json().catch(() => ({}))).error) || res.status})`);
+          } catch { failed.push(`${file.name} (network error)`); }
+        }
+        await loadContexts();
+        const parts = [];
+        if (created.length) parts.push(`Created ${created.length}: ${created.join(', ')}.`);
+        if (skipped.length) parts.push(`Already existed, left unchanged: ${skipped.join(', ')}.`);
+        if (failed.length) parts.push(`Not imported: ${failed.join(', ')}.`);
+        if (parts.length) await uiAlert(parts.join('\n\n') + (created.length ? '\n\nAttach them to a project, or drag them onto agents in the flow editor.' : ''));
+      });
+      input.click();
+    }
+
     async function saveContext() {
       const name = document.getElementById('context-name').value.trim();
       const description = document.getElementById('context-desc').value.trim();
@@ -1854,7 +1923,7 @@ Never skip steps or modify them with your own judgment.</div>
       if (!description) { errEl.textContent = 'Description is required.'; errEl.classList.remove('hidden'); return; }
       const ctxFiles = FILE_EDITORS.context.getFiles();
       const entry = ctxFiles.find(f => f.is_entry);
-      if (!entry || !entry.content.trim()) { errEl.textContent = 'CONTEXT.md content is required.'; errEl.classList.remove('hidden'); return; }
+      if (!entry || !entry.content.trim()) { errEl.textContent = 'The main document is empty: upload your file or write its content.'; errEl.classList.remove('hidden'); return; }
       const empty = ctxFiles.find(f => !f.content.trim());
       if (empty) { errEl.textContent = `File "${empty.name}" is empty. Add content or remove it.`; errEl.classList.remove('hidden'); return; }
       errEl.classList.add('hidden');
@@ -1934,11 +2003,12 @@ Never skip steps or modify them with your own judgment.</div>
 
     const TYPE_LABEL_SINGULAR = { project:'Project', agent:'Agent', skill:'Skill' };
     const TYPE_LABEL_PLURAL   = { project:'Projects', agent:'Agents', skill:'Skills' };
-    const TYPE_BASE = { project:'/projects', agent:'/agents', skill:'/skills' };
+    const TYPE_BASE = { project:'/projects', agent:'/agents', skill:'/skills', context:'/contexts' };
     const TYPE_AFTER = {
       project: id => `project.html?id=${encodeURIComponent(id)}`,
       agent:   () => `dashboard.html?tab=agents`,
       skill:   () => `dashboard.html?tab=skills`,
+      context: () => `dashboard.html?tab=contexts`,
     };
 
     async function loadTeam() {
@@ -2095,8 +2165,14 @@ Never skip steps or modify them with your own judgment.</div>
       const list = inRes.ok ? await inRes.json() : [];
       const inv = list.find(i => i.id === invId && i.type === type);
       if (!inv) { await uiAlert('Invitation not found.'); return; }
-      const targetId = inv.project_id || inv.agent_id || inv.skill_id;
-      const res = await authFetch(`${TYPE_BASE[type]}/${targetId}/fork`, { method:'POST' });
+      const targetId = inv.project_id || inv.agent_id || inv.skill_id || inv.context_id;
+      let body;
+      if (type === 'project') {
+        const choice = await AIOrcForkDialog.confirmProjectFork(targetId, localStorage.getItem('token'));
+        if (!choice) return;
+        body = JSON.stringify(choice);
+      }
+      const res = await authFetch(`${TYPE_BASE[type]}/${targetId}/fork`, { method:'POST', ...(body ? { body } : {}) });
       if (!res.ok) {
         const err = await res.json().catch(()=>({}));
         await uiAlert(err.error || 'Could not fork.');
@@ -2125,5 +2201,7 @@ Never skip steps or modify them with your own judgment.</div>
     loadSkills();
     refreshTeamBadge();
   </script>
+  <script src="fork-dialog.js"></script>
+  <script src="notifications.js"></script>
 </body>
 </html>
