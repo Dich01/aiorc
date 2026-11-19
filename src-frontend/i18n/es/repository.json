@@ -1,0 +1,154 @@
+{
+  "text": {
+    "AIOrc — Public repository": "AIOrc — Repositorio público",
+    "AIOrc Community": "Comunidad AIOrc",
+    "Explore projects, agents, skills and contexts that other users have made public. Fork what's useful: you get your own copy to change without affecting the original, and when the original improves you are told and can take the update in one step. Contexts are copied only when their owner shares them.": "Explora proyectos, agentes, skills y contextos que otros usuarios hicieron públicos. Haz un fork de lo que te sirva: obtienes tu propia copia para cambiarla sin afectar el original y, cuando el original mejora, se te avisa y puedes aplicar la actualización en un solo paso. Los contextos solo se copian cuando su propietario los comparte.",
+    "Search…": "Buscar…",
+    "Search projects…": "Buscar proyectos…",
+    "Search agents…": "Buscar agentes…",
+    "Search skills…": "Buscar skills…",
+    "Search contexts…": "Buscar contextos…",
+    "Most popular": "Más populares",
+    "Most forks": "Más forks",
+    "Most used (▶)": "Más usados (▶)",
+    "Project ID copied": "ID del proyecto copiado",
+    "Public agent": "Agente público",
+    "Public context": "Contexto público",
+    "Public skill": "Skill pública",
+    "Public project": "Proyecto público",
+    "Log in and fork this agent to see its full content. The name and description are available in the public list; the agent body stays private until you copy it to your workspace.": "Inicia sesión y haz un fork de este agente para ver su contenido completo. El nombre y la descripción están disponibles en la lista pública; el cuerpo del agente se mantiene privado hasta que lo copies a tu espacio de trabajo.",
+    "Log in and fork this context to see its full content. The body stays private until you copy it to your workspace.": "Inicia sesión y haz un fork de este contexto para ver su contenido completo. El cuerpo se mantiene privado hasta que lo copies a tu espacio de trabajo.",
+    "Log in and fork this skill to see its full content. The skill body stays private until you copy it to your workspace.": "Inicia sesión y haz un fork de esta skill para ver su contenido completo. El cuerpo de la skill se mantiene privado hasta que la copies a tu espacio de trabajo.",
+    "no associated skills": "sin skills asociadas",
+    "Content": "Contenido",
+    "(no content)": "(sin contenido)",
+    "entry": "principal",
+    "To see the full agents, skills and flow, fork this project to your workspace.": "Para ver completos los agentes, las skills y el flujo, haz un fork de este proyecto en tu espacio de trabajo.",
+    "This project has no description. Fork it to inspect it in your workspace.": "Este proyecto no tiene descripción. Haz un fork para revisarlo en tu espacio de trabajo.",
+    "Could not star.": "No se pudo marcar con estrella.",
+    "Fork this agent to your workspace? You'll get an editable copy.": "¿Hacer un fork de este agente en tu espacio de trabajo? Obtendrás una copia editable.",
+    "Fork this skill to your workspace? You'll get an editable copy.": "¿Hacer un fork de esta skill en tu espacio de trabajo? Obtendrás una copia editable.",
+    "Fork this context to your workspace? You'll get an editable copy.": "¿Hacer un fork de este contexto en tu espacio de trabajo? Obtendrás una copia editable.",
+    "Could not fork.": "No se pudo hacer el fork.",
+    "No flow configured": "Sin flujo configurado",
+    "unknown": "desconocido",
+    "by": "por",
+    "Log in to star": "Inicia sesión para dar una estrella",
+    "Log in to fork": "Inicia sesión para hacer un fork",
+    "No associated agents": "Sin agentes asociados",
+    "No associated skills": "Sin skills asociadas",
+    "Click to view description": "Haz clic para ver la descripción",
+    "Click to view content": "Haz clic para ver el contenido",
+    "With a personal token, this project ID lets any AIOrc user run the project (x-project-id + Authorization: Bearer aiorc_pat_...). Without a token it only lists the eval suite.": "Con un token personal, este ID de proyecto permite que cualquier usuario de AIOrc ejecute el proyecto (x-project-id + Authorization: Bearer aiorc_pat_...). Sin token, solo lista la suite de evaluación.",
+    "Copy MCP ID": "Copiar ID de MCP",
+    "The full skill content is included when forking.": "El contenido completo de la skill se incluye al hacer un fork.",
+    "Business documentation / know-how. Full content is included when forking.": "Documentación del negocio / know-how. El contenido completo se incluye al hacer un fork.",
+    "1 public project": "1 proyecto público",
+    "1 public agent": "1 agente público",
+    "1 public skill": "1 skill pública",
+    "1 public context": "1 contexto público",
+    "No public projects yet": "Todavía no hay proyectos públicos",
+    "No public agents yet": "Todavía no hay agentes públicos",
+    "No public skills yet": "Todavía no hay skills públicas",
+    "No public contexts yet": "Todavía no hay contextos públicos",
+    "No results": "Sin resultados",
+    "Try different search terms.": "Prueba con otros términos de búsqueda.",
+    "When users make their content public, you'll see it here.": "Cuando los usuarios hagan público su contenido, lo verás aquí.",
+    "Could not load data.": "No se pudieron cargar los datos."
+  },
+  "html": {},
+  "patterns": [
+    {
+      "re": "^by @(\\S+) · public · executed in (\\d+) run\\(s\\), (\\d+) invocation\\(s\\)$",
+      "es": "por @$1 · público · presente en $2 ejecución(es), $3 invocación(es)"
+    },
+    {
+      "re": "^by @(\\S+) · public · included in (\\d+) run\\(s\\)$",
+      "es": "por @$1 · público · incluido en $2 ejecución(es)"
+    },
+    {
+      "re": "^by @(\\S+) · public$",
+      "es": "por @$1 · público"
+    },
+    {
+      "re": "^by @(\\S+)$",
+      "es": "por @$1"
+    },
+    {
+      "re": "^by (\\S+@\\S+)$",
+      "es": "por $1"
+    },
+    {
+      "re": "^Public project · (\\d+) run\\(s\\), (\\d+) with execution report$",
+      "es": "Proyecto público · $1 ejecución(es), $2 con informe de ejecución"
+    },
+    {
+      "re": "^Could not load content: (.+)$",
+      "es": "No se pudo cargar el contenido: $1"
+    },
+    {
+      "re": "^Executed in (\\d+) run\\(s\\), (\\d+) invocation\\(s\\) total$",
+      "es": "Presente en $1 ejecución(es), $2 invocación(es) en total"
+    },
+    {
+      "re": "^(\\d+) run\\(s\\)$",
+      "es": "$1 ejecución(es)"
+    },
+    {
+      "re": "^Agents \\((\\d+)\\)$",
+      "es": "Agentes ($1)"
+    },
+    {
+      "re": "^Flow \\((\\d+) nodes\\)$",
+      "es": "Flujo ($1 nodos)"
+    },
+    {
+      "re": "^Included skills \\((\\d+)\\)$",
+      "es": "Skills incluidas ($1)"
+    },
+    {
+      "re": "^(\\d+) public projects for \"(.*)\"$",
+      "es": "$1 proyectos públicos para \"$2\""
+    },
+    {
+      "re": "^(\\d+) public projects$",
+      "es": "$1 proyectos públicos"
+    },
+    {
+      "re": "^(\\d+) public agents for \"(.*)\"$",
+      "es": "$1 agentes públicos para \"$2\""
+    },
+    {
+      "re": "^(\\d+) public agents$",
+      "es": "$1 agentes públicos"
+    },
+    {
+      "re": "^(\\d+) public skills for \"(.*)\"$",
+      "es": "$1 skills públicas para \"$2\""
+    },
+    {
+      "re": "^(\\d+) public skills$",
+      "es": "$1 skills públicas"
+    },
+    {
+      "re": "^(\\d+) public contexts for \"(.*)\"$",
+      "es": "$1 contextos públicos para \"$2\""
+    },
+    {
+      "re": "^(\\d+) public contexts$",
+      "es": "$1 contextos públicos"
+    },
+    {
+      "re": "^Fork this agent to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
+      "es": "Haz un fork de este agente para ver su contenido completo. Aquí solo pueden leerlo su propietario y las personas con quienes lo comparte."
+    },
+    {
+      "re": "^Fork this skill to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
+      "es": "Haz un fork de esta skill para ver su contenido completo. Aquí solo pueden leerla su propietario y las personas con quienes la comparte."
+    },
+    {
+      "re": "^Fork this context to see its full content\\. Only its owner and the people it is shared with can read it here\\.$",
+      "es": "Haz un fork de este contexto para ver su contenido completo. Aquí solo pueden leerlo su propietario y las personas con quienes lo comparte."
+    }
+  ]
+}

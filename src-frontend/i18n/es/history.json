@@ -1,0 +1,51 @@
+{
+  "text": {
+    "AIOrc — Version history": "AIOrc — Historial de versiones",
+    "Version history": "Historial de versiones",
+    "1 line added": "1 línea agregada",
+    "1 removed": "1 eliminada",
+    "View": "Vista",
+    "This is the first version": "Esta es la primera versión",
+    "Changes": "Cambios",
+    "Full content": "Contenido completo",
+    "against": "contra",
+    "Restore this version": "Restaurar esta versión",
+    "Restore": "Restaurar",
+    "Could not restore this version.": "No se pudo restaurar esta versión.",
+    "Not restored": "No se restauró",
+    "Nothing to show": "Nada que mostrar",
+    "No access": "Sin acceso",
+    "Not found": "No encontrado",
+    "Project · version history": "Proyecto · historial de versiones",
+    "Agent · version history": "Agente · historial de versiones",
+    "Skill · version history": "Skill · historial de versiones",
+    "Context · version history": "Contexto · historial de versiones",
+    "Versions": "Versiones",
+    "current": "actual"
+  },
+  "html": {
+    "<strong>No item selected</strong>Open the history from a project, agent, skill or context.": "<strong>No hay ningún elemento seleccionado</strong>Abre el historial desde un proyecto, agente, skill o contexto.",
+    "<strong>You cannot see this history</strong>The history is visible to the owner and to people the project is shared with.": "<strong>No puedes ver este historial</strong>El historial lo ven el propietario y las personas con las que se comparte el proyecto.",
+    "<strong>This item does not exist</strong>It may have been deleted.": "<strong>Este elemento no existe</strong>Puede que se haya eliminado.",
+    "<strong>No versions yet</strong>A version is saved every time this changes.": "<strong>Todavía no hay versiones</strong>Se guarda una versión cada vez que esto cambia."
+  },
+  "patterns": [
+    { "re": "^AIOrc — History of (.+)$", "es": "AIOrc — Historial de $1" },
+    { "re": "^Compared with v(\\d+):$", "es": "Comparada con v$1:" },
+    { "re": "^(\\d+) lines added$", "es": "$1 líneas agregadas" },
+    { "re": "^(\\d+) removed$", "es": "$1 eliminadas" },
+    { "re": "^No differences with v(\\d+)\\.$", "es": "Sin diferencias con v$1." },
+    { "re": "^Version (\\d+) \\(current\\)$", "es": "Versión $1 (actual)" },
+    { "re": "^Version (\\d+)$", "es": "Versión $1" },
+    { "re": "^system · (.+)$", "es": "sistema · $1" },
+    { "re": "^Restore version (\\d+)\\?$", "es": "¿Restaurar la versión $1?" },
+    { "re": "^The project goes back to what it was in version (\\d+)\\. This is saved as a new version, so nothing is lost and you can undo it the same way\\. Its flow and settings go back; visibility and attached contexts stay as they are\\.$", "es": "El proyecto vuelve a como estaba en la versión $1. Esto se guarda como una nueva versión, así que no se pierde nada y puedes deshacerlo de la misma forma. Su flujo y su configuración vuelven atrás; la visibilidad y los contextos adjuntos quedan como están." },
+    { "re": "^The agent goes back to what it was in version (\\d+)\\. This is saved as a new version, so nothing is lost and you can undo it the same way\\.$", "es": "El agente vuelve a como estaba en la versión $1. Esto se guarda como una nueva versión, así que no se pierde nada y puedes deshacerlo de la misma forma." },
+    { "re": "^The skill goes back to what it was in version (\\d+)\\. This is saved as a new version, so nothing is lost and you can undo it the same way\\.$", "es": "La skill vuelve a como estaba en la versión $1. Esto se guarda como una nueva versión, así que no se pierde nada y puedes deshacerlo de la misma forma." },
+    { "re": "^The context goes back to what it was in version (\\d+)\\. This is saved as a new version, so nothing is lost and you can undo it the same way\\.$", "es": "El contexto vuelve a como estaba en la versión $1. Esto se guarda como una nueva versión, así que no se pierde nada y puedes deshacerlo de la misma forma." },
+    { "re": "^1 version · owner (.+?) · you can view, only the owner can restore$", "es": "1 versión · propietario $1 · puedes verla; solo el propietario puede restaurar" },
+    { "re": "^1 version · owner (.+)$", "es": "1 versión · propietario $1" },
+    { "re": "^(\\d+) versions · owner (.+?) · you can view, only the owner can restore$", "es": "$1 versiones · propietario $2 · puedes verlas; solo el propietario puede restaurar" },
+    { "re": "^(\\d+) versions · owner (.+)$", "es": "$1 versiones · propietario $2" }
+  ]
+}

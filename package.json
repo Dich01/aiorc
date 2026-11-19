@@ -12,7 +12,8 @@
     "dev:flow": "vite build --watch",
     "admin:create": "ts-node --transpile-only src/scripts/adminCreate.ts",
     "audit:verify": "ts-node --transpile-only src/scripts/auditVerify.ts",
-    "harness:apply": "ts-node --transpile-only src/scripts/harnessApply.ts"
+    "harness:apply": "ts-node --transpile-only src/scripts/harnessApply.ts",
+    "build:i18n": "node src/scripts/buildI18n.js"
   },
   "dependencies": {
     "ajv": "^8.17.1",

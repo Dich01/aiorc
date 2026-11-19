@@ -46,4 +46,16 @@ so a menu change has to be repeated in those files too.
 - Rebuild after any change: `npm run build:flow`.
 - Used only by `project.html`.
 
+## Languages (English / Spanish)
+
+- Pages are written in English. `public/i18n.js` translates them in the browser; the EN | ES switch is added
+  to `.sidebar-footer`, `.site-nav-cta` and `.nav-cta`. The choice is kept in the `aiorc_lang` cookie.
+- Every page loads `<script src="/i18n/es.js"></script><script src="/i18n.js"></script>` first thing in `<head>`.
+  A new page needs those two tags too.
+- Spanish text lives in `src-frontend/i18n/es/*.json` (one file per page, plus `common.json` for the shared
+  scripts, `flow-editor.json` and `server.json` for API messages). Rules and terms: `src-frontend/i18n/GLOSSARY.md`.
+- After adding or changing any visible English text, add its Spanish entry in the matching JSON and run
+  `npm run build:i18n` (writes `public/i18n/es.js`, which is committed). Check with `?i18n-debug=1`:
+  `window.__i18nMisses` lists text still in English.
+
 Keep this file up to date when a page or shared file is added, renamed or removed.
