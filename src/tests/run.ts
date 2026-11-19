@@ -30,6 +30,7 @@ import './integration/readyForPr.test';
 import './integration/agentContexts.test';
 import './integration/versions.test';
 import './integration/privacy.test';
+import './integration/skillOrder.test';
 
 
 runAll()

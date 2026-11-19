@@ -96,9 +96,9 @@
         if (c.input_schema) { out.push('', '── input schema ──', ...JSON.stringify(c.input_schema, null, 2).split('\n')); }
         const flow = c.flow || { nodes: [], edges: [] };
         out.push('', '── flow: steps ──');
-        for (const n of flow.nodes || []) out.push(`${n.id}  ${n.type || 'agent'}${n.agent_name ? '  ' + n.agent_name : ''}${n.outcome ? '  -> ' + n.outcome : ''}${n.max_visits ? '  max ' + n.max_visits : ''}`);
+        for (const n of flow.nodes || []) out.push(`${n.id}  ${n.type || 'agent'}${n.agent_name ? '  ' + n.agent_name : ''}${n.outcome ? '  -> ' + n.outcome : ''}${n.max_invocations ? '  max ' + n.max_invocations : ''}`);
         out.push('', '── flow: connections ──');
-        for (const e of flow.edges || []) out.push(`${e.from} -> ${e.to}${e.condition ? '  when ' + JSON.stringify(e.condition) : ''}${e.label ? '  (' + e.label + ')' : ''}`);
+        for (const e of flow.edges || []) out.push(`${e.from} -> ${e.to}${e.condition ? '  when ' + JSON.stringify(e.condition) : ''}${e.when ? '  rule ' + JSON.stringify(e.when) : ''}${e.default ? '  default' : ''}${e.label ? '  (' + e.label + ')' : ''}`);
         if ((c.contexts || []).length) { out.push('', '── contexts of the project ──'); for (const x of c.contexts) out.push(`${nm(x.context_id)}${x.share_on_fork ? '  shared with forks' : ''}`); }
         if ((c.shared_agent_contexts || []).length) { out.push('', '── agent contexts shared with forks ──', ...c.shared_agent_contexts.map(nm)); }
       } else if (kind === 'agent') {

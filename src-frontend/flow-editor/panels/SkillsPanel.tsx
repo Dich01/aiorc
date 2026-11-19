@@ -59,7 +59,7 @@ export default function SkillsPanel({ skills, contexts, visible, onToggle, onSho
       <div className="fe-panel-hint">
         {tab === 'skills'
           ? 'Drag a skill onto an agent to attach it.'
-          : 'Drag a context onto the agent that needs it. Only that agent receives it, in its own step.'}
+          : 'Drag a context onto the agent that needs it. It goes with that agent in every project; in server-orchestrated runs only that agent receives it, in its own step.'}
       </div>
       <div className="fe-panel-body">
         {items.length === 0 ? (
