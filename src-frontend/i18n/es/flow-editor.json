@@ -1,0 +1,405 @@
+{
+  "text": {
+    "Show/hide agents": "Mostrar u ocultar agentes",
+    "Agents": "Agentes",
+    "Show/hide skills and contexts": "Mostrar u ocultar skills y contextos",
+    "Skills & contexts": "Skills y contextos",
+    "Add:": "Agregar:",
+    "Add Start node (one per flow)": "Agregar nodo Inicio (uno por flujo)",
+    "Start": "Inicio",
+    "Add Parallel node (fork: run branches in parallel)": "Agregar nodo Paralelo (bifurcación: ejecuta ramas en paralelo)",
+    "Parallel": "Paralelo",
+    "Add End node": "Agregar nodo Fin",
+    "End": "Fin",
+    "Delete all nodes and connections": "Eliminar todos los nodos y conexiones",
+    "Clear flow": "Vaciar flujo",
+    "Save flow": "Guardar flujo",
+    "Saving…": "Guardando…",
+    "Save": "Guardar",
+    "Cancel": "Cancelar",
+    "Drag an agent from the palette, or add a Start from the toolbar": "Arrastra un agente desde la paleta o agrega un Inicio desde la barra de herramientas",
+    "Delete all nodes and connections from the flow?": "¿Eliminar todos los nodos y conexiones del flujo?",
+    "There is already a Start node. Only one is allowed per flow.": "Ya hay un nodo Inicio. Solo se permite uno por flujo.",
+    "Hide": "Ocultar",
+    "Filter agents…": "Filtrar agentes…",
+    "No agents in this project.": "No hay agentes en este proyecto.",
+    "No results.": "Sin resultados.",
+    "Click to view content": "Haz clic para ver el contenido",
+    "Contexts": "Contextos",
+    "Filter skills…": "Filtrar skills…",
+    "Filter contexts…": "Filtrar contextos…",
+    "Drag a skill onto an agent to attach it.": "Arrastra una skill sobre un agente para asignársela.",
+    "Drag a context onto the agent that needs it. Only that agent receives it, in its own step.": "Arrastra un contexto sobre el agente que lo necesita. Solo ese agente lo recibe, en su propio paso.",
+    "No skills in this project.": "No hay skills en este proyecto.",
+    "No contexts yet. Create them in Contexts.": "Todavía no hay contextos. Créalos en Contextos.",
+    "Unnamed agent": "Agente sin nombre",
+    "Agent ·": "Agente ·",
+    "Change max invocations": "Cambiar el máximo de invocaciones",
+    "max ×": "máx. ×",
+    "View agent content": "Ver el contenido del agente",
+    "Delete node": "Eliminar nodo",
+    "CONTEXTS": "CONTEXTOS",
+    "Remove skill": "Quitar skill",
+    "Remove context": "Quitar contexto",
+    "Drop a skill or a context here": "Suelta aquí una skill o un contexto",
+    "Delete Start": "Eliminar Inicio",
+    "Edit outcome": "Editar resultado",
+    "+ outcome": "+ resultado",
+    "Delete End": "Eliminar Fin",
+    "Edit label": "Editar etiqueta",
+    "+ label": "+ etiqueta",
+    "Delete Parallel": "Eliminar Paralelo",
+    "Add condition": "Agregar condición",
+    "+ condition": "+ condición",
+    "Delete edge": "Eliminar conexión",
+    "Edge condition": "Condición de la conexión",
+    "Condition (free text, natural language)": "Condición (texto libre, lenguaje natural)",
+    "E.g.: when the test fails, or when the reviewer found bugs": "Ej.: cuando falla la prueba, o cuando el revisor encontró errores",
+    "The LLM will interpret this condition when executing the flow. If you leave it empty, this edge is the default transition (fallback) when no other one matches.": "El LLM interpretará esta condición al ejecutar el flujo. Si la dejas vacía, esta conexión es la transición predeterminada (fallback) cuando ninguna otra coincide.",
+    "Max invocations": "Máximo de invocaciones",
+    "End outcome": "Resultado del Fin",
+    "Parallel label": "Etiqueta del Paralelo",
+    "How many times this agent can be invoked at most during a workflow execution. Default 10, max 50.": "Cuántas veces como máximo se puede invocar este agente durante una ejecución del flujo. Valor predeterminado 10, máximo 50.",
+    "Free text describing in what state the flow ends when this End is reached. E.g.: \"all OK\", \"critical failure\", \"needs manual approval\". Optional.": "Texto libre que describe en qué estado termina el flujo cuando se llega a este Fin. Ej.: \"todo OK\", \"falla crítica\", \"requiere aprobación manual\". Opcional.",
+    "Optional label to identify this fork in the step instructions (and in the fast-mode prompt). E.g.: \"QA gates\", \"domain\". If left empty, it is shown as \"Parallel\".": "Etiqueta opcional para identificar esta bifurcación en las instrucciones de los pasos (y en el prompt del modo rápido). Ej.: \"compuertas de QA\", \"dominio\". Si la dejas vacía, se muestra como \"Paralelo\".",
+    "E.g.: all OK, critical failure, needs manual review": "Ej.: todo OK, falla crítica, requiere revisión manual",
+    "E.g.: QA gates, domain, validations": "Ej.: compuertas de QA, dominio, validaciones",
+    "The flow cannot be saved": "No se puede guardar el flujo",
+    "Got it": "Entendido",
+    "Control Panel": "Panel de controles",
+    "Zoom In": "Acercar",
+    "Zoom Out": "Alejar",
+    "Fit View": "Ajustar vista",
+    "Toggle Interactivity": "Activar o desactivar la interacción",
+    "Mini Map": "Minimapa",
+    "Handle": "Punto de conexión",
+    "React Flow attribution": "Atribución de React Flow",
+    "Press enter or space to select a node. Press delete to remove it and escape to cancel.": "Presiona Enter o la barra espaciadora para seleccionar un nodo. Presiona Suprimir para eliminarlo y Escape para cancelar.",
+    "Press enter or space to select a node. You can then use the arrow keys to move the node around. Press delete to remove it and escape to cancel.": "Presiona Enter o la barra espaciadora para seleccionar un nodo. Luego puedes usar las flechas para moverlo. Presiona Suprimir para eliminarlo y Escape para cancelar.",
+    "Press enter or space to select an edge. You can then press delete to remove it or escape to cancel.": "Presiona Enter o la barra espaciadora para seleccionar una conexión. Luego puedes presionar Suprimir para eliminarla o Escape para cancelar.",
+    "The flow is empty. Add a Start node, at least one agent and an End node.": "El flujo está vacío. Agrega un nodo Inicio, al menos un agente y un nodo Fin.",
+    "A node has no id.": "Un nodo no tiene ID.",
+    "An edge has no id.": "Una conexión no tiene ID.",
+    "The flow has no Start node.": "El flujo no tiene nodo Inicio.",
+    "The flow has no End node. A run only completes by reaching an End.": "El flujo no tiene nodo Fin. Una ejecución solo termina al llegar a un Fin.",
+    "The Start node cannot have incoming edges.": "El nodo Inicio no puede tener conexiones de entrada.",
+    "The edge leaving Start cannot carry a condition or rule.": "La conexión que sale de Inicio no puede llevar una condición ni una regla.",
+    "rule must be an object": "la regla debe ser un objeto",
+    "a combinator rule has exactly one key: \"all\" or \"any\"": "una regla combinada tiene exactamente una clave: \"all\" o \"any\"",
+    "\"all\"/\"any\" must be a non-empty array of rules": "\"all\"/\"any\" debe ser una lista de reglas no vacía",
+    "rule.path must be a dot-separated path of letters, digits, \"_\" or \"-\"": "rule.path debe ser una ruta separada por puntos, con letras, dígitos, \"_\" o \"-\"",
+    "rule.value must be an array for op \"in\"": "rule.value debe ser una lista para el operador \"in\"",
+    "rule.value must be true or false for op \"exists\"": "rule.value debe ser true o false para el operador \"exists\""
+  },
+  "html": {},
+  "patterns": [
+    {
+      "re": "^(.+) \\(click to edit\\)$",
+      "es": "$1 (haz clic para editar)"
+    },
+    {
+      "re": "^(.+) \\(rule edge: evaluated by the server, read-only here\\)$",
+      "es": "$1 (conexión con regla: la evalúa el servidor, aquí es de solo lectura)"
+    },
+    {
+      "re": "^Edge from (\\S+) to (\\S+)$",
+      "es": "Conexión de $1 a $2"
+    },
+    {
+      "re": "^Moved selected node up\\. New position, x: (-?[\\d.]+), y: (-?[\\d.]+)$",
+      "es": "Nodo seleccionado movido hacia arriba. Nueva posición, x: $1, y: $2"
+    },
+    {
+      "re": "^Moved selected node down\\. New position, x: (-?[\\d.]+), y: (-?[\\d.]+)$",
+      "es": "Nodo seleccionado movido hacia abajo. Nueva posición, x: $1, y: $2"
+    },
+    {
+      "re": "^Moved selected node left\\. New position, x: (-?[\\d.]+), y: (-?[\\d.]+)$",
+      "es": "Nodo seleccionado movido hacia izquierda. Nueva posición, x: $1, y: $2"
+    },
+    {
+      "re": "^Moved selected node right\\. New position, x: (-?[\\d.]+), y: (-?[\\d.]+)$",
+      "es": "Nodo seleccionado movido hacia derecha. Nueva posición, x: $1, y: $2"
+    },
+    {
+      "re": "^Two nodes share the id \"(.+)\"\\. Node ids must be unique\\.$",
+      "es": "Dos nodos comparten el ID \"$1\". Los ID de los nodos deben ser únicos."
+    },
+    {
+      "re": "^Node (\\S+) has unknown type \"(.+)\"\\.$",
+      "es": "El nodo $1 tiene un tipo desconocido: \"$2\"."
+    },
+    {
+      "re": "^Two edges share the id \"(.+)\"\\. Edge ids must be unique\\.$",
+      "es": "Dos conexiones comparten el ID \"$1\". Los ID de las conexiones deben ser únicos."
+    },
+    {
+      "re": "^Edge (\\S+) starts at a node that does not exist \\((.+)\\)\\.$",
+      "es": "La conexión $1 sale de un nodo que no existe ($2)."
+    },
+    {
+      "re": "^Edge (\\S+) points at a node that does not exist \\((.+)\\)\\.$",
+      "es": "La conexión $1 apunta a un nodo que no existe ($2)."
+    },
+    {
+      "re": "^Edge (\\S+) has both a rule \\(\"when\"\\) and a natural-language condition\\. Use one or the other\\.$",
+      "es": "La conexión $1 tiene a la vez una regla (\"when\") y una condición en lenguaje natural. Usa una u otra."
+    },
+    {
+      "re": "^Edge (\\S+): rule is too large \\(more than (\\d+) clauses\\)\\.$",
+      "es": "Conexión $1: la regla es demasiado grande (más de $2 cláusulas)."
+    },
+    {
+      "re": "^Edge (\\S+): rule is nested too deeply \\(more than (\\d+) levels\\)\\.$",
+      "es": "Conexión $1: la regla tiene demasiados niveles de anidación (más de $2)."
+    },
+    {
+      "re": "^Edge (\\S+): rule\\.op must be one of (.+)\\.$",
+      "es": "Conexión $1: rule.op debe ser uno de estos: $2."
+    },
+    {
+      "re": "^Edge (\\S+): unknown rule field \"(.+)\"\\.$",
+      "es": "Conexión $1: campo de regla desconocido \"$2\"."
+    },
+    {
+      "re": "^Edge (\\S+): rule\\.value must be a number or string for op \"(.+)\"\\.$",
+      "es": "Conexión $1: rule.value debe ser un número o un texto para el operador \"$2\"."
+    },
+    {
+      "re": "^Edge (\\S+): rule\\.value is required for op \"(.+)\"\\.$",
+      "es": "Conexión $1: rule.value es obligatorio para el operador \"$2\"."
+    },
+    {
+      "re": "^Edge (\\S+): (.+)\\.$",
+      "es": "Conexión $1: $2."
+    },
+    {
+      "re": "^The flow has (\\d+) Start nodes; it needs exactly one\\.$",
+      "es": "El flujo tiene $1 nodos Inicio; necesita exactamente uno."
+    },
+    {
+      "re": "^The Start node must have exactly one outgoing edge \\(it has (\\d+)\\)\\.$",
+      "es": "El nodo Inicio debe tener exactamente una conexión de salida (tiene $1)."
+    },
+    {
+      "re": "^Agent node (\\S+) has no agent assigned\\.$",
+      "es": "El nodo de agente $1 no tiene un agente asignado."
+    },
+    {
+      "re": "^Agent node (\\S+) references an agent that does not exist or is not available to this project \\((.+)\\)\\.$",
+      "es": "El nodo de agente $1 hace referencia a un agente que no existe o no está disponible para este proyecto ($2)."
+    },
+    {
+      "re": "^End \"(.+)\" cannot have outgoing edges\\.$",
+      "es": "El nodo Fin \"$1\" no puede tener conexiones de salida."
+    },
+    {
+      "re": "^End (\\S+) cannot have outgoing edges\\.$",
+      "es": "El nodo Fin $1 no puede tener conexiones de salida."
+    },
+    {
+      "re": "^Agent \"(.+)\" has no outgoing edge\\. Every node except End needs a way forward\\.$",
+      "es": "El agente \"$1\" no tiene conexión de salida. Todos los nodos, salvo Fin, necesitan una forma de avanzar."
+    },
+    {
+      "re": "^Parallel \"(.+)\" has no outgoing edge\\. Every node except End needs a way forward\\.$",
+      "es": "El nodo Paralelo \"$1\" no tiene conexión de salida. Todos los nodos, salvo Fin, necesitan una forma de avanzar."
+    },
+    {
+      "re": "^Parallel (\\S+) has no outgoing edge\\. Every node except End needs a way forward\\.$",
+      "es": "El nodo Paralelo $1 no tiene conexión de salida. Todos los nodos, salvo Fin, necesitan una forma de avanzar."
+    },
+    {
+      "re": "^Node (\\S+) has no outgoing edge\\. Every node except End needs a way forward\\.$",
+      "es": "El nodo $1 no tiene conexión de salida. Todos los nodos, salvo Fin, necesitan una forma de avanzar."
+    },
+    {
+      "re": "^Parallel \"(.+)\" has (\\d+) branch\\(es\\); a fork needs at least 2\\.$",
+      "es": "El nodo Paralelo \"$1\" tiene $2 rama(s); una bifurcación necesita al menos 2."
+    },
+    {
+      "re": "^Parallel (\\S+) has (\\d+) branch\\(es\\); a fork needs at least 2\\.$",
+      "es": "El nodo Paralelo $1 tiene $2 rama(s); una bifurcación necesita al menos 2."
+    },
+    {
+      "re": "^Parallel \"(.+)\": branch edges of a fork cannot carry conditions or rules\\.$",
+      "es": "El nodo Paralelo \"$1\": las conexiones de las ramas de una bifurcación no pueden llevar condiciones ni reglas."
+    },
+    {
+      "re": "^Parallel (\\S+): branch edges of a fork cannot carry conditions or rules\\.$",
+      "es": "El nodo Paralelo $1: las conexiones de las ramas de una bifurcación no pueden llevar condiciones ni reglas."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to Agent \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al agente \"$3\")."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to End \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Fin \"$3\")."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to End (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Fin $3)."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to Parallel \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Paralelo \"$3\")."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to Parallel (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Paralelo $3)."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to The Start node\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Inicio)."
+    },
+    {
+      "re": "^Parallel \"(.+)\": every branch must be an agent node \\(edge (\\S+) goes to Node (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben ser nodos de agente (la conexión $2 va al nodo $3)."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to Agent \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al agente \"$3\")."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to End \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Fin \"$3\")."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to End (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Fin $3)."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to Parallel \"(.+)\"\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Paralelo \"$3\")."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to Parallel (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Paralelo $3)."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to The Start node\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo Inicio)."
+    },
+    {
+      "re": "^Parallel (\\S+): every branch must be an agent node \\(edge (\\S+) goes to Node (\\S+)\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben ser nodos de agente (la conexión $2 va al nodo $3)."
+    },
+    {
+      "re": "^Agent \"(.+)\" is a branch of Parallel \"(.+)\" and must have no other incoming edges\\.$",
+      "es": "El agente \"$1\" es una rama del nodo Paralelo \"$2\" y no debe tener otras conexiones de entrada."
+    },
+    {
+      "re": "^Agent \"(.+)\" is a branch of Parallel (\\S+) and must have no other incoming edges\\.$",
+      "es": "El agente \"$1\" es una rama del nodo Paralelo $2 y no debe tener otras conexiones de entrada."
+    },
+    {
+      "re": "^Agent \"(.+)\" is a branch of Parallel \"(.+)\" and must have exactly one unconditional outgoing edge, to the join node\\.$",
+      "es": "El agente \"$1\" es una rama del nodo Paralelo \"$2\" y debe tener exactamente una conexión de salida sin condición, hacia el nodo de unión."
+    },
+    {
+      "re": "^Agent \"(.+)\" is a branch of Parallel (\\S+) and must have exactly one unconditional outgoing edge, to the join node\\.$",
+      "es": "El agente \"$1\" es una rama del nodo Paralelo $2 y debe tener exactamente una conexión de salida sin condición, hacia el nodo de unión."
+    },
+    {
+      "re": "^Parallel \"(.+)\": all branches must converge on the same join node \\(they go to (\\d+) different nodes\\)\\.$",
+      "es": "El nodo Paralelo \"$1\": todas las ramas deben converger en el mismo nodo de unión (van a $2 nodos distintos)."
+    },
+    {
+      "re": "^Parallel (\\S+): all branches must converge on the same join node \\(they go to (\\d+) different nodes\\)\\.$",
+      "es": "El nodo Paralelo $1: todas las ramas deben converger en el mismo nodo de unión (van a $2 nodos distintos)."
+    },
+    {
+      "re": "^Parallel \"(.+)\": the join node cannot itself be a Parallel node\\.$",
+      "es": "El nodo Paralelo \"$1\": el nodo de unión no puede ser a su vez un nodo Paralelo."
+    },
+    {
+      "re": "^Parallel (\\S+): the join node cannot itself be a Parallel node\\.$",
+      "es": "El nodo Paralelo $1: el nodo de unión no puede ser a su vez un nodo Paralelo."
+    },
+    {
+      "re": "^Agent \"(.+)\" has a single outgoing edge with a condition or rule\\. A lone exit must be unconditional\\.$",
+      "es": "El agente \"$1\" tiene una sola conexión de salida y lleva una condición o una regla. Una salida única debe ser sin condición."
+    },
+    {
+      "re": "^Node (\\S+) has a single outgoing edge with a condition or rule\\. A lone exit must be unconditional\\.$",
+      "es": "El nodo $1 tiene una sola conexión de salida y lleva una condición o una regla. Una salida única debe ser sin condición."
+    },
+    {
+      "re": "^Agent \"(.+)\" has (\\d+) outgoing edges and (\\d+) default edge\\(s\\)\\. Exactly one must be the default \\(no condition, no rule\\)\\.$",
+      "es": "El agente \"$1\" tiene $2 conexiones de salida y $3 conexión(es) predeterminada(s). Exactamente una debe ser la predeterminada (sin condición ni regla)."
+    },
+    {
+      "re": "^Node (\\S+) has (\\d+) outgoing edges and (\\d+) default edge\\(s\\)\\. Exactly one must be the default \\(no condition, no rule\\)\\.$",
+      "es": "El nodo $1 tiene $2 conexiones de salida y $3 conexión(es) predeterminada(s). Exactamente una debe ser la predeterminada (sin condición ni regla)."
+    },
+    {
+      "re": "^Agent \"(.+)\" mixes rule edges and natural-language edges\\. All non-default exits of a node must be of the same kind\\.$",
+      "es": "El agente \"$1\" mezcla conexiones con regla y conexiones en lenguaje natural. Todas las salidas no predeterminadas de un nodo deben ser del mismo tipo."
+    },
+    {
+      "re": "^Node (\\S+) mixes rule edges and natural-language edges\\. All non-default exits of a node must be of the same kind\\.$",
+      "es": "El nodo $1 mezcla conexiones con regla y conexiones en lenguaje natural. Todas las salidas no predeterminadas de un nodo deben ser del mismo tipo."
+    },
+    {
+      "re": "^Agent \"(.+)\" has rule edges, so its agent needs an output schema the rules can be evaluated against\\.$",
+      "es": "El agente \"$1\" tiene conexiones con regla, así que su agente necesita un schema de salida contra el cual evaluar las reglas."
+    },
+    {
+      "re": "^Agent \"(.+)\" cannot be reached from Start\\.$",
+      "es": "No se puede llegar al agente \"$1\" desde Inicio."
+    },
+    {
+      "re": "^End \"(.+)\" cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo Fin \"$1\" desde Inicio."
+    },
+    {
+      "re": "^End (\\S+) cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo Fin $1 desde Inicio."
+    },
+    {
+      "re": "^Parallel \"(.+)\" cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo Paralelo \"$1\" desde Inicio."
+    },
+    {
+      "re": "^Parallel (\\S+) cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo Paralelo $1 desde Inicio."
+    },
+    {
+      "re": "^The Start node cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo Inicio desde Inicio."
+    },
+    {
+      "re": "^Node (\\S+) cannot be reached from Start\\.$",
+      "es": "No se puede llegar al nodo $1 desde Inicio."
+    },
+    {
+      "re": "^Agent \"(.+)\" has no path to any End node\\.$",
+      "es": "El agente \"$1\" no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^End \"(.+)\" has no path to any End node\\.$",
+      "es": "El nodo Fin \"$1\" no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^End (\\S+) has no path to any End node\\.$",
+      "es": "El nodo Fin $1 no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^Parallel \"(.+)\" has no path to any End node\\.$",
+      "es": "El nodo Paralelo \"$1\" no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^Parallel (\\S+) has no path to any End node\\.$",
+      "es": "El nodo Paralelo $1 no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^The Start node has no path to any End node\\.$",
+      "es": "El nodo Inicio no tiene un camino hacia ningún nodo Fin."
+    },
+    {
+      "re": "^Node (\\S+) has no path to any End node\\.$",
+      "es": "El nodo $1 no tiene un camino hacia ningún nodo Fin."
+    }
+  ]
+}

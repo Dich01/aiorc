@@ -1,0 +1,27 @@
+{
+  "text": {
+    "AIOrc — Notifications": "AIOrc — Notificaciones",
+    "Changes to projects shared with you, updates to the projects your forks came from, invitations, forks of your work, runs that ended badly and issues.": "Cambios en proyectos compartidos contigo, actualizaciones de los proyectos de los que vienen tus forks, invitaciones, forks de tu trabajo, ejecuciones que terminaron mal y reportes.",
+    "Show": "Mostrar",
+    "Unread": "Sin leer",
+    "Mark all as read": "Marcar todas como leídas",
+    "Mark as read": "Marcar como leída",
+    "Original updated": "Original actualizado",
+    "Shared project changed": "Cambió un proyecto compartido",
+    "Invitation": "Invitación",
+    "Forked": "Nuevo fork",
+    "Run": "Ejecución",
+    "Issue": "Reporte",
+    "just now": "hace un momento"
+  },
+  "html": {
+    "<strong>Nothing unread</strong>You are up to date.": "<strong>Nada sin leer</strong>Estás al día.",
+    "<strong>No notifications yet</strong>When something you use changes, or someone invites you or forks your work, it shows up here.": "<strong>Todavía no hay notificaciones</strong>Cuando algo que usas cambia, o alguien te invita o hace un fork de tu trabajo, aparece aquí.",
+    "<strong>Could not load notifications</strong>Reload the page to try again.": "<strong>No se pudieron cargar las notificaciones</strong>Recarga la página para volver a intentarlo."
+  },
+  "patterns": [
+    { "re": "^(\\d+) min ago$", "es": "hace $1 min" },
+    { "re": "^(\\d+) h ago$", "es": "hace $1 h" },
+    { "re": "^(\\d+) d ago$", "es": "hace $1 d" }
+  ]
+}

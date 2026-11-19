@@ -1,0 +1,532 @@
+{
+  "text": {
+    "AIOrc — Project": "AIOrc — Proyecto",
+    "Loading...": "Cargando...",
+    "Project key": "Clave de proyecto",
+    "Get this project running": "Pon en marcha este proyecto",
+    "Add agents to the project": "Agrega agentes al proyecto",
+    "DO THIS →": "HAZ ESTO →",
+    "Design the flow": "Diseña el flujo",
+    "Connect your AI client": "Conecta tu cliente de IA",
+    "Run it from Claude": "Ejecútalo desde Claude",
+    "Flow Builder": "Editor de flujos",
+    "Connect AI": "Conectar IA",
+    "Settings": "Configuración",
+    "Agents associated with this project.": "Agentes asociados a este proyecto.",
+    "Skills associated with this project.": "Skills asociadas a este proyecto.",
+    "Business documentation and know-how that applies to the ENTIRE flow.": "Documentación y conocimiento del negocio que aplican a TODO el flujo.",
+    "For each context, mark whether it travels with future forks of the project.": "En cada contexto, marca si viaja con los futuros forks del proyecto.",
+    "Automatically associated with this project.": "Se asocia automáticamente a este proyecto.",
+    "e.g. Code reviewer": "p. ej. Revisor de código",
+    "Short description": "Descripción breve",
+    "e.g. Reads the diff and reports bugs": "p. ej. Lee el diff y reporta errores",
+    "You are an agent that...": "Eres un agente que...",
+    "Output schema (JSON Schema, optional)": "Schema de salida (JSON Schema, opcional)",
+    "Create agent": "Crear agente",
+    "e.g. Formal language": "p. ej. Lenguaje formal",
+    "e.g. Professional tone without jargon": "p. ej. Tono profesional sin jerga",
+    "SKILL.md is the entry point. Add more files to split a larger skill into pieces — they're hoisted together when any agent uses this skill.": "SKILL.md es el punto de entrada. Agrega más archivos para dividir una skill grande en partes — se cargan juntos cuando cualquier agente usa esta skill.",
+    "+ Add file": "+ Agregar archivo",
+    "Create skill": "Crear skill",
+    "Business documentation for this project. The model will read it before acting.": "Documentación del negocio para este proyecto. El modelo la leerá antes de actuar.",
+    "e.g. Onboarding process": "p. ej. Proceso de incorporación",
+    "e.g. Client X business rules": "p. ej. Reglas de negocio del cliente X",
+    "This context travels with future forks of the project": "Este contexto viaja con los futuros forks del proyecto",
+    "Leave unchecked for private business know-how": "Déjalo sin marcar si es conocimiento privado del negocio",
+    "Create context": "Crear contexto",
+    "Pausing blocks NEW runs of this project's workflow. Runs already in progress are never interrupted — to stop one of those, cancel it individually from the Audit page.": "Pausar bloquea las NUEVAS ejecuciones del flujo de este proyecto. Las ejecuciones que ya están en curso nunca se interrumpen — para detener una de ellas, cancélala individualmente desde la página de Auditoría.",
+    "Appears in the public repository when the project is marked as public. Helps other users understand what your flow does.": "Aparece en el repositorio público cuando el proyecto está marcado como público. Ayuda a otros usuarios a entender qué hace tu flujo.",
+    "E.g. Code review pipeline that combines linter, tests and LLM review…": "P. ej. Pipeline de revisión de código que combina linter, pruebas y revisión con LLM…",
+    "Save description": "Guardar descripción",
+    "Short labels to identify and group this project. Comma-separated. Shown on the project card and in the public repository.": "Etiquetas cortas para identificar y agrupar este proyecto. Separadas por comas. Se muestran en la tarjeta del proyecto y en el repositorio público.",
+    "e.g. code-review, backend, internal": "p. ej. code-review, backend, interno",
+    "Save tags": "Guardar etiquetas",
+    "Execution mode": "Modo de ejecución",
+    "Make this project public": "Hacer público este proyecto",
+    "Contexts shared with forks": "Contextos compartidos con forks",
+    "Contexts hold your business knowledge, so they are private by default. A checked context is offered as a copy to whoever forks this project; the rest stay here, and the fork is told its agents will need their own.": "Los contextos contienen el conocimiento de tu negocio, por eso son privados de forma predeterminada. Un contexto marcado se ofrece como copia a quien haga un fork de este proyecto; el resto se queda aquí, y al fork se le avisa que sus agentes necesitarán los suyos propios.",
+    "Every change to the flow and settings is saved as a version. The history is visible to everyone the project is shared with; you can compare versions and restore an earlier one.": "Cada cambio en el flujo y la configuración se guarda como una versión. El historial es visible para todas las personas con quienes se comparte el proyecto; puedes comparar versiones y restaurar una anterior.",
+    "Open the project history": "Abrir el historial del proyecto",
+    "Resetting the project key invalidates the previous key immediately. Integrations that use the key (CI, runners) stop working until updated. Connections that use the project ID and a personal token are unaffected.": "Restablecer la clave de proyecto invalida la clave anterior de inmediato. Las integraciones que usan la clave (CI, runners) dejan de funcionar hasta que se actualicen. Las conexiones que usan el ID del proyecto y un token personal no se ven afectadas.",
+    "Reset project key": "Restablecer clave de proyecto",
+    "Share with": "Compartir con",
+    "Where to paste it?": "¿Dónde pegarlo?",
+    "Claude Code · project scope": "Claude Code · alcance de proyecto",
+    "versioned with the repo, ideal for sharing with the team": "versionado con el repo, ideal para compartir con el equipo",
+    "Claude Code · user scope": "Claude Code · alcance de usuario",
+    "available in all your sessions, regardless of directory": "disponible en todas tus sesiones, sin importar el directorio",
+    "Copy MCP Config": "Copiar configuración MCP",
+    "Copy CLAUDE.md": "Copiar CLAUDE.md",
+    "External MCP servers": "Servidores MCP externos",
+    "Name (e.g. jira)": "Nombre (p. ej. jira)",
+    "Description (optional)": "Descripción (opcional)",
+    "Add": "Agregar",
+    "The flow could not be saved": "No se pudo guardar el flujo",
+    "Copy all errors": "Copiar todos los errores",
+    "Are you sure?": "¿Estás seguro?",
+    "Confirm": "Confirmar",
+    "Switch to model-orchestrated mode?": "¿Cambiar al modo orquestado por el modelo?",
+    "No output is validated and no transition or cap is enforced: the model decides the path on its own.": "No se valida ninguna salida ni se aplica ninguna transición o límite: el modelo decide el camino por su cuenta.",
+    "A run cannot be stopped midway: cancelling only refuses its report.": "Una ejecución no se puede detener a medio camino: cancelarla solo rechaza su informe.",
+    "External MCP tools are not available, and every agent's instructions are sent, including branches not taken.": "Las herramientas MCP externas no están disponibles, y se envían las instrucciones de todos los agentes, incluidas las ramas que no se toman.",
+    "The CI review runners refuse model-orchestrated runs by default. Eval runs keep running server-orchestrated.": "Los runners de revisión de CI rechazan de forma predeterminada las ejecuciones orquestadas por el modelo. Las ejecuciones de evaluación siguen siendo orquestadas por el servidor.",
+    "Runs already in flight keep their mode. You can switch back to server-orchestrated mode at any time.": "Las ejecuciones en curso conservan su modo. Puedes volver al modo orquestado por el servidor en cualquier momento.",
+    "Yes, use model-orchestrated mode": "Sí, usar el modo orquestado por el modelo",
+    "Make this project public?": "¿Hacer público este proyecto?",
+    "Run this flow with its project ID (each run is recorded under them).": "Ejecutar este flujo con su ID de proyecto (cada ejecución queda registrada a su nombre).",
+    "Call the external MCP servers registered on it during their runs.": "Llamar a los servidores MCP externos registrados en él durante sus ejecuciones.",
+    "List and export this project's runs through the runner API.": "Listar y exportar las ejecuciones de este proyecto mediante la API de runners.",
+    "Without a token, the project ID only exposes the eval suite.": "Sin un token, el ID del proyecto solo expone la suite de evaluación.",
+    "You can revert it at any time from this same screen.": "Puedes revertirlo en cualquier momento desde esta misma pantalla.",
+    "Yes, make public": "Sí, hacer público",
+    "Connection condition": "Condición de la conexión",
+    "When to take this branch?": "¿Cuándo tomar esta rama?",
+    "When the verdict is PASS (continue)": "Cuando el veredicto es PASS (continuar)",
+    "When the verdict is FAIL (reject)": "Cuando el veredicto es FAIL (rechazar)",
+    "When the verdict is BLOCKED (block)": "Cuando el veredicto es BLOCKED (bloquear)",
+    "Custom condition…": "Condición personalizada…",
+    "When an output field equals…": "Cuando un campo de la salida es igual a…",
+    "When a field is true": "Cuando un campo es true",
+    "When a field is false": "Cuando un campo es false",
+    "If no other branch matches (fallthrough)": "Si ninguna otra rama coincide (fallthrough)",
+    "field (e.g. has_issues)": "campo (p. ej. has_issues)",
+    "value (e.g. true)": "valor (p. ej. true)",
+    "Condition (natural language or expression)": "Condición (lenguaje natural o expresión)",
+    "Priority (lower = evaluated first)": "Prioridad (menor = se evalúa primero)",
+    "Is a loop return edge (loop_end → loop_start)": "Es una conexión de retorno del bucle (loop_end → loop_start)",
+    "Copied!": "¡Copiado!",
+    "No external servers registered. Agents only see AIOrc workflow tools.": "No hay servidores externos registrados. Los agentes solo ven las herramientas de flujo de AIOrc.",
+    "tools:": "herramientas:",
+    "Remove": "Quitar",
+    "Remove this external server? Its tools disappear from the client tool list.": "¿Quitar este servidor externo? Sus herramientas desaparecen de la lista de herramientas del cliente.",
+    "Could not add the server.": "No se pudo agregar el servidor.",
+    "Resume project": "Reanudar proyecto",
+    "Pause project": "Pausar proyecto",
+    "Paused — new runs are rejected. In-flight runs may finish.": "En pausa — se rechazan las nuevas ejecuciones. Las que están en curso pueden terminar.",
+    "Active — the workflow accepts new runs.": "Activo — el flujo acepta nuevas ejecuciones.",
+    "Pause this project? New runs will be rejected until you resume. Runs already in progress are not interrupted.": "¿Pausar este proyecto? Las nuevas ejecuciones se rechazarán hasta que lo reanudes. Las ejecuciones en curso no se interrumpen.",
+    "Could not change the pause state.": "No se pudo cambiar el estado de pausa.",
+    "Project key copied!": "¡Clave de proyecto copiada!",
+    "The key is only shown once, when it is created or reset. Reset it to get a new one; the old key stops working.": "La clave solo se muestra una vez, cuando se crea o se restablece. Restablécela para obtener una nueva; la clave anterior deja de funcionar.",
+    "Model-orchestrated mode: whole flow in one prompt, self-declared": "Modo orquestado por el modelo: el flujo completo en un solo prompt, autodeclarado",
+    "MCP config copied!": "¡Configuración MCP copiada!",
+    "Public project: anyone with an AIOrc personal token can use this entry.": "Proyecto público: cualquier persona con un token personal de AIOrc puede usar esta entrada.",
+    "Private project: only you and the people you invite can use this entry; for anyone else the server answers 403.": "Proyecto privado: solo tú y las personas que invites pueden usar esta entrada; para cualquier otra persona el servidor responde 403.",
+    "Could not change the execution mode.": "No se pudo cambiar el modo de ejecución.",
+    "Which contexts can people who fork it take?": "¿Qué contextos pueden llevarse quienes hagan un fork?",
+    "Unchecked contexts stay private: forks run without them and are told so.": "Los contextos sin marcar siguen siendo privados: los forks se ejecutan sin ellos y se les avisa.",
+    "This project has no contexts yet.": "Este proyecto aún no tiene contextos.",
+    "Could not save which contexts are shared.": "No se pudo guardar qué contextos se comparten.",
+    "Up to date": "Al día",
+    "This fork already has everything from": "Este fork ya tiene todo lo de",
+    ". Nothing to update.": ". No hay nada que actualizar.",
+    "The original project has changes": "El proyecto original tiene cambios",
+    "See changes": "Ver cambios",
+    "Update everything": "Actualizar todo",
+    "Hide changes": "Ocultar cambios",
+    "Flow and settings changed": "Flujo y configuración modificados",
+    "Flow and settings new": "Flujo y configuración nuevos",
+    "Flow and settings removed from the original": "Flujo y configuración eliminados del original",
+    "Skill": "Skill",
+    "changed": "modificado",
+    "new": "nuevo",
+    "removed from the original": "eliminado del original",
+    "· you changed it too; your edits to it are replaced": "· tú también lo modificaste; tus cambios se reemplazan",
+    "Updating takes every change at once and keeps what is yours: the contexts you attached, files you added to a skill or context, the project's name, key and settings.": "Al actualizar se aplican todos los cambios a la vez y se conserva lo tuyo: los contextos que adjuntaste, los archivos que agregaste a una skill o un contexto, y el nombre, la clave y la configuración del proyecto.",
+    "Updating takes every change at once and keeps what is yours: the contexts you attached, files you added to a skill or context, the project's name, key and settings. Agents removed from the original leave your flow but are not deleted.": "Al actualizar se aplican todos los cambios a la vez y se conserva lo tuyo: los contextos que adjuntaste, los archivos que agregaste a una skill o un contexto, y el nombre, la clave y la configuración del proyecto. Los agentes eliminados del original salen de tu flujo, pero no se eliminan.",
+    "Every change from the original is applied at once. Your own contexts, added files, name, key and settings stay as they are.": "Todos los cambios del original se aplican a la vez. Tus propios contextos, los archivos agregados, el nombre, la clave y la configuración quedan como están.",
+    "Update from the original?": "¿Actualizar desde el original?",
+    "Updating…": "Actualizando…",
+    "Could not update.": "No se pudo actualizar.",
+    "Not updated": "No se actualizó",
+    "Reset the project key? The previous key will stop working immediately.": "¿Restablecer la clave de proyecto? La clave anterior dejará de funcionar de inmediato.",
+    "Could not reset the project key.": "No se pudo restablecer la clave de proyecto.",
+    "New project key copied. It will not be shown again.": "Nueva clave de proyecto copiada. No se volverá a mostrar.",
+    "No tags yet.": "Aún no hay etiquetas.",
+    "Error saving.": "Error al guardar.",
+    "Saved ✓": "Guardado ✓",
+    "seconds ago ·": "hace unos segundos ·",
+    "Inviting…": "Invitando…",
+    "Could not send the invitation.": "No se pudo enviar la invitación.",
+    "Invitation sent — they will see it in their Team tab.": "Invitación enviada — la verán en su pestaña Equipo.",
+    "Invitation sent. They will see it when they register with that email.": "Invitación enviada. La verán cuando se registren con ese correo electrónico.",
+    "No agents.": "No hay agentes.",
+    "View content": "Ver contenido",
+    "no skills associated": "sin skills asociadas",
+    "Drag skills onto the node to associate them.": "Arrastra skills al nodo para asociarlas.",
+    "Remove this skill from the agent": "Quitar esta skill del agente",
+    "× Remove": "× Quitar",
+    "Associated skills": "Skills asociadas",
+    "Agent content": "Contenido del agente",
+    "No skills.": "No hay skills.",
+    "↳ Drag a skill onto an agent to associate it.": "↳ Arrastra una skill a un agente para asociarla.",
+    "No contexts in this project yet.": "Aún no hay contextos en este proyecto.",
+    "Travels with future forks": "Viaja con los futuros forks",
+    "✓ copied to fork": "✓ se copia al fork",
+    "stays private to the project": "queda privado en el proyecto",
+    "Could not change the flag.": "No se pudo cambiar la opción.",
+    "Content is required.": "El contenido es obligatorio.",
+    "Unsaved changes": "Cambios sin guardar",
+    "Saved": "Guardado",
+    "Could not remove the skill.": "No se pudo quitar la skill.",
+    "No skills": "Sin skills",
+    "No conditions": "Sin condiciones",
+    "↺ Connect to the next step": "↺ Conéctalo al siguiente paso",
+    "Drag to connect": "Arrastra para conectar",
+    "Decision": "Decisión",
+    "Gate": "Compuerta",
+    "Loop": "Bucle",
+    "Loop end": "Fin del bucle",
+    "unknown node": "nodo desconocido",
+    "Delete connection?": "¿Eliminar la conexión?",
+    "You are about to delete this connection from the flow. You can recreate it by dragging between the ports.": "Estás a punto de eliminar esta conexión del flujo. Puedes volver a crearla arrastrando entre los puertos.",
+    "✓ Copied to clipboard": "✓ Copiado al portapapeles",
+    "Error saving — open the panel": "Error al guardar — abre el panel",
+    "Network error": "Error de red",
+    "Gate branch": "Rama de la compuerta",
+    "Decision branch": "Rama de la decisión",
+    "field (e.g. intent)": "campo (p. ej. intent)",
+    "value (e.g. bug)": "valor (p. ej. bug)",
+    "Node name": "Nombre del nodo",
+    "E.g. task_type — leave empty if the previous agent returns free text": "P. ej. task_type — déjalo vacío si el agente anterior devuelve texto libre",
+    "(no condition)": "(sin condición)",
+    "No outgoing connections yet.": "Aún no hay conexiones de salida.",
+    "Loop label": "Etiqueta del bucle",
+    "Maximum iterations (1–20)": "Iteraciones máximas (1–20)",
+    "Pair ID (readonly)": "ID del par (solo lectura)",
+    "Label": "Etiqueta",
+    "E.g. Successful end": "P. ej. Fin exitoso",
+    "Outcome": "Resultado",
+    "✓ success": "✓ éxito",
+    "✗ failure": "✗ fallo",
+    "⊘ blocked": "⊘ bloqueado",
+    "◆ Custom…": "◆ Personalizado…",
+    "Custom outcome": "Resultado personalizado",
+    "E.g. needs_review, escalated, partial_success": "P. ej. needs_review, escalated, partial_success",
+    "The End node marks the end of a branch of the flow. Its outcome is included in the execution report so you know which branch it ended on.": "El nodo Fin marca el final de una rama del flujo. Su resultado se incluye en el informe de la ejecución para que sepas en qué rama terminó.",
+    "File name (must end with .md, no spaces):": "Nombre del archivo (debe terminar en .md, sin espacios):",
+    "Invalid name. Use letters, digits, \".\", \"_\", \"-\" and end with .md": "Nombre no válido. Usa letras, dígitos, \".\", \"_\", \"-\" y termina en .md",
+    "CLAUDE.md copied!": "¡CLAUDE.md copiado!",
+    ".mcp.json copied!": "¡.mcp.json copiado!",
+    "Tells the Claude client how to connect to the AIOrc server.": "Le indica al cliente de Claude cómo conectarse al servidor de AIOrc.",
+    "Decision — branch by content": "Decisión — ramificar según el contenido",
+    "## Context\nThis document describes...": "## Contexto\nEste documento describe...",
+    "e.g. output.task_type === 'bug'\nEmpty = always (fallthrough)": "p. ej. output.task_type === 'bug'\nVacío = siempre (fallthrough)",
+    "## SKILL.md\n\nMain skill body...": "## SKILL.md\n\nCuerpo principal de la skill...",
+    "# Section\n\nSupporting content.": "# Sección\n\nContenido de apoyo.",
+    "Collapse/expand menu": "Contraer/expandir menú",
+    "Skills": "Skills",
+    "Benchmarks": "Benchmarks",
+    "Copy": "Copiar",
+    "+ New agent": "+ Nuevo agente",
+    "+ New skill": "+ Nueva skill",
+    "+ New context": "+ Nuevo contexto",
+    "New agent": "Nuevo agente",
+    "Name": "Nombre",
+    "Content (Markdown)": "Contenido (Markdown)",
+    "New skill": "Nueva skill",
+    "Files": "Archivos",
+    "New context": "Nuevo contexto",
+    "Kill switch": "Interruptor de emergencia",
+    "Description": "Descripción",
+    "Tags": "Etiquetas",
+    "Model-orchestrated mode (one prompt, self-declared)": "Modo orquestado por el modelo (un solo prompt, autodeclarado)",
+    "Visibility": "Visibilidad",
+    "Version history": "Historial de versiones",
+    "Invite": "Invitar",
+    "No invitations yet.": "Todavía no hay invitaciones.",
+    "by": "por",
+    "Model-orchestrated": "Orquestado por el modelo",
+    "Server-orchestrated": "Orquestado por el servidor",
+    "Server-orchestrated: the server drives and checks every step": "Orquestado por el servidor: el servidor dirige y verifica cada paso",
+    "● Private": "● Privado",
+    "Could not change visibility.": "No se pudo cambiar la visibilidad.",
+    "Agent": "Agente",
+    "Context": "Contexto",
+    "pending": "pendiente",
+    "accepted": "aceptada",
+    "declined": "rechazada",
+    "revoked": "revocada",
+    "seconds ago": "hace unos segundos",
+    "Revoke": "Revocar",
+    "Enter an email.": "Ingresa un correo.",
+    "Network error.": "Error de red.",
+    "Revoke this invitation?": "¿Revocar esta invitación?",
+    "Could not revoke.": "No se pudo revocar.",
+    "No skills associated": "Sin skills asociadas",
+    "(no content)": "(sin contenido)",
+    "Error loading.": "Error al cargar.",
+    "entry": "principal",
+    "entry · always loaded": "principal · siempre se carga",
+    "Name is required.": "El nombre es obligatorio.",
+    "Description is required.": "La descripción es obligatoria.",
+    "Saving...": "Guardando...",
+    "Could not save.": "No se pudo guardar.",
+    "Input": "Entrada",
+    "(optional)": "(opcional)",
+    "Output schema must be valid JSON.": "El schema de salida debe ser JSON válido.",
+    "Remove file": "Quitar archivo",
+    "One-line description of what this file covers": "Descripción breve de lo que cubre este archivo",
+    "Loop — iteration with cap": "Bucle — iteración con límite",
+    "URL (https://...)": "URL (https://...)",
+    "SKILLS": "SKILLS",
+    "This entry connects the repository to this project only, as the server": "Esta entrada conecta el repositorio solo con este proyecto, como el servidor",
+    ". If the file already has": ". Si el archivo ya tiene",
+    ", add just this entry next to the others. The token is not written in the file:": ", agrega solo esta entrada junto a las demás. El token no se escribe en el archivo:",
+    "is read from each person's environment (": "se lee del entorno de cada persona (",
+    "in": "en",
+    "; create the token in your profile), so the file can be committed and shared.": "; crea el token en tu perfil), así que el archivo se puede subir en un commit y compartir.",
+    "Tells Claude when to use this project's server,": "Le indica a Claude cuándo usar el servidor de este proyecto,",
+    ". Paste it in the": ". Pégala en el",
+    "of the repository. If the repository uses several AIOrc projects, paste one rule per project: each names its own server. The project description is what Claude reads as \"use it for\", so keep it precise.": "del repositorio. Si el repositorio usa varios proyectos de AIOrc, pega una regla por proyecto: cada una nombra su propio servidor. La descripción del proyecto es lo que Claude lee como \"use it for\", así que mantenla precisa."
+  },
+  "html": {
+    "<strong>Server-orchestrated</strong> (default): the server hands your AI one step at a time, validates every output against the agent's schema, decides or checks every transition and enforces the caps. <strong>Model-orchestrated</strong>: your AI receives the whole flow in one prompt, runs it on its own and reports what it did; the report is stored as self-declared and nothing is verified. The mode is fixed when a run starts, so switching never affects runs in flight. Eval runs are always server-orchestrated.": "<strong>Orquestado por el servidor</strong> (predeterminado): el servidor le entrega a tu IA un paso a la vez, valida cada salida contra el schema del agente, decide o verifica cada transición y aplica los límites. <strong>Orquestado por el modelo</strong>: tu IA recibe el flujo completo en un solo prompt, lo ejecuta por su cuenta e informa lo que hizo; el informe se guarda como autodeclarado y nada se verifica. El modo se fija cuando empieza una ejecución, así que cambiarlo nunca afecta las ejecuciones en curso. Las ejecuciones de evaluación siempre son orquestadas por el servidor.",
+    "A <strong>private</strong> project runs only for you and the people you invite, each with their own personal token. A <strong>public</strong> project is listed in the repository and anyone with an AIOrc personal token can run it with its project ID; without a token the ID only lists its tools and evals.": "Un proyecto <strong>privado</strong> solo se ejecuta para ti y las personas que invites, cada una con su propio token personal. Un proyecto <strong>público</strong> aparece en el repositorio y cualquier persona con un token personal de AIOrc puede ejecutarlo con su ID de proyecto; sin un token, el ID solo lista sus herramientas y evaluaciones.",
+    "Invite someone by email. While the invitation is pending or accepted they can run this project with its project ID and their own personal token, and they can fork a copy from their <strong>Team</strong> tab. Revoke the invitation to remove access.": "Invita a alguien por correo electrónico. Mientras la invitación esté pendiente o aceptada, podrá ejecutar este proyecto con su ID de proyecto y su propio token personal, y podrá hacer un fork de una copia desde su pestaña <strong>Equipo</strong>. Revoca la invitación para quitarle el acceso.",
+    "<strong>This is the step that brings your project to life.</strong> Your flow doesn't run inside AIOrc — it runs inside YOUR AI client (Claude Code, Claude Desktop, Cursor...). Paste the configuration below into that client and it will discover this project's workflow tools automatically. From then on, any task you give it goes through your flow.": "<strong>Este es el paso que le da vida a tu proyecto.</strong> Tu flujo no se ejecuta dentro de AIOrc — se ejecuta dentro de TU cliente de IA (Claude Code, Claude Desktop, Cursor...). Pega la configuración de abajo en ese cliente y descubrirá automáticamente las herramientas de flujo de este proyecto. A partir de ahí, cualquier tarea que le des pasa por tu flujo.",
+    "Replace <code class=\"mcp-path\">/path/to/mcp-bridge.js</code> with the path of <code class=\"mcp-path\">mcp-bridge.js</code> in your AIOrc checkout.": "Reemplaza <code class=\"mcp-path\">/path/to/mcp-bridge.js</code> por la ruta de <code class=\"mcp-path\">mcp-bridge.js</code> en tu copia local de AIOrc.",
+    "This entry connects the repository to this project only, as the server <code class=\"mcp-server-name\">aiorc</code>. If the file already has <code>mcpServers</code>, add just this entry next to the others. The token is not written in the file: <code>${AIORC_TOKEN}</code> is read from each person's environment (<code>export AIORC_TOKEN=aiorc_pat_...</code> in <code>~/.zshrc</code>; create the token in your profile), so the file can be committed and shared.": "Esta entrada conecta el repositorio solo con este proyecto, como el servidor <code class=\"mcp-server-name\">aiorc</code>. Si el archivo ya tiene <code>mcpServers</code>, agrega solo esta entrada junto a las demás. El token no se escribe en el archivo: <code>${AIORC_TOKEN}</code> se lee del entorno de cada persona (<code>export AIORC_TOKEN=aiorc_pat_...</code> en <code>~/.zshrc</code>; crea el token en tu perfil), así que el archivo se puede subir en un commit y compartir.",
+    "2. Rule in <code style=\"font-size:0.85rem\">CLAUDE.md</code>": "2. Regla en <code style=\"font-size:0.85rem\">CLAUDE.md</code>",
+    "Tells Claude when to use this project's server, <code class=\"mcp-server-name\">aiorc</code>. Paste it in the <code>CLAUDE.md</code> of the repository. If the repository uses several AIOrc projects, paste one rule per project: each names its own server. The project description is what Claude reads as \"use it for\", so keep it precise.": "Le indica a Claude cuándo usar el servidor de este proyecto, <code class=\"mcp-server-name\">aiorc</code>. Pégala en el <code>CLAUDE.md</code> del repositorio. Si el repositorio usa varios proyectos de AIOrc, pega una regla por proyecto: cada una nombra su propio servidor. La descripción del proyecto es lo que Claude lee como \"use it for\", así que mantenla precisa.",
+    "Your client does not connect to these servers directly: the servers you register here are exposed through this project's AIOrc connection. Their tools appear as <code>server__tool</code> in the client's tool list. A tool can only be called during a server-orchestrated run, by an agent whose <code>allowed_tools</code> lists it (set through the API or a harness file), and every call is logged.": "Tu cliente no se conecta directamente a estos servidores: los servidores que registras aquí se exponen a través de la conexión de AIOrc de este proyecto. Sus herramientas aparecen como <code>server__tool</code> en la lista de herramientas del cliente. Una herramienta solo se puede llamar durante una ejecución orquestada por el servidor, por un agente cuyo <code>allowed_tools</code> la incluya (definido mediante la API o un archivo de harness), y cada llamada queda registrada.",
+    "Found <span id=\"vm-count\">0</span> error(s) preventing this flow from running. Fix each one and try saving again.": "Se encontraron <span id=\"vm-count\">0</span> error(es) que impiden ejecutar este flujo. Corrige cada uno e intenta guardar de nuevo.",
+    "New runs will receive the <strong>whole flow in one prompt</strong> and finish with a self-declared report. Faster, but the server stops checking how they execute:": "Las nuevas ejecuciones recibirán el <strong>flujo completo en un solo prompt</strong> y terminarán con un informe autodeclarado. Es más rápido, pero el servidor deja de verificar cómo se ejecutan:",
+    "The report is stored as <strong>self-declared</strong>; these runs never count as verified in Audit or Analytics.": "El informe se guarda como <strong>autodeclarado</strong>; estas ejecuciones nunca cuentan como verificadas en Auditoría ni en Analítica.",
+    "Once public, <strong>anyone</strong> with an AIOrc account and personal token will be able to:": "Una vez público, <strong>cualquier persona</strong> con una cuenta de AIOrc y un token personal podrá:",
+    "See the project listed in the <em>Public repository</em>.": "Ver el proyecto en el <em>Repositorio público</em>.",
+    "<span class=\"mode-pill fast\">Model-orchestrated</span> New runs get the whole flow in one prompt and finish with <code>workflow.report</code>. Self-declared, not verified.": "<span class=\"mode-pill fast\">Orquestado por el modelo</span> Las nuevas ejecuciones reciben el flujo completo en un solo prompt y terminan con <code>workflow.report</code>. Autodeclarado, no verificado.",
+    "<span class=\"mode-pill\">Server-orchestrated</span> New runs are driven step by step by the server with <code>workflow.next</code>, and every step is checked.": "<span class=\"mode-pill\">Orquestado por el servidor</span> El servidor guía las nuevas ejecuciones paso a paso con <code>workflow.next</code>, y cada paso se verifica.",
+    "This project runs in <strong>model-orchestrated mode</strong>: <code>workflow.start</code> returns the whole flow and your AI finishes with <code>workflow.report</code>.": "Este proyecto se ejecuta en <strong>modo orquestado por el modelo</strong>: <code>workflow.start</code> devuelve el flujo completo y tu IA termina con <code>workflow.report</code>.",
+    "This project runs in <strong>server-orchestrated mode</strong>: <code>workflow.start</code> returns step 1 and your AI advances with <code>workflow.next</code>.": "Este proyecto se ejecuta en <strong>modo orquestado por el servidor</strong>: <code>workflow.start</code> devuelve el paso 1 y tu IA avanza con <code>workflow.next</code>.",
+    "<span style=\"color:#22c55e\">● Public</span> — listed in the repository. Anyone with an AIOrc personal token can connect and run it; each run is recorded under who ran it.": "<span style=\"color:#22c55e\">● Público</span> — aparece en el repositorio. Cualquier persona con un token personal de AIOrc puede conectarse y ejecutarlo; cada ejecución queda registrada a nombre de quien la hizo.",
+    "<span style=\"color:#f59e0b\">● Private</span> — only you and the people you invite can run it, each with their own personal token.": "<span style=\"color:#f59e0b\">● Privado</span> — solo tú y las personas que invites pueden ejecutarlo, cada una con su propio token personal.",
+    "Output field to evaluate <span style=\"font-weight:400;color:var(--muted)\">(optional)</span>": "Campo de salida a evaluar <span style=\"font-weight:400;color:var(--muted)\">(opcional)</span>",
+    "If the previous agent returns JSON, enter the field name to read (e.g. <code>task_type</code>). If it returns free text, leave it empty — the LLM reads the whole output.": "Si el agente anterior devuelve JSON, ingresa el nombre del campo a leer (p. ej. <code>task_type</code>). Si devuelve texto libre, déjalo vacío — el LLM lee la salida completa.",
+    "The Gate follows the branch whose condition matches the result of the previous step.<br> Conditions are configured on each outgoing connection.": "La compuerta sigue la rama cuya condición coincide con el resultado del paso anterior.<br> Las condiciones se configuran en cada conexión de salida.",
+    "Description <span style=\"font-weight:400;text-transform:none;color:var(--muted)\">(optional)</span>": "Descripción <span style=\"font-weight:400;text-transform:none;color:var(--muted)\">(opcional)</span>",
+    "<strong>Define agents</strong> — In Dashboard → Agents. Each agent is a Markdown prompt: a step of the flow in server-orchestrated mode, a section of the whole-flow prompt in model-orchestrated mode.": "<strong>Define agentes</strong> — En Panel → Agentes. Cada agente es un prompt en Markdown: un paso del flujo en el modo orquestado por el servidor, una sección del prompt del flujo completo en el modo orquestado por el modelo.",
+    "<strong>Build the flow</strong> — On this page (Flow Builder). Drag agents from the left panel and connect them. Branch with conditions on the edges; fork with Parallel; iterate with back-edges.": "<strong>Arma el flujo</strong> — En esta página (Editor de flujos). Arrastra agentes desde el panel izquierdo y conéctalos. Ramifica con condiciones en las conexiones; bifurca con Paralelo; itera con conexiones de retorno.",
+    "<strong>Save</strong> — The flow is validated (single Start, valid agent references, well-formed Parallel forks). Cycles are legal — a back-edge is a loop. If it passes, it is persisted; if not, the errors are listed in a dialog and saving is blocked.": "<strong>Guarda</strong> — Se valida el flujo (un único Inicio, referencias a agentes válidas, bifurcaciones Paralelo bien formadas). Los ciclos están permitidos — una conexión de retorno es un bucle. Si pasa la validación, se guarda; si no, los errores se muestran en un cuadro de diálogo y no se guarda.",
+    "<strong>Connect your AI</strong> with the <em>Connect AI</em> tab: it generates the <code>.mcp.json</code> entry and the <code>CLAUDE.md</code> rule for this project.": "<strong>Conecta tu IA</strong> con la pestaña <em>Conectar IA</em>: genera la entrada de <code>.mcp.json</code> y la regla de <code>CLAUDE.md</code> para este proyecto.",
+    "<strong>Done</strong> — Claude calls <code>workflow.start</code>. In <strong>server-orchestrated mode</strong> (default) the server hands it one step at a time, validating each output and deciding or checking each transition, until the flow reaches an End. In <strong>model-orchestrated mode</strong> it receives the whole flow at once and finishes with <code>workflow.report</code>, a self-declared report.": "<strong>Listo</strong> — Claude llama a <code>workflow.start</code>. En el <strong>modo orquestado por el servidor</strong> (predeterminado), el servidor le entrega un paso a la vez, valida cada salida y decide o verifica cada transición, hasta que el flujo llega a un Fin. En el <strong>modo orquestado por el modelo</strong>, recibe el flujo completo de una vez y termina con <code>workflow.report</code>, un informe autodeclarado.",
+    "1. <code>.mcp.json</code> at the root of the target project": "1. <code>.mcp.json</code> en la raíz del proyecto de destino",
+    "2. Rule in <code>CLAUDE.md</code>": "2. Regla en <code>CLAUDE.md</code>",
+    "Tells the model to always start with <code>workflow.start</code> and follow what it returns. Without this rule, Claude may ignore AIOrc. Use the rule generated in the <em>Connect AI</em> tab: it names this project's server, so several AIOrc projects can live in one repository.": "Le indica al modelo que siempre empiece con <code>workflow.start</code> y siga lo que devuelve. Sin esta regla, Claude puede ignorar AIOrc. Usa la regla generada en la pestaña <em>Conectar IA</em>: nombra el servidor de este proyecto, así que varios proyectos de AIOrc pueden convivir en un mismo repositorio.",
+    "Example conditions: <em>\"intent == 'bug'\"</em>, <em>\"the agent determines that it needs more context\"</em>.": "Condiciones de ejemplo: <em>\"intent == 'bug'\"</em>, <em>\"el agente determina que necesita más contexto\"</em>."
+  },
+  "patterns": [
+    {
+      "re": "^(.+) \\(copy it now: it will not be shown again\\)$",
+      "es": "$1 (cópiala ahora: no se volverá a mostrar)"
+    },
+    {
+      "re": "^(.*)… \\(hidden: reset to get a new key\\)$",
+      "es": "$1… (oculta: restablécela para obtener una nueva)"
+    },
+    {
+      "re": "^Agent (.+)$",
+      "es": "Agente $1"
+    },
+    {
+      "re": "^Agents (.+)$",
+      "es": "Agentes $1"
+    },
+    {
+      "re": "^Saved\\. 1 context offered to forks\\.$",
+      "es": "Guardado. 1 contexto ofrecido a los forks."
+    },
+    {
+      "re": "^Saved\\. (\\d+) contexts offered to forks\\.$",
+      "es": "Guardado. $1 contextos ofrecidos a los forks."
+    },
+    {
+      "re": "^by (.+) changed: 1 agent\\.$",
+      "es": "de $1 cambió: 1 agente."
+    },
+    {
+      "re": "^by (.+) changed: (\\d+) agents\\.$",
+      "es": "de $1 cambió: $2 agentes."
+    },
+    {
+      "re": "^by (.+) changed: 1 skill\\.$",
+      "es": "de $1 cambió: 1 skill."
+    },
+    {
+      "re": "^by (.+) changed: (\\d+) skills\\.$",
+      "es": "de $1 cambió: $2 skills."
+    },
+    {
+      "re": "^by (.+) changed: 1 context\\.$",
+      "es": "de $1 cambió: 1 contexto."
+    },
+    {
+      "re": "^by (.+) changed: (\\d+) contexts\\.$",
+      "es": "de $1 cambió: $2 contextos."
+    },
+    {
+      "re": "^by (.+) changed: flow and settings\\.$",
+      "es": "de $1 cambió: flujo y configuración."
+    },
+    {
+      "re": "^by (.+) changed: (.+)\\.$",
+      "es": "de $1 cambió: $2."
+    },
+    {
+      "re": "^You also changed (.+)\\. Updating replaces those edits with the original's version \\(they stay in the history, so you can restore them\\)\\.$",
+      "es": "También modificaste $1. Al actualizar, esos cambios se reemplazan por la versión del original (quedan en el historial, así que puedes restaurarlos)."
+    },
+    {
+      "re": "^(\\d+) updated\\. The flow editor reloads with the new version\\.$",
+      "es": "$1 actualizados. El editor de flujos se recarga con la nueva versión."
+    },
+    {
+      "re": "^(\\d+) updated, 1 new agent added\\. The flow editor reloads with the new version\\.$",
+      "es": "$1 actualizados, 1 agente nuevo agregado. El editor de flujos se recarga con la nueva versión."
+    },
+    {
+      "re": "^(\\d+) updated, (\\d+) new agents added\\. The flow editor reloads with the new version\\.$",
+      "es": "$1 actualizados, $2 agentes nuevos agregados. El editor de flujos se recarga con la nueva versión."
+    },
+    {
+      "re": "^(\\d+)m ago ·$",
+      "es": "hace $1 min ·"
+    },
+    {
+      "re": "^(\\d+)h ago ·$",
+      "es": "hace $1 h ·"
+    },
+    {
+      "re": "^1 skill associated$",
+      "es": "1 skill asociada"
+    },
+    {
+      "re": "^(\\d+) skills associated$",
+      "es": "$1 skills asociadas"
+    },
+    {
+      "re": "^1 skill available$",
+      "es": "1 skill disponible"
+    },
+    {
+      "re": "^(\\d+) skills available$",
+      "es": "$1 skills disponibles"
+    },
+    {
+      "re": "^Skill · (\\d+) files$",
+      "es": "Skill · $1 archivos"
+    },
+    {
+      "re": "^1 context in this project$",
+      "es": "1 contexto en este proyecto"
+    },
+    {
+      "re": "^(\\d+) contexts in this project$",
+      "es": "$1 contextos en este proyecto"
+    },
+    {
+      "re": "^Remove the skill \"(.+)\" from the agent\\? Note: this disassociates it from the agent globally — it affects every node that uses this agent, in any project\\.$",
+      "es": "¿Quitar la skill \"$1\" del agente? Nota: esto la desasocia del agente de forma global — afecta a todos los nodos que usan este agente, en cualquier proyecto."
+    },
+    {
+      "re": "^1 skill$",
+      "es": "1 skill"
+    },
+    {
+      "re": "^(\\d+) skills$",
+      "es": "$1 skills"
+    },
+    {
+      "re": "^↻ max (\\d+) iterations$",
+      "es": "↻ máx. $1 iteraciones"
+    },
+    {
+      "re": "^There is more than one start node: (.+)\\. The flow must have a single entry point\\.$",
+      "es": "Hay más de un nodo de inicio: $1. El flujo debe tener un único punto de entrada."
+    },
+    {
+      "re": "^(.+): needs ≥2 outputs with a condition\\.$",
+      "es": "$1: necesita ≥2 salidas con una condición."
+    },
+    {
+      "re": "^(.+): each output needs a condition \\(the verdict that leads to that branch\\)\\.$",
+      "es": "$1: cada salida necesita una condición (el veredicto que lleva a esa rama)."
+    },
+    {
+      "re": "^(.+): max_iterations out of range \\(1–20\\) or no paired loop_end\\.$",
+      "es": "$1: max_iterations fuera de rango (1–20) o sin loop_end emparejado."
+    },
+    {
+      "re": "^(.+): the End node must not have outputs\\. It is terminal\\.$",
+      "es": "$1: el nodo Fin no debe tener salidas. Es terminal."
+    },
+    {
+      "re": "^(.+): has an input but no output\\. If you want the flow to end here, connect its output to an End node\\. If it should continue, connect it to the next step\\.$",
+      "es": "$1: tiene una entrada pero ninguna salida. Si quieres que el flujo termine aquí, conecta su salida a un nodo Fin. Si debe continuar, conéctalo al siguiente paso."
+    },
+    {
+      "re": "^Invalid condition on the connection leaving (.+): \"(.*)\"\\. The field name cannot contain spaces — use underscores \\(e\\.g\\. \"has_issues\"\\) and edit the connection with the structured editor\\.$",
+      "es": "Condición no válida en la conexión que sale de $1: \"$2\". El nombre del campo no puede contener espacios — usa guiones bajos (p. ej. \"has_issues\") y edita la conexión con el editor estructurado."
+    },
+    {
+      "re": "^Invalid condition on the connection leaving (.+): \"(.*)\"\\. Expected format: output\\.<field> === <value>\\. Edit the connection and use the mode selector\\.$",
+      "es": "Condición no válida en la conexión que sale de $1: \"$2\". Formato esperado: output.<campo> === <valor>. Edita la conexión y usa el selector de modo."
+    },
+    {
+      "re": "^These nodes are not reachable from the start of the flow: (.+)\\. Connect them to some branch of the flow or delete them\\.$",
+      "es": "No se puede llegar a estos nodos desde el inicio del flujo: $1. Conéctalos a alguna rama del flujo o elimínalos."
+    },
+    {
+      "re": "^There is a cycle in the flow between: (.+)\\. If you want a step to go back, wrap that part with Loop Start / Loop End nodes\\. Otherwise, remove the backward connection\\.$",
+      "es": "Hay un ciclo en el flujo entre: $1. Si quieres que un paso vuelva atrás, envuelve esa parte con nodos Loop Start / Loop End (inicio y fin del bucle). Si no, quita la conexión hacia atrás."
+    },
+    {
+      "re": "^1 error — click to see detail$",
+      "es": "1 error — haz clic para ver el detalle"
+    },
+    {
+      "re": "^(\\d+) errors — click to see detail$",
+      "es": "$1 errores — haz clic para ver el detalle"
+    },
+    {
+      "re": "^1 error — open the panel to see detail$",
+      "es": "1 error — abre el panel para ver el detalle"
+    },
+    {
+      "re": "^(\\d+) errors — open the panel to see detail$",
+      "es": "$1 errores — abre el panel para ver el detalle"
+    },
+    {
+      "re": "^Error saving \\(status (\\d+)\\)\\.$",
+      "es": "Error al guardar (estado $1)."
+    },
+    {
+      "re": "^Network error contacting the server: (.*)$",
+      "es": "Error de red al contactar al servidor: $1"
+    },
+    {
+      "re": "^(.+) already exists as the entry file\\.$",
+      "es": "$1 ya existe como archivo principal."
+    },
+    {
+      "re": "^A file named \"(.+)\" already exists\\.$",
+      "es": "Ya existe un archivo llamado \"$1\"."
+    },
+    {
+      "re": "^Remove file \"(.+)\"\\?$",
+      "es": "¿Quitar el archivo \"$1\"?"
+    },
+    {
+      "re": "^(.+) content is required\\.$",
+      "es": "El contenido de $1 es obligatorio."
+    },
+    {
+      "re": "^File \"(.+)\" is empty\\.$",
+      "es": "El archivo \"$1\" está vacío."
+    },
+    {
+      "re": "^Error (\\d+)$",
+      "es": "Error $1"
+    }
+  ]
+}

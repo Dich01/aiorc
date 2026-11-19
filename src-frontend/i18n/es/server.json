@@ -1,0 +1,391 @@
+{
+  "text": {
+    "Forbidden": "Acceso denegado",
+    "Not found": "No encontrado",
+    "Admin only": "Solo para administradores",
+    "Missing or invalid authorization header": "Falta el encabezado de autorización o no es válido",
+    "Invalid or expired token": "El token no es válido o expiró",
+    "Malformed JSON body": "El cuerpo de la solicitud no es JSON válido",
+    "Request body too large": "El cuerpo de la solicitud es demasiado grande",
+    "Internal server error": "Error interno del servidor",
+    "email and password are required": "El correo electrónico y la contraseña son obligatorios",
+    "Too many failed login attempts. Try again later.": "Demasiados intentos fallidos de inicio de sesión. Vuelve a intentarlo más tarde.",
+    "Invalid credentials": "Credenciales no válidas",
+    "Registration is closed on this server. Ask an administrator for an account.": "El registro está cerrado en este servidor. Pídele una cuenta a un administrador.",
+    "nickname is required": "El nombre de usuario es obligatorio",
+    "nickname must be 3–30 chars, only letters, numbers, hyphens, underscores": "El nombre de usuario debe tener entre 3 y 30 caracteres: solo letras, números, guiones y guiones bajos",
+    "nickname must be 3-30 chars, only letters, numbers, hyphens, underscores": "El nombre de usuario debe tener entre 3 y 30 caracteres: solo letras, números, guiones y guiones bajos",
+    "Email already registered": "El correo electrónico ya está registrado",
+    "Nickname already taken": "El nombre de usuario ya está en uso",
+    "A valid email is required": "Se requiere un correo electrónico válido",
+    "User not found": "Usuario no encontrado",
+    "Invalid avatar": "Avatar no válido",
+    "At most 20 active tokens per user. Revoke one first.": "Máximo 20 tokens activos por usuario. Revoca uno primero.",
+    "Token not found": "Token no encontrado",
+    "someone": "alguien",
+    "Agent not found": "Agente no encontrado",
+    "Skill not found": "Skill no encontrada",
+    "Context not found": "Contexto no encontrado",
+    "Project not found": "Proyecto no encontrado",
+    "name and description are required": "El nombre y la descripción son obligatorios",
+    "name is required": "El nombre es obligatorio",
+    "output_schema must be valid JSON": "output_schema debe ser JSON válido",
+    "output_schema must be a JSON Schema object": "output_schema debe ser un objeto JSON Schema",
+    "is_public boolean is required": "Se requiere is_public (booleano)",
+    "allow boolean is required": "Se requiere allow (booleano)",
+    "paused boolean is required": "Se requiere paused (booleano)",
+    "shared_context_ids (array) is required": "Se requiere shared_context_ids (lista)",
+    "project_id and share_on_fork (boolean) are required": "Se requieren project_id y share_on_fork (booleano)",
+    "Context is not attached to this project": "El contexto no está asociado a este proyecto",
+    "Cannot star this agent": "No puedes darle una estrella a este agente",
+    "Cannot star this skill": "No puedes darle una estrella a esta skill",
+    "Cannot star this context": "No puedes darle una estrella a este contexto",
+    "Cannot star this project": "No puedes darle una estrella a este proyecto",
+    "Only the owner can invite": "Solo el propietario puede invitar",
+    "Only the project owner can invite": "Solo el propietario del proyecto puede invitar",
+    "You cannot invite yourself": "No puedes invitar a tu propia cuenta",
+    "You cannot fork this agent": "No puedes hacer un fork de este agente",
+    "You cannot fork this skill": "No puedes hacer un fork de esta skill",
+    "You cannot fork this context": "No puedes hacer un fork de este contexto",
+    "You cannot fork this project": "No puedes hacer un fork de este proyecto",
+    "This project has no flow to fork": "Este proyecto no tiene un flujo del cual hacer un fork",
+    "Fork failed": "No se pudo hacer el fork",
+    "This project is not linked to the project it was forked from.": "Este proyecto no está vinculado al proyecto del que se hizo el fork.",
+    "At least one file (or `content`) is required": "Se requiere al menos un archivo (o `content`)",
+    "Each file must have a name": "Cada archivo debe tener un nombre",
+    "nodes and edges must be arrays": "nodes y edges deben ser listas",
+    "Invalid flow": "Flujo no válido",
+    "name is required (max 60 chars)": "El nombre es obligatorio (máximo 60 caracteres)",
+    "url must be a valid URL": "La URL debe ser válida",
+    "url must use http or https": "La URL debe usar http o https",
+    "url cannot point to localhost or a private network address": "La URL no puede apuntar a localhost ni a una dirección de red privada",
+    "url must not embed credentials": "La URL no debe incluir credenciales",
+    "the server did not answer with JSON": "el servidor no respondió con JSON",
+    "allowed_tools must be an array of \"server__tool\" or \"server__*\" strings": "allowed_tools debe ser una lista de textos \"server__tool\" o \"server__*\"",
+    "at most 100 allowed_tools entries": "máximo 100 entradas en allowed_tools",
+    "project_id is required": "project_id es obligatorio",
+    "input is required": "La entrada es obligatoria",
+    "input must be an object (or text, used as the request)": "La entrada debe ser un objeto (o texto, que se usa como la solicitud)",
+    "expected_findings must be valid JSON": "expected_findings debe ser JSON válido",
+    "expected_findings must be an array": "expected_findings debe ser una lista",
+    "each expected finding must be an object": "cada hallazgo esperado debe ser un objeto",
+    "must_complete_agents must be an array of agent names": "must_complete_agents debe ser una lista de nombres de agentes",
+    "max_extra_findings must be a non-negative integer or null": "max_extra_findings debe ser un entero no negativo o null",
+    "A case with this name already exists in the project": "Ya existe un caso con este nombre en el proyecto",
+    "Eval case not found": "Caso de evaluación no encontrado",
+    "Invitation not found": "Invitación no encontrada",
+    "Invitation is not pending": "La invitación no está pendiente",
+    "Notification not found": "Notificación no encontrada",
+    "Issue not found": "Reporte no encontrado",
+    "title is required": "El título es obligatorio",
+    "body is required": "El texto es obligatorio",
+    "Only admins can close issues": "Solo los administradores pueden cerrar reportes",
+    "Only admins can reopen issues": "Solo los administradores pueden reabrir reportes",
+    "Already closed": "Ya está cerrado",
+    "Already open": "Ya está abierto",
+    "Comment not found": "Comentario no encontrado",
+    "Run not found": "Ejecución no encontrada",
+    "kind must be project, agent, skill or context": "kind debe ser project, agent, skill o context",
+    "No such version": "Esa versión no existe",
+    "Only the owner or an admin can restore a version": "Solo el propietario o un administrador puede restaurar una versión",
+    "(deleted skill)": "(skill eliminada)",
+    "(deleted context)": "(contexto eliminado)",
+    "contexts shared with forks changed": "cambiaron los contextos compartidos con los forks",
+    "linked to the project it was forked from": "vinculado al proyecto del que se hizo el fork"
+  },
+  "html": {},
+  "patterns": [
+    {
+      "re": "^Unknown project ids: (.+)$",
+      "es": "ID de proyecto desconocidos: $1"
+    },
+    {
+      "re": "^Unknown skill ids: (.+)$",
+      "es": "ID de skill desconocidos: $1"
+    },
+    {
+      "re": "^Unknown context ids: (.+)$",
+      "es": "ID de contexto desconocidos: $1"
+    },
+    {
+      "re": "^Project (\\S+) does not belong to this user$",
+      "es": "El proyecto $1 no pertenece a este usuario"
+    },
+    {
+      "re": "^Skill (\\S+) does not belong to this user$",
+      "es": "La skill $1 no pertenece a este usuario"
+    },
+    {
+      "re": "^Context (\\S+) does not belong to this user$",
+      "es": "El contexto $1 no pertenece a este usuario"
+    },
+    {
+      "re": "^This agent is used by the flow of (.+)\\. Remove it from those flows first\\.$",
+      "es": "Este agente se usa en el flujo de $1. Quítalo primero de esos flujos."
+    },
+    {
+      "re": "^This context is attached to (.+), which have flows \\(directly or through one of their agents\\)\\. Detach it first\\.$",
+      "es": "Este contexto está asociado a $1, que tienen flujos (directamente o a través de uno de sus agentes). Desasócialo primero."
+    },
+    {
+      "re": "^This skill is used by agents in the flow of (.+)\\. Detach it from those agents first\\.$",
+      "es": "Esta skill la usan agentes del flujo de $1. Quítasela primero a esos agentes."
+    },
+    {
+      "re": "^bio must be at most (\\d+) characters$",
+      "es": "La biografía debe tener como máximo $1 caracteres"
+    },
+    {
+      "re": "^password must be at least (\\d+) characters$",
+      "es": "La contraseña debe tener al menos $1 caracteres"
+    },
+    {
+      "re": "^password must be at most (\\d+) characters$",
+      "es": "La contraseña debe tener como máximo $1 caracteres"
+    },
+    {
+      "re": "^execution_mode must be one of (.+)$",
+      "es": "execution_mode debe ser uno de estos: $1"
+    },
+    {
+      "re": "^mode must be one of (.+)$",
+      "es": "mode debe ser uno de estos: $1"
+    },
+    {
+      "re": "^A server with the tool prefix \"(.+)\" already exists in this project\\. Choose a distinct name\\.$",
+      "es": "Ya existe en este proyecto un servidor con el prefijo de herramientas \"$1\". Elige un nombre distinto."
+    },
+    {
+      "re": "^invalid allowed_tools entry (.+): use \"server__tool\" or \"server__\\*\"$",
+      "es": "Entrada de allowed_tools no válida $1: usa \"server__tool\" o \"server__*\""
+    },
+    {
+      "re": "^could not resolve host \"(.+)\"$",
+      "es": "no se pudo resolver el host \"$1\""
+    },
+    {
+      "re": "^url resolves to a loopback, private or reserved address \\((.+)\\)$",
+      "es": "la URL apunta a una dirección de loopback, privada o reservada ($1)"
+    },
+    {
+      "re": "^the server answered with a redirect \\((\\d+)\\); redirects are not followed$",
+      "es": "el servidor respondió con una redirección ($1); las redirecciones no se siguen"
+    },
+    {
+      "re": "^response larger than (\\d+) bytes$",
+      "es": "la respuesta supera los $1 bytes"
+    },
+    {
+      "re": "^no answer within (\\d+) ms$",
+      "es": "sin respuesta en $1 ms"
+    },
+    {
+      "re": "^output_schema is too large \\((\\d+) bytes; the limit is (\\d+)\\)$",
+      "es": "output_schema es demasiado grande ($1 bytes; el límite es $2)"
+    },
+    {
+      "re": "^output_schema does not compile: (.+)$",
+      "es": "output_schema no compila: $1"
+    },
+    {
+      "re": "^output_schema: (.+) points outside the schema \\(\"(.*)\"\\); only local references \\(\"#/\\.\\.\\.\"\\) are allowed$",
+      "es": "output_schema: $1 apunta fuera del schema (\"$2\"); solo se permiten referencias locales (\"#/...\")"
+    },
+    {
+      "re": "^output_schema: (.+) must not be an absolute URI$",
+      "es": "output_schema: $1 no debe ser un URI absoluto"
+    },
+    {
+      "re": "^Invalid file name \"(.+)\"\\. Allowed: letters, digits, '\\.', '_', '-', and a file extension \\(e\\.g\\. \\.md, \\.sh, \\.json\\)$",
+      "es": "Nombre de archivo no válido \"$1\". Se permiten letras, dígitos, '.', '_', '-' y una extensión de archivo (p. ej. .md, .sh, .json)"
+    },
+    {
+      "re": "^Duplicate file name: (.+)$",
+      "es": "Nombre de archivo duplicado: $1"
+    },
+    {
+      "re": "^Entry file must be named (\\S+) \\(got \"(.*)\"\\)$",
+      "es": "El archivo principal debe llamarse $1 (se recibió \"$2\")"
+    },
+    {
+      "re": "^File \"(.+)\" content is empty$",
+      "es": "El contenido del archivo \"$1\" está vacío"
+    },
+    {
+      "re": "^Exactly one file must be marked as entry \\(got (\\d+)\\)$",
+      "es": "Exactamente un archivo debe estar marcado como principal (se recibieron $1)"
+    },
+    {
+      "re": "^(AGENT\\.md|SKILL\\.md|CONTEXT\\.md) is required$",
+      "es": "$1 es obligatorio"
+    },
+    {
+      "re": "^min_severity must be one of (.+)$",
+      "es": "min_severity debe ser uno de estos: $1"
+    },
+    {
+      "re": "^Run is already completed$",
+      "es": "La ejecución ya terminó"
+    },
+    {
+      "re": "^Run is already failed$",
+      "es": "La ejecución ya falló"
+    },
+    {
+      "re": "^Run is already cancelled$",
+      "es": "La ejecución ya fue cancelada"
+    },
+    {
+      "re": "^Run is already capped$",
+      "es": "La ejecución ya se detuvo por llegar a un límite"
+    },
+    {
+      "re": "^Run is already reported$",
+      "es": "La ejecución ya entregó su informe"
+    },
+    {
+      "re": "^Run is already (\\S+)$",
+      "es": "La ejecución ya está en estado $1"
+    },
+    {
+      "re": "^the run did not reach an End \\(status (\\S+)\\)$",
+      "es": "la ejecución no llegó a un Fin (estado $1)"
+    },
+    {
+      "re": "^the run did not reach an End \\(status ([^\\s:]+): (.+)\\)$",
+      "es": "la ejecución no llegó a un Fin (estado $1: $2)"
+    },
+    {
+      "re": "^expected End \"(.*)\" but the run ended at \"(.*)\"$",
+      "es": "se esperaba el Fin \"$1\", pero la ejecución terminó en \"$2\""
+    },
+    {
+      "re": "^agents that never completed a step: (.+)$",
+      "es": "agentes que nunca completaron un paso: $1"
+    },
+    {
+      "re": "^expected finding not reported: (.+)$",
+      "es": "hallazgo esperado no reportado: $1"
+    },
+    {
+      "re": "^(\\d+) finding\\(s\\) beyond the expected ones \\(at most (\\d+) allowed\\)$",
+      "es": "$1 hallazgo(s) además de los esperados (se permiten como máximo $2)"
+    },
+    {
+      "re": "^(.+) invited you to the project \"(.+)\"$",
+      "es": "$1 te invitó al proyecto \"$2\""
+    },
+    {
+      "re": "^(.+) invited you to the agent \"(.+)\"$",
+      "es": "$1 te invitó al agente \"$2\""
+    },
+    {
+      "re": "^(.+) invited you to the skill \"(.+)\"$",
+      "es": "$1 te invitó a la skill \"$2\""
+    },
+    {
+      "re": "^(.+) invited you to the context \"(.+)\"$",
+      "es": "$1 te invitó al contexto \"$2\""
+    },
+    {
+      "re": "^New bug report: (.+)$",
+      "es": "Nuevo reporte de error: $1"
+    },
+    {
+      "re": "^New feature report: (.+)$",
+      "es": "Nuevo reporte de idea: $1"
+    },
+    {
+      "re": "^New question report: (.+)$",
+      "es": "Nuevo reporte de pregunta: $1"
+    },
+    {
+      "re": "^Opened by (.+)\\.$",
+      "es": "Abierto por $1."
+    },
+    {
+      "re": "^Closed by (.+)\\.$",
+      "es": "Cerrado por $1."
+    },
+    {
+      "re": "^Your issue \"(.+)\" was closed$",
+      "es": "Se cerró tu reporte \"$1\""
+    },
+    {
+      "re": "^New comment on your issue \"(.+)\"$",
+      "es": "Nuevo comentario en tu reporte \"$1\""
+    },
+    {
+      "re": "^A run of \"(.+)\" was cancelled by (.+)$",
+      "es": "Una ejecución de \"$1\" fue cancelada por $2"
+    },
+    {
+      "re": "^A run of \"(.+)\" stopped: (.*)$",
+      "es": "Una ejecución de \"$1\" se detuvo: $2"
+    },
+    {
+      "re": "^A run of \"(.+)\" failed: (.*)$",
+      "es": "Una ejecución de \"$1\" falló: $2"
+    },
+    {
+      "re": "^\"(.+)\" has changes for your fork \"(.+)\"$",
+      "es": "\"$1\" tiene cambios para tu fork \"$2\""
+    },
+    {
+      "re": "^\"(.+)\" changed$",
+      "es": "\"$1\" cambió"
+    },
+    {
+      "re": "^The project settings or flow are now v(\\d+) \\(by (.+)\\)\\.$",
+      "es": "La configuración o el flujo del proyecto ahora están en la v$1 (por $2)."
+    },
+    {
+      "re": "^Agent \"(.+)\" is now v(\\d+) \\(by (.+)\\)\\.$",
+      "es": "El agente \"$1\" ahora está en la v$2 (por $3)."
+    },
+    {
+      "re": "^Skill \"(.+)\" is now v(\\d+) \\(by (.+)\\)\\.$",
+      "es": "La skill \"$1\" ahora está en la v$2 (por $3)."
+    },
+    {
+      "re": "^Context \"(.+)\" is now v(\\d+) \\(by (.+)\\)\\.$",
+      "es": "El contexto \"$1\" ahora está en la v$2 (por $3)."
+    },
+    {
+      "re": "^(.+) forked your project \"(.+)\"$",
+      "es": "$1 hizo un fork de tu proyecto \"$2\""
+    },
+    {
+      "re": "^(.+) forked your agent \"(.+)\"$",
+      "es": "$1 hizo un fork de tu agente \"$2\""
+    },
+    {
+      "re": "^(.+) forked your skill \"(.+)\"$",
+      "es": "$1 hizo un fork de tu skill \"$2\""
+    },
+    {
+      "re": "^(.+) forked your context \"(.+)\"$",
+      "es": "$1 hizo un fork de tu contexto \"$2\""
+    },
+    {
+      "re": "^forked from \"(.+)\"$",
+      "es": "fork de \"$1\""
+    },
+    {
+      "re": "^updated from \"(.+)\" v(\\d+)$",
+      "es": "actualizado desde \"$1\" v$2"
+    },
+    {
+      "re": "^restored v(\\d+)$",
+      "es": "se restauró la v$1"
+    },
+    {
+      "re": "^context \"(.+)\" shared with forks$",
+      "es": "contexto \"$1\" compartido con los forks"
+    },
+    {
+      "re": "^context \"(.+)\" kept private from forks$",
+      "es": "contexto \"$1\" oculto para los forks"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "text": {
+    "AIOrc — Audit": "AIOrc — Auditoría",
+    "Collapse/expand menu": "Contraer/expandir menú",
+    "Workspace": "Espacio de trabajo",
+    "Projects": "Proyectos",
+    "Agents": "Agentes",
+    "Contexts": "Contextos",
+    "Team": "Equipo",
+    "Insights": "Análisis",
+    "Usage analytics": "Analítica de uso",
+    "Audit": "Auditoría",
+    "Admin panel": "Panel de administración",
+    "Community": "Comunidad",
+    "Public repository": "Repositorio público",
+    "Report a bug or idea": "Reportar un error o una idea",
+    "Help": "Ayuda",
+    "How to use AIOrc": "Cómo usar AIOrc",
+    "Documentation": "Documentación",
+    "How AIOrc compares": "Cómo se compara AIOrc",
+    "Compare": "Comparar",
+    "Log out": "Cerrar sesión",
+    "Run": "Ejecución",
+    "Close": "Cerrar",
+    "Loading…": "Cargando…",
+    "Input": "Entrada",
+    "Eval": "Evaluación",
+    "completed": "completada",
+    "dispatched, awaiting output": "despachado, esperando salida",
+    "pass": "aprobado",
+    "fail": "fallido",
+    "not graded": "sin calificar",
+    "Self-declared report (posted by the model, not verified)": "Informe autodeclarado (publicado por el modelo, sin verificar)",
+    "Self-declared report": "Informe autodeclarado",
+    "The model has not posted its report yet.": "El modelo todavía no ha publicado su informe.",
+    "No details recorded for this run.": "No hay detalles registrados para esta ejecución.",
+    "just now": "justo ahora",
+    "All projects": "Todos los proyectos",
+    "When": "Cuándo",
+    "Project": "Proyecto",
+    "Caller": "Solicitante",
+    "Model-orchestrated mode: the model posted its own report. Not verified by the server.": "Modo orquestado por el modelo: el modelo publicó su propio informe. El servidor no lo verificó.",
+    "running": "en curso",
+    "cancelled": "cancelada",
+    "abandoned": "abandonada",
+    "capped": "limitada",
+    "failed": "fallida",
+    "delivered": "entregada",
+    "reported": "reportada",
+    "LIVE": "EN VIVO",
+    "Every run, auditable: who ran what, which path it took, and how it ended. Cancel an in-flight run or export a signed audit trail.": "Cada ejecución, auditable: quién ejecutó qué, qué ruta siguió y cómo terminó. Cancela una ejecución en curso o exporta un registro de auditoría firmado.",
+    "All statuses": "Todos los estados",
+    "Running": "En curso",
+    "Completed": "Completada",
+    "Cancelled": "Cancelada",
+    "Abandoned": "Abandonada",
+    "Capped": "Limitada",
+    "Failed": "Fallida",
+    "Model-orchestrated · waiting for report": "Orquestado por el modelo · esperando informe",
+    "Model-orchestrated · reported": "Orquestado por el modelo · reportado",
+    "Mode": "Modo",
+    "Status": "Estado",
+    "Actions": "Acciones",
+    "No runs match the current filters.": "Ninguna ejecución coincide con los filtros actuales.",
+    "No activity for 2h+ — resumes automatically if the client comes back, or cancel it to close it": "Sin actividad por más de 2 h: se reanuda automáticamente si el cliente vuelve, o cancélala para cerrarla",
+    "An agent reached its invocation cap": "Un agente alcanzó su tope de invocaciones",
+    "Model-orchestrated mode: the whole flow was sent; waiting for the model's report": "Modo orquestado por el modelo: se envió el flujo completo; esperando el informe del modelo",
+    "Model-orchestrated mode: whole flow in one prompt; the report is self-declared, not verified": "Modo orquestado por el modelo: el flujo completo en un solo prompt; el informe es autodeclarado, no verificado",
+    "model-orchestrated · self-declared": "orquestado por el modelo · autodeclarado",
+    "Model-orchestrated mode: no report posted": "Modo orquestado por el modelo: no se publicó ningún informe",
+    "model-orchestrated · no report": "orquestado por el modelo · sin informe",
+    "Server-orchestrated: the server dispatched and checked every step. See Status for how the run ended.": "Orquestado por el servidor: el servidor despachó y verificó cada paso. Consulta Estado para ver cómo terminó la ejecución.",
+    "server-orchestrated": "orquestado por el servidor",
+    "Detail": "Detalle",
+    "Export": "Exportar",
+    "Cancel": "Cancelar",
+    "Cancel this run? Only this run is affected — other runs and the project keep working.": "¿Cancelar esta ejecución? Solo se ve afectada esta ejecución: las demás ejecuciones y el proyecto siguen funcionando.",
+    "Could not cancel the run.": "No se pudo cancelar la ejecución.",
+    "Could not export.": "No se pudo exportar.",
+    "Versions this run used": "Versiones que usó esta ejecución",
+    "project": "proyecto",
+    "agent": "agente",
+    "context": "contexto"
+  },
+  "html": {},
+  "patterns": [
+    {
+      "re": "^(\\d+)m ago$",
+      "es": "hace $1 min"
+    },
+    {
+      "re": "^(\\d+)h ago$",
+      "es": "hace $1 h"
+    },
+    {
+      "re": "^(\\d+)d ago$",
+      "es": "hace $1 d"
+    },
+    {
+      "re": "^Run ([0-9A-Za-z-]{1,8})…$",
+      "es": "Ejecución $1…"
+    },
+    {
+      "re": "^Could not load run \\((\\d+)\\)$",
+      "es": "No se pudo cargar la ejecución ($1)"
+    },
+    {
+      "re": "^(.+) · model-orchestrated \\(self-declared, not verified\\) · ([a-z]+)$",
+      "es": "$1 · orquestado por el modelo (autodeclarado, sin verificar) · $2"
+    },
+    {
+      "re": "^(.+) · server-orchestrated · ([a-z]+)$",
+      "es": "$1 · orquestado por el servidor · $2"
+    },
+    {
+      "re": "^Verified steps \\((\\d+)\\)$",
+      "es": "Pasos verificados ($1)"
+    },
+    {
+      "re": "^Verified steps \\((\\d+) — (.+)\\)$",
+      "es": "Pasos verificados ($1 — $2)"
+    },
+    {
+      "re": "^completed · edge (.+)$",
+      "es": "completado · conexión $1"
+    },
+    {
+      "re": "^dispatched, awaiting output · edge (.+)$",
+      "es": "despachado, esperando salida · conexión $1"
+    },
+    {
+      "re": "^Output of (.+) \\(sha256 ([0-9a-f]+)\\)$",
+      "es": "Salida de $1 (sha256 $2)"
+    },
+    {
+      "re": "^Failed to load runs \\((\\d+)\\)$",
+      "es": "No se pudieron cargar las ejecuciones ($1)"
+    },
+    {
+      "re": "^Open the (project|agent|skill|context) history at this version$",
+      "es": "Abrir el historial de $1 en esta versión"
+    },
+    {
+      "re": "^(project|agent|skill|context) (.+) v(\\d+)$",
+      "es": "$1 $2 v$3"
+    },
+    {
+      "re": "^sha256 ([0-9a-f]+) · recorded in the run's event chain$",
+      "es": "sha256 $1 · registrado en la cadena de eventos de la ejecución"
+    }
+  ]
+}
