@@ -33,7 +33,7 @@ export default function PalettePanel({ agents, visible, onToggle, onShowContent 
         <input
           type="text"
           className="fe-search-input"
-          placeholder="🔍 Filter agents…"
+          placeholder="Filter agents…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />

@@ -3,25 +3,37 @@
 
 :root {
   --primary: #4361ee;
-  --primary-dark: #3451d1;
+  --primary-dark: #2f4bd6;
   --accent: #4361ee;
-  --header-bg: #1a1a2e;
-  --header-text: #e0e0ff;
-  --bg: #f5f6fa;
+  --header-bg: #0b1128;
+  --header-text: #e2e7f8;
+  --bg: #fbfbfc;
   --card-bg: #ffffff;
-  --text: #1a1a2e;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --success: #10b981;
-  --error: #ef4444;
-  --warning: #f59e0b;
+  --text: #0e1530;
+  --muted: #565e74;
+  --border: #e3e6ee;
+  --success: #12804a;
+  --error: #d0342c;
+  --warning: #b7791f;
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow: 0 1px 2px rgba(14,21,48,0.05);
+  --shadow-md: 0 1px 2px rgba(14,21,48,0.05), 0 8px 24px -12px rgba(14,21,48,0.16);
+
+  /* System layer (shared with the landing) */
+  --ink: #0e1530;
+  --night: #0b1128;
+  --line-strong: #c9cfdb;
+  --surface-2: #f4f5f8;
+  --route-tint: #eef1fd;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ui: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
@@ -506,3 +518,211 @@ textarea { resize: vertical; min-height: 90px; }
 .skill-files-readonly .skill-file-row { background: var(--card-bg, #fafafa); }
 .skill-files-readonly .skill-file-body { background: #0f172a; color: #e2e8f0; border-radius: 0 0 var(--radius) var(--radius); padding: 14px 18px; border-top: 1px solid #1e293b; }
 .skill-files-readonly .skill-file-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: 'SFMono-Regular',Consolas,monospace; font-size: 0.82rem; line-height: 1.6; color: inherit; }
+
+/* =====================================================================
+   System layer — Operate surfaces (dashboard, project, admin, analytics,
+   audit, issues, repository, profile, docs).
+   Pages still carry their own <style> blocks after this file; selectors
+   here are prefixed with :root where they must win over those blocks.
+   Motion rules follow the project's motion standard: specific properties,
+   custom ease-out curves, under 250 ms, nothing on high-frequency actions.
+   ===================================================================== */
+
+/* ----- Browser surfaces ----- */
+::selection { background: var(--primary); color: #fff; }
+input, textarea { caret-color: var(--primary); }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+html { scrollbar-color: #c4cad8 transparent; }
+code, pre, kbd, samp { font-family: var(--mono); }
+h1, h2, h3, h4 { letter-spacing: -0.012em; }
+
+/* ----- Buttons ----- */
+.btn {
+  height: 36px; padding: 0 14px; border-radius: 7px;
+  font-weight: 600; font-size: 0.86rem; line-height: 1;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms var(--ease-out);
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn-sm { height: 30px; padding: 0 10px; font-size: 0.8rem; border-radius: 6px; }
+.btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
+.btn-ghost:hover { background: var(--surface-2); border-color: #aab2c3; }
+
+/* ----- Forms ----- */
+input, select, textarea { border-color: var(--line-strong); border-radius: 7px; }
+input:hover, select:hover, textarea:hover { border-color: #aab2c3; }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,97,238,0.16); }
+label { color: var(--ink); font-weight: 600; font-size: 0.83rem; }
+
+/* ----- Cards: flat, hairline; only clickable cards respond to hover ----- */
+.card { box-shadow: none; border-radius: 10px; }
+.card:hover { box-shadow: none; }
+:root .item-card, :root .stat-card, :root .team-card, :root .repo-card, :root .agent-card {
+  box-shadow: none; border-color: var(--border); border-radius: 10px;
+}
+:root .item-card { transition: border-color 160ms ease; }
+:root .item-card:hover { box-shadow: none; border-color: var(--line-strong); }
+:root .repo-card { transition: border-color 160ms ease, box-shadow 200ms var(--ease-out); }
+:root .repo-card:hover { transform: none; border-color: var(--line-strong); box-shadow: var(--shadow-md); }
+:root .agent-card-header .agent-icon,
+:root .team-card-icon { background: var(--route-tint); color: var(--primary); }
+
+/* ----- Badges & chips: calmer, sentence case ----- */
+.badge { text-transform: none; letter-spacing: 0; font-weight: 600; border-radius: 6px; }
+:root .pc-badge { border-radius: 6px; background: var(--surface-2); color: #2b3350; border-color: var(--border); }
+:root .pc-badge.skill { background: #f6f2fd; color: #5b2a9a; border-color: #e6dcf8; }
+:root .pc-flow-preview { background: var(--night); border-color: var(--night); }
+
+/* ----- Code blocks ----- */
+.mcp-config, :root .info-code { background: var(--night); font-family: var(--mono); }
+.api-key-row { font-family: var(--mono); background: var(--surface-2); border-color: var(--border); color: var(--ink); }
+
+/* ----- Shell: sidebar ----- */
+:root .sidebar {
+  background: var(--surface-2); color: var(--ink);
+  border-right: 1px solid var(--border);
+  transition: none; /* collapsing is instant: animating width reflows the whole page */
+}
+:root .sidebar-header { border-bottom: none; padding: 18px 14px 8px 20px; }
+:root .sidebar-logo { font-family: var(--ui); font-stretch: 115%; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.02em; }
+:root .sidebar-logo a { color: var(--ink); }
+:root .sidebar-collapse-btn { color: var(--muted); width: 28px; height: 28px; border-radius: 6px; }
+:root .sidebar-collapse-btn:hover { background: rgba(14,21,48,0.06); color: var(--ink); }
+:root .sidebar-section-title { color: #7d8499; font-size: 0.7rem; letter-spacing: 0.06em; padding: 18px 22px 6px; }
+:root .sidebar-nav { padding: 2px 10px; gap: 1px; }
+:root .sidebar-item {
+  color: #3a4258; font-weight: 500; padding: 7px 10px; border-radius: 7px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+:root .sidebar-item:hover { background: rgba(14,21,48,0.05); color: var(--ink); }
+:root .sidebar-item.active {
+  background: #fff; color: var(--ink); font-weight: 600;
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px rgba(14,21,48,0.06);
+}
+:root .sidebar-item-glyph { background: none; width: 18px; height: 18px; color: #6b7389; border-radius: 0; }
+:root .sidebar-item-glyph svg { width: 18px; height: 18px; display: block; }
+:root .sidebar-item.active .sidebar-item-glyph { background: none; color: var(--primary); }
+:root .sidebar-footer { border-top: 1px solid var(--border); }
+:root .sidebar-user { color: var(--ink); }
+:root .sidebar-logout { color: var(--muted); }
+:root .sidebar-logout:hover { color: var(--ink); }
+:root .team-badge { background: var(--primary); }
+
+/* ----- Shell: page header ----- */
+:root .page-header h1, .page-title {
+  font-stretch: 110%; font-weight: 700; font-size: 1.75rem; letter-spacing: -0.024em; color: var(--ink);
+}
+:root .page-header .page-subtitle { color: var(--muted); font-size: 0.92rem; }
+:root .section-title { font-stretch: 105%; letter-spacing: -0.012em; }
+
+/* ----- Modals: enter with scale + fade, centred (no transform-origin trick for modals) ----- */
+@keyframes sys-fade { from { opacity: 0; } }
+@keyframes sys-pop { from { opacity: 0; transform: scale(0.96); } }
+body:not(.landing) .modal-overlay.open { animation: sys-fade 160ms ease-out; background: rgba(11,17,40,0.5); }
+body:not(.landing) .modal-overlay.open > .modal-box { animation: sys-pop 200ms var(--ease-out); }
+:root .modal-box { border-radius: 14px; box-shadow: 0 2px 4px rgba(14,21,48,0.08), 0 32px 64px -16px rgba(11,17,40,0.4); }
+
+/* ----- Shared dialogs (ui-dialogs.js) ----- */
+:root .ui-dlg-backdrop { background: rgba(11,17,40,0.5); }
+:root .ui-dlg-box { border-radius: 14px; color: var(--ink); animation: sys-pop 180ms var(--ease-out); }
+:root .ui-dlg-title { color: var(--ink); }
+:root .ui-dlg-btn { border-radius: 7px; transition: background-color 140ms ease, transform 140ms var(--ease-out); }
+:root .ui-dlg-btn:active { transform: scale(0.97); }
+:root .ui-dlg-btn.ghost { color: var(--ink); border-color: var(--line-strong); }
+
+/* ----- Inline glyph icons (replace emoji) ----- */
+.i { display: inline-block; width: 1em; height: 1em; vertical-align: -0.14em; flex-shrink: 0; }
+
+/* ----- Reduced motion: keep fades, drop movement ----- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+  .btn:active, :root .ui-dlg-btn:active { transform: none; }
+  body:not(.landing) .modal-overlay.open > .modal-box, :root .ui-dlg-box { animation: sys-fade 160ms ease-out; }
+  .spinner { animation-duration: 1.4s; }
+}
+
+/* ----- Toolbars: search + sort ----- */
+:root .sort-select { width: auto; flex: 0 0 auto; }
+:root .search-input-wrap::before {
+  content: ''; width: 16px; height: 16px; background-color: var(--muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5.5'/%3E%3Cpath d='m13.2 13.2 3.6 3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5.5'/%3E%3Cpath d='m13.2 13.2 3.6 3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:root .search-input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,97,238,0.16); }
+:root .search-input:focus { box-shadow: none; }
+
+/* ----- Stats: ink numerals, tabular, sentence-case labels ----- */
+:root .stat-card { text-align: left; }
+:root .stat-val, :root .stat-value { color: var(--ink); font-variant-numeric: tabular-nums; font-stretch: 105%; letter-spacing: -0.02em; }
+:root .stat-lbl { text-transform: none; letter-spacing: 0; font-size: 0.82rem; }
+table { font-variant-numeric: tabular-nums; }
+
+/* ----- Empty states teach the next step ----- */
+.sys-empty { grid-column: 1 / -1; border: 1px dashed var(--line-strong); border-radius: 12px; padding: 40px 36px; background: #fff; max-width: 720px; }
+.sys-empty h3 { font-size: 1.15rem; font-weight: 700; font-stretch: 105%; margin-bottom: 8px; color: var(--ink); }
+.sys-empty p { color: var(--muted); font-size: 0.93rem; line-height: 1.6; max-width: 58ch; margin-bottom: 20px; }
+.sys-empty-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ----- Flow previews on cards: light, matching the flow editor ----- */
+:root .pc-flow-preview { background: var(--surface-2); border-color: var(--border); }
+:root .pc-flow-empty { color: var(--muted); }
+:root .pc-flow-node { fill: #fff; stroke: var(--primary); stroke-width: 1.2; }
+:root .pc-flow-node.decision { fill: #fff; stroke: #c2560c; }
+:root .pc-flow-node.gate { fill: #fff; stroke: #d0342c; }
+:root .pc-flow-node.loop { fill: #fff; stroke: #12804a; }
+:root .pc-flow-edge { stroke: #9aa3b5; }
+
+/* ----- Execution mode pill (verified / fast) ----- */
+.mode-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--route-tint); color: var(--primary); border: 1px solid #d9e0fb; white-space: nowrap; }
+.mode-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mode-pill.fast { background: #fdf4e3; color: #8a5a0b; border-color: #f0dcb0; }
+
+/* ----- Shared site shell (site-shell.js) ------------------------------------
+   Signed-out pages use the public top nav (same look as the landing nav);
+   signed-in pages use the app sidebar. Base sidebar layout lives here so a
+   page that has no sidebar CSS of its own (benchmarks) still gets it. */
+body.has-sidebar { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; flex-shrink: 0; z-index: 50; }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; }
+.sidebar-logo a { color: inherit; text-decoration: none; }
+.sidebar-logo span { color: var(--primary); }
+.sidebar-collapse-btn { background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.sidebar-nav { display: flex; flex-direction: column; }
+.sidebar-item { display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 0.875rem; cursor: pointer; background: none; border: none; width: 100%; text-align: left; font-family: inherit; }
+.sidebar-item-glyph { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sidebar-footer { margin-top: auto; padding: 14px 18px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 6px; }
+.sidebar-user { word-break: break-all; font-size: 0.82rem; }
+.sidebar-logout { text-decoration: none; font-size: 0.82rem; align-self: flex-start; cursor: pointer; }
+.sidebar.collapsed { width: 60px; }
+.sidebar.collapsed .sidebar-logo, .sidebar.collapsed .sidebar-section-title, .sidebar.collapsed .sidebar-item-label, .sidebar.collapsed .sidebar-user { display: none; }
+.sidebar.collapsed .sidebar-header { justify-content: center; padding: 14px 8px; }
+.sidebar.collapsed .sidebar-item { justify-content: center; padding: 9px 8px; }
+.team-badge { margin-left: auto; color: #fff; font-size: 0.66rem; font-weight: 700; padding: 1px 6px; border-radius: 9px; min-width: 16px; text-align: center; line-height: 1.4; }
+.main-area { flex: 1; min-width: 0; }
+@media (max-width: 768px) {
+  body.has-sidebar { flex-direction: column; }
+  .sidebar { width: 100% !important; height: auto; position: static; }
+}
+
+.site-nav { position: sticky; top: 0; z-index: 100; height: 64px; background: rgba(255,255,255,0.88); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--border); }
+.site-nav-inner { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.site-nav-logo { font: 800 1.3rem/1 var(--ui); font-stretch: 115%; letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
+.site-nav-logo span { color: var(--primary); }
+.site-nav-links { display: flex; align-items: center; gap: 32px; }
+.site-nav-links a { color: var(--muted); text-decoration: none; font-size: 0.92rem; font-weight: 500; transition: color 160ms ease; }
+.site-nav-links a[aria-current] { color: var(--ink); font-weight: 650; }
+.site-nav-cta { display: flex; align-items: center; gap: 8px; }
+.site-nav-login { font-size: 0.92rem; font-weight: 500; color: var(--ink); padding: 8px 12px; border-radius: 6px; text-decoration: none; transition: background-color 160ms ease; }
+.site-nav-start { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 7px; background: var(--primary); color: #fff; font-weight: 600; font-size: 0.875rem; text-decoration: none; transition: background-color 160ms ease, transform 160ms var(--ease-out); }
+.site-nav-start:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .site-nav-links a:hover { color: var(--ink); }
+  .site-nav-login:hover { background: rgba(14,21,48,0.06); }
+  .site-nav-start:hover { background: var(--primary-dark); }
+}
+@media (max-width: 860px) { .site-nav-links { display: none; } .site-nav-inner { padding: 0 18px; } }
+/* Same metrics on every page, whether a sidebar item is a link or a button. */
+.sidebar-section-title { font-weight: 700; text-transform: uppercase; }
+.sidebar-item-glyph { width: 22px; height: 22px; }
+:root .sidebar-item { line-height: 1.4; font-size: 0.875rem; }
+:root .sidebar-section-title { padding: 18px 22px 6px; font-size: 0.68rem; letter-spacing: 0.08em; }

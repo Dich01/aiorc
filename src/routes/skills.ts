@@ -5,6 +5,9 @@ import { sendInvitationEmail } from '../lib/mailer';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Skill, SkillFile, SkillInvitation } from '../db/schema';
+import { flowsReferencingAgents } from '../orchestrator';
+import { recordVersion, notifyForked } from '../lib/versions';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -186,10 +189,10 @@ router.get('/public', (req: Request, res: Response): void => {
     SELECT s.*, u.email as owner_email, u.nickname as owner_nickname,
            (SELECT COUNT(DISTINCT au.run_id) FROM agent_usage au
               JOIN agent_skills ask ON ask.agent_id = au.agent_id
-              WHERE ask.skill_id = s.id AND au.source = 'reported') as usage_runs,
+              WHERE ask.skill_id = s.id AND au.source = 'executed') as usage_runs,
            (SELECT COALESCE(SUM(au.invocations), 0) FROM agent_usage au
               JOIN agent_skills ask ON ask.agent_id = au.agent_id
-              WHERE ask.skill_id = s.id AND au.source = 'reported') as usage_invocations
+              WHERE ask.skill_id = s.id AND au.source = 'executed') as usage_invocations
     FROM skills s JOIN users u ON u.id = s.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -286,6 +289,7 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }
   }
 
+  recordVersion('skill', id, req.userId!, 'created');
   const created = db.prepare('SELECT * FROM skills WHERE id = ?').get(id) as Skill;
   res.status(201).json(enrichSkill(created, req.userId!));
 });
@@ -325,6 +329,7 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
+  recordVersion('skill', skill.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
   const updated = db.prepare('SELECT * FROM skills WHERE id = ?').get(skill.id) as Skill;
   res.json(enrichSkill(updated, req.userId!));
 });
@@ -395,6 +400,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO skill_invitations (id, skill_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, skill.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'skill', entityName: skill.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the skill "${skill.name}"`, link: 'dashboard.html?tab=team', entityKind: 'skill', entityId: skill.id });
   res.status(201).json(db.prepare('SELECT * FROM skill_invitations WHERE id = ?').get(id));
 });
 
@@ -464,6 +470,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   try { fork(); }
   catch (err) { res.status(500).json({ error: 'Fork failed', detail: String(err) }); return; }
 
+  recordVersion('skill', newSkillId, req.userId!, `forked from "${source.name}"`);
+  notifyForked('skill', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM skills WHERE id = ?').get(newSkillId) as Skill;
   res.status(201).json(enrichSkill(created, req.userId!));
 });
@@ -475,6 +483,14 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
   if (!isAdmin(req.userId!) && skill.user_id !== req.userId) {
     res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  // Refuse while an agent carrying this skill sits in a saved flow.
+  const carriers = (db.prepare('SELECT agent_id FROM agent_skills WHERE skill_id = ?').all(skill.id) as { agent_id: string }[]).map(r => r.agent_id);
+  const usedBy = flowsReferencingAgents(carriers);
+  if (usedBy.length > 0) {
+    res.status(409).json({ error: `This skill is used by agents in the flow of ${usedBy.map(p => `"${p.name}"`).join(', ')}. Detach it from those agents first.`, projects: usedBy });
+    return;
   }
 
   db.prepare('DELETE FROM agent_skills WHERE skill_id = ?').run(skill.id);

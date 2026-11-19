@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "required": ["kind", "decisions", "commits", "changed_files", "stuck", "summary", "notes"],
+  "properties": {
+    "kind": { "enum": ["checks", "findings"] },
+    "decisions": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["id", "action", "reason"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "action": { "enum": ["fixed", "rejected", "not-applicable"] },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "commits": { "type": "array", "items": { "type": "string", "pattern": "^[0-9a-f]{40}$" } },
+    "changed_files": { "type": "array", "items": { "type": "string" } },
+    "stuck": { "type": "boolean" },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "notes": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

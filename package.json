@@ -4,13 +4,15 @@
   "description": "Multi-tenant AI agent registry with MCP server support and deterministic orchestration",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "AIORC_OPEN_REGISTRATION=1 ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "ts-node src/seed.ts",
     "test": "ts-node --transpile-only src/tests/run.ts",
     "build:flow": "vite build",
-    "dev:flow": "vite build --watch"
+    "dev:flow": "vite build --watch",
+    "admin:create": "ts-node --transpile-only src/scripts/adminCreate.ts",
+    "audit:verify": "ts-node --transpile-only src/scripts/auditVerify.ts",
+    "harness:apply": "ts-node --transpile-only src/scripts/harnessApply.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",

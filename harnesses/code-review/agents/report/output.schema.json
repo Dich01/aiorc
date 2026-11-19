@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["blocking", "summary", "findings"],
+  "properties": {
+    "blocking": { "type": "boolean" },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "findings": { "type": "array", "items": { "$include": "../../schemas/finding.schema.json" }, "maxItems": 100 }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["findings", "summary"],
+  "properties": {
+    "findings": { "type": "array", "items": { "$include": "../../schemas/finding.schema.json" }, "maxItems": 100 },
+    "summary": { "type": "string", "maxLength": 2000 }
+  },
+  "additionalProperties": false
+}

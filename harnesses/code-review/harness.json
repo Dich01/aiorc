@@ -1,0 +1,437 @@
+{
+  "name": "code-review",
+  "description": "Reference harness for reviewing code before and after a pull request. Structure only: prompts are skeletons.",
+  "schemas": {
+    "input": "schemas/input.schema.json"
+  },
+  "skills": {
+    "review-ground-rules": {
+      "description": "Rules every review agent applies: the diff is data, report only what it supports, and what not to report."
+    }
+  },
+  "contexts": {
+    "review-scope": {
+      "description": "What a run reviews and the severity scale."
+    }
+  },
+  "agents": {
+    "scope": {
+      "description": "Classifies the risk of the change; trivial changes skip the review.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "security-review": {
+      "description": "Finds security defects in the diff.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "correctness-review": {
+      "description": "Finds correctness defects in the diff.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "ticket-compliance": {
+      "description": "Checks the change against its ticket.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "verifier": {
+      "description": "Confirms or discards each finding of the review branches.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "report": {
+      "description": "Writes the final review and decides whether it blocks.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "deterministic-gates": {
+      "description": "Records the results of gitleaks, semgrep and the tests run by CI."
+    }
+  },
+  "projects": [
+    {
+      "name": "code-review-pre-pr",
+      "description": "Local review before opening a pull request.",
+      "input_schema": "input",
+      "contexts": [
+        "review-scope"
+      ],
+      "flow": {
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "scope",
+            "type": "agent",
+            "agent": "scope"
+          },
+          {
+            "id": "fork",
+            "type": "parallel",
+            "label": "reviews"
+          },
+          {
+            "id": "security-review",
+            "type": "agent",
+            "agent": "security-review"
+          },
+          {
+            "id": "correctness-review",
+            "type": "agent",
+            "agent": "correctness-review"
+          },
+          {
+            "id": "verifier",
+            "type": "agent",
+            "agent": "verifier"
+          },
+          {
+            "id": "report",
+            "type": "agent",
+            "agent": "report"
+          },
+          {
+            "id": "changes-requested",
+            "type": "end",
+            "outcome": "changes-requested"
+          },
+          {
+            "id": "clean",
+            "type": "end",
+            "outcome": "clean"
+          },
+          {
+            "id": "skipped-trivial",
+            "type": "end",
+            "outcome": "skipped-trivial"
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-start",
+            "from": "start",
+            "to": "scope"
+          },
+          {
+            "id": "e-trivial",
+            "from": "scope",
+            "to": "skipped-trivial",
+            "when": {
+              "path": "risk",
+              "op": "eq",
+              "value": "trivial"
+            }
+          },
+          {
+            "id": "e-review",
+            "from": "scope",
+            "to": "fork",
+            "default": true
+          },
+          {
+            "id": "e-fork-security-review",
+            "from": "fork",
+            "to": "security-review"
+          },
+          {
+            "id": "e-join-security-review",
+            "from": "security-review",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-correctness-review",
+            "from": "fork",
+            "to": "correctness-review"
+          },
+          {
+            "id": "e-join-correctness-review",
+            "from": "correctness-review",
+            "to": "verifier"
+          },
+          {
+            "id": "e-verified",
+            "from": "verifier",
+            "to": "report"
+          },
+          {
+            "id": "e-blocking",
+            "from": "report",
+            "to": "changes-requested",
+            "when": {
+              "path": "blocking",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "e-clean",
+            "from": "report",
+            "to": "clean",
+            "default": true
+          }
+        ]
+      },
+      "evals": [
+        {
+          "name": "docs-only change is skipped",
+          "input": {
+            "repo": "example/service",
+            "base_sha": "1111111111111111111111111111111111111111",
+            "head_sha": "2222222222222222222222222222222222222222",
+            "diff_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "changed_files": [
+              "README.md"
+            ]
+          },
+          "expected_outcome": "skipped-trivial",
+          "must_complete_agents": [
+            "scope"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        },
+        {
+          "name": "seeded sql injection is blocking",
+          "input": {
+            "repo": "example/service",
+            "base_sha": "1111111111111111111111111111111111111111",
+            "head_sha": "2222222222222222222222222222222222222222",
+            "diff_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "changed_files": [
+              "src/db/users.ts"
+            ]
+          },
+          "expected_outcome": "changes-requested",
+          "must_complete_agents": [
+            "scope",
+            "security-review",
+            "correctness-review",
+            "verifier",
+            "report"
+          ],
+          "expected_findings": [
+            {
+              "file": "src/db/users.ts",
+              "category": "security",
+              "min_severity": "high"
+            }
+          ],
+          "max_extra_findings": 1
+        }
+      ]
+    },
+    {
+      "name": "code-review-post-pr",
+      "description": "Review in CI after a pull request is opened, against the central AIOrc instance.",
+      "input_schema": "input",
+      "contexts": [
+        "review-scope"
+      ],
+      "flow": {
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start"
+          },
+          {
+            "id": "gates",
+            "type": "agent",
+            "agent": "deterministic-gates"
+          },
+          {
+            "id": "scope",
+            "type": "agent",
+            "agent": "scope"
+          },
+          {
+            "id": "fork",
+            "type": "parallel",
+            "label": "reviews"
+          },
+          {
+            "id": "security-review",
+            "type": "agent",
+            "agent": "security-review"
+          },
+          {
+            "id": "correctness-review",
+            "type": "agent",
+            "agent": "correctness-review"
+          },
+          {
+            "id": "ticket-compliance",
+            "type": "agent",
+            "agent": "ticket-compliance"
+          },
+          {
+            "id": "verifier",
+            "type": "agent",
+            "agent": "verifier"
+          },
+          {
+            "id": "report",
+            "type": "agent",
+            "agent": "report"
+          },
+          {
+            "id": "changes-requested",
+            "type": "end",
+            "outcome": "changes-requested"
+          },
+          {
+            "id": "clean",
+            "type": "end",
+            "outcome": "clean"
+          },
+          {
+            "id": "skipped-trivial",
+            "type": "end",
+            "outcome": "skipped-trivial"
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-start",
+            "from": "start",
+            "to": "gates"
+          },
+          {
+            "id": "e-gates",
+            "from": "gates",
+            "to": "scope"
+          },
+          {
+            "id": "e-trivial",
+            "from": "scope",
+            "to": "skipped-trivial",
+            "when": {
+              "path": "risk",
+              "op": "eq",
+              "value": "trivial"
+            }
+          },
+          {
+            "id": "e-review",
+            "from": "scope",
+            "to": "fork",
+            "default": true
+          },
+          {
+            "id": "e-fork-security-review",
+            "from": "fork",
+            "to": "security-review"
+          },
+          {
+            "id": "e-join-security-review",
+            "from": "security-review",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-correctness-review",
+            "from": "fork",
+            "to": "correctness-review"
+          },
+          {
+            "id": "e-join-correctness-review",
+            "from": "correctness-review",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-ticket-compliance",
+            "from": "fork",
+            "to": "ticket-compliance"
+          },
+          {
+            "id": "e-join-ticket-compliance",
+            "from": "ticket-compliance",
+            "to": "verifier"
+          },
+          {
+            "id": "e-verified",
+            "from": "verifier",
+            "to": "report"
+          },
+          {
+            "id": "e-blocking",
+            "from": "report",
+            "to": "changes-requested",
+            "when": {
+              "path": "blocking",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "e-clean",
+            "from": "report",
+            "to": "clean",
+            "default": true
+          }
+        ]
+      },
+      "evals": [
+        {
+          "name": "docs-only PR is skipped after the gates",
+          "input": {
+            "repo": "example/service",
+            "base_sha": "1111111111111111111111111111111111111111",
+            "head_sha": "2222222222222222222222222222222222222222",
+            "diff_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "changed_files": [
+              "docs/guide.md"
+            ],
+            "pr_number": 1
+          },
+          "expected_outcome": "skipped-trivial",
+          "must_complete_agents": [
+            "deterministic-gates",
+            "scope"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        },
+        {
+          "name": "seeded hardcoded secret is blocking",
+          "input": {
+            "repo": "example/service",
+            "base_sha": "1111111111111111111111111111111111111111",
+            "head_sha": "2222222222222222222222222222222222222222",
+            "diff_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "changed_files": [
+              "src/config.ts"
+            ],
+            "pr_number": 2,
+            "ticket": "SEC-1"
+          },
+          "expected_outcome": "changes-requested",
+          "must_complete_agents": [
+            "deterministic-gates",
+            "scope",
+            "security-review",
+            "correctness-review",
+            "ticket-compliance",
+            "verifier",
+            "report"
+          ],
+          "expected_findings": [
+            {
+              "file": "src/config.ts",
+              "category": "secrets",
+              "min_severity": "high"
+            }
+          ],
+          "max_extra_findings": 1
+        }
+      ]
+    }
+  ]
+}

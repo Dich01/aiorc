@@ -49,8 +49,8 @@ export default function EdgeConditionPopover({
           </p>
         </div>
         <div className="popover-footer">
-          <button className="btn-secondary" onClick={handleDelete} style={{ marginRight: 'auto', color: '#ef4444' }}>
-            🗑 Delete edge
+          <button className="btn-secondary" onClick={handleDelete} style={{ marginRight: 'auto', color: '#d0342c' }}>
+            Delete edge
           </button>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={handleSave}>Save</button>

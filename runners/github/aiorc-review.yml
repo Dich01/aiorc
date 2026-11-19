@@ -1,0 +1,158 @@
+# AIOrc review after a pull request is opened. Template: copy it to
+# .github/workflows/aiorc-review.yml in the repository to review, and copy
+# runners/pre-pr/aiorc-review.sh and runners/github/publish.mjs from the AIOrc
+# repository to .github/aiorc/ in that repository.
+#
+# Two jobs with separate permissions:
+#   review   reads the code (contents: read), runs the deterministic gates and
+#            Claude Code against the central AIOrc instance, and uploads the
+#            signed audit export. It holds the secrets; it cannot write to the PR.
+#   publish  never checks out the PR's code and runs no model. It verifies the
+#            export (signature, hash chain, head commit) and only then writes
+#            one comment, inline comments and an advisory check aiorc/review.
+#            It never approves.
+#
+# Required secrets: AIORC_PROJECT_KEY, AIORC_TOKEN (personal access token of a
+# CI account), ANTHROPIC_API_KEY.
+# Required variables: AIORC_URL, AIORC_AUDIT_PUBLIC_KEY (PEM from
+# GET <AIORC_URL>/audit/keys, pinned so a compromised server cannot swap it).
+# Optional variable: AIORC_TEST_COMMAND (default: npm test --if-present).
+#
+# Pull requests from forks and from bots are skipped: they do not get secrets.
+# Uses pull_request, never pull_request_target. Actions are pinned by SHA.
+
+name: aiorc-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: aiorc-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false &&
+      !endsWith(github.event.pull_request.user.login, '[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+      SEMGREP_VERSION: 1.182.0
+      CLAUDE_CODE_VERSION: 2.1.310
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Deterministic gates (gitleaks, semgrep, tests)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_COMMAND: ${{ vars.AIORC_TEST_COMMAND || 'npm test --if-present' }}
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/gates"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+          python -m pip install --quiet "semgrep==${SEMGREP_VERSION}"
+          cd "$GITHUB_WORKSPACE"
+
+          set +e
+          "$RUNNER_TEMP/gitleaks" git --log-opts="${BASE_SHA}..HEAD" --report-format json --report-path "$RUNNER_TEMP/gates/gitleaks.json" --exit-code 1 .
+          GITLEAKS_EXIT=$?
+          semgrep scan --config auto --json --output "$RUNNER_TEMP/gates/semgrep.json" --baseline-commit "$BASE_SHA" --metrics off .
+          SEMGREP_EXIT=$?
+          bash -c "$TEST_COMMAND" > "$RUNNER_TEMP/gates/tests.log" 2>&1
+          TESTS_EXIT=$?
+          set -e
+
+          sum() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else printf '' | sha256sum | cut -d' ' -f1; fi; }
+          cat > "$RUNNER_TEMP/gates.json" <<JSON
+          {"gates":[
+            {"tool":"gitleaks","version":"${GITLEAKS_VERSION}","exit_code":${GITLEAKS_EXIT},"report_sha256":"$(sum "$RUNNER_TEMP/gates/gitleaks.json")"},
+            {"tool":"semgrep","version":"${SEMGREP_VERSION}","exit_code":${SEMGREP_EXIT},"report_sha256":"$(sum "$RUNNER_TEMP/gates/semgrep.json")"},
+            {"tool":"tests","version":"${TEST_COMMAND//\"/}","exit_code":${TESTS_EXIT},"report_sha256":"$(sum "$RUNNER_TEMP/gates/tests.log")"}
+          ],"secrets_found":$([ "$GITLEAKS_EXIT" -eq 1 ] && echo true || echo false)}
+          JSON
+          cat "$RUNNER_TEMP/gates.json"
+
+      - name: Install Claude Code
+        run: npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+
+      - name: Review with AIOrc
+        env:
+          AIORC_URL: ${{ vars.AIORC_URL }}
+          AIORC_PROJECT_KEY: ${{ secrets.AIORC_PROJECT_KEY }}
+          AIORC_TOKEN: ${{ secrets.AIORC_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          bash .github/aiorc/aiorc-review.sh --base "$BASE_SHA" --pr "$PR_NUMBER" \
+            --gates "$RUNNER_TEMP/gates.json" --out "$RUNNER_TEMP/aiorc-export.json" || echo "review exit code $?"
+          test -s "$RUNNER_TEMP/aiorc-export.json"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: aiorc-export
+          path: |
+            ${{ runner.temp }}/aiorc-export.json
+            ${{ runner.temp }}/gates.json
+          retention-days: 90
+          if-no-files-found: error
+
+  publish:
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      checks: write
+    steps:
+      # Only the publisher script, from the base commit: never the PR's code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github/aiorc/publish.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: aiorc-export
+          path: ${{ runner.temp }}/aiorc
+
+      - name: Verify and publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AIORC_AUDIT_PUBLIC_KEY: ${{ vars.AIORC_AUDIT_PUBLIC_KEY }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf '%s\n' "$AIORC_AUDIT_PUBLIC_KEY" > "$RUNNER_TEMP/aiorc-public.pem"
+          node .github/aiorc/publish.mjs --export "$RUNNER_TEMP/aiorc/aiorc-export.json" \
+            --repo "$REPO" --pr "$PR_NUMBER" --head-sha "$HEAD_SHA" --public-key "$RUNNER_TEMP/aiorc-public.pem"

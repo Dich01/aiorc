@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "required": [
+    "title",
+    "body",
+    "labels",
+    "push_plan"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 72,
+      "not": {
+        "pattern": "[Cc]o-[Aa]uthored-[Bb]y|[Gg]enerated with|noreply@anthropic\\.com|[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]"
+      }
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000,
+      "not": {
+        "pattern": "[Cc]o-[Aa]uthored-[Bb]y|[Gg]enerated with|noreply@anthropic\\.com|[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]"
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 50
+      },
+      "maxItems": 10
+    },
+    "push_plan": {
+      "type": "object",
+      "required": [
+        "branch",
+        "commands"
+      ],
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

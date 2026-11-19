@@ -1,6 +1,10 @@
 import { FlowDocument, FlowNode, FlowEdge } from '../db/schema';
+import { outgoing } from '../shared/flow';
 
-// ── Graph-aware skip classification ─────────────────────────────────────────
+// ── Graph-aware skip classification (compiled / model-orchestrated mode runs) ─────────────
+//
+// Server-orchestrated runs cannot skip: the server dispatches every step. This
+// replays a compiled run's SELF-DECLARED report against the flow it ran.
 //
 // A planned agent that doesn't appear in the execution report is NOT
 // necessarily a bug: conditional branches legitimately divert the flow away
@@ -10,11 +14,12 @@ import { FlowDocument, FlowNode, FlowEdge } from '../db/schema';
 //   1. Dominator rule — the agent's node lies on EVERY path from Start to some
 //      node that DID execute. If X ran and A dominates X, A had to run first;
 //      a report naming X but not A means the LLM jumped over a mandatory step.
-//   2. Truncation rule — after the last reported agent, the flow continues
-//      through an unconditional (fallback) edge to another agent. Per the
-//      execution rules the LLM may only stop when every outgoing edge is
-//      conditional and none matches — so an unexecuted fallback target means
-//      the run was cut short.
+//   2. Truncation rule — after the last reported agent, the node has exactly
+//      one exit (no choice to make) leading to another agent. A run may only
+//      end at an End node, so an unexecuted single-exit target means the run
+//      was cut short. Nodes with several exits (choices or rules) may have
+//      left through a branch the report does not spell out, so the walk stops
+//      there rather than guess.
 //
 // Everything else planned-but-not-executed is classified as off-path
 // (a branch that wasn't taken) and excluded from compliance.
@@ -125,9 +130,9 @@ export function classifySkips(
     const visited = new Set<string>();
     while (cur && !visited.has(cur.id)) {
       visited.add(cur.id);
-      const unconditional = (succs.get(cur.id) ?? []).filter(e => !e.condition);
-      if (unconditional.length === 0) break; // all edges conditional → stopping is legal
-      const target = nodesById.get(unconditional[0]!.to);
+      const exits = outgoing(flow, cur.id).filter(e => nodesById.has(e.to));
+      if (exits.length !== 1) break; // a choice or rules: the branch taken is unknown
+      const target = nodesById.get(exits[0]!.to);
       if (!target || target.type === 'end') break;
       if (target.type === 'parallel') {
         for (const be of succs.get(target.id) ?? []) {

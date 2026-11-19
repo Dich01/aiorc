@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Issue, IssueComment, IssueType } from '../db/schema';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -115,6 +116,10 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     'INSERT INTO issues (id, user_id, title, body, type, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).run(id, req.userId!, title.trim().slice(0, 200), (body ?? '').trim(), finalType, 'open', now, now);
 
+  // Admins triage issues: each one hears about a new report.
+  for (const a of db.prepare("SELECT id FROM users WHERE role = 'admin' AND id != ?").all(req.userId!) as { id: string }[]) {
+    notify({ userId: a.id, kind: 'issue', title: `New ${finalType} report: ${title.trim().slice(0, 120)}`, body: `Opened by ${displayName(req.userId!)}.`, link: `issues.html?id=${id}` });
+  }
   const row = db.prepare(`
     SELECT i.*, u.nickname as author_nickname, u.email as author_email
     FROM issues i JOIN users u ON u.id = i.user_id WHERE i.id = ?
@@ -157,6 +162,9 @@ router.post('/:id/close', requireAuth, (req: AuthRequest, res: Response): void =
   db.prepare('UPDATE issues SET status = ?, closed_by_user_id = ?, closed_at = ?, updated_at = ? WHERE id = ?').run(
     'closed', req.userId!, Date.now(), Date.now(), issue.id
   );
+  if (issue.user_id !== req.userId) {
+    notify({ userId: issue.user_id, kind: 'issue', title: `Your issue "${issue.title}" was closed`, body: `Closed by ${displayName(req.userId!)}.`, link: `issues.html?id=${issue.id}` });
+  }
   const updated = db.prepare(`
     SELECT i.*, u.nickname as author_nickname, u.email as author_email, c.nickname as closer_nickname
     FROM issues i JOIN users u ON u.id = i.user_id LEFT JOIN users c ON c.id = i.closed_by_user_id
@@ -228,7 +236,7 @@ router.get('/:id/comments', (req: Request, res: Response): void => {
 
 // POST /issues/:id/comments — auth, any logged-in user.
 router.post('/:id/comments', requireAuth, (req: AuthRequest, res: Response): void => {
-  const issue = db.prepare('SELECT id FROM issues WHERE id = ?').get(req.params['id']) as { id: string } | undefined;
+  const issue = db.prepare('SELECT id, user_id, title FROM issues WHERE id = ?').get(req.params['id']) as { id: string; user_id: string; title: string } | undefined;
   if (!issue) { res.status(404).json({ error: 'Issue not found' }); return; }
   const { body } = req.body as { body?: string };
   if (!body?.trim()) { res.status(400).json({ error: 'body is required' }); return; }
@@ -239,6 +247,9 @@ router.post('/:id/comments', requireAuth, (req: AuthRequest, res: Response): voi
   );
   // Bump the issue's updated_at so sort=recent surfaces active threads.
   db.prepare('UPDATE issues SET updated_at = ? WHERE id = ?').run(Date.now(), issue.id);
+  if (issue.user_id !== req.userId) {
+    notify({ userId: issue.user_id, kind: 'issue', title: `New comment on your issue "${issue.title}"`, body: `${displayName(req.userId!)}: ${body.trim().slice(0, 300)}`, link: `issues.html?id=${issue.id}` });
+  }
 
   const created = db.prepare(`
     SELECT c.*, u.nickname as author_nickname, u.email as author_email, u.role as author_role

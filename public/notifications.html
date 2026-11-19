@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIOrc — Notifications</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="site-shell.js"></script>
+  <style>
+    body { background: var(--bg); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    .main-area { flex: 1; min-width: 0; }
+    .page { max-width: 860px; margin: 0 auto; padding: 40px 32px 64px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .page-head h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    .page-head p { margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; }
+    .tools { display: flex; gap: 8px; align-items: center; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--card-bg); }
+    .seg button { border: 0; background: none; padding: 6px 12px; font: inherit; font-size: 0.82rem; color: var(--muted); cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+    .btn-plain { background: var(--card-bg); color: var(--ink); border: 1px solid var(--border); }
+    .btn-plain:hover { background: var(--surface-2); }
+    .btn-plain:disabled { opacity: 0.5; cursor: default; }
+
+    .list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); overflow: hidden; }
+    .item { display: grid; grid-template-columns: 10px 1fr auto; gap: 14px; padding: 16px 18px; border-top: 1px solid var(--border); align-items: start; }
+    .item:first-child { border-top: 0; }
+    .item.unread { background: #f7f8fe; }
+    .mark { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: transparent; }
+    .item.unread .mark { background: #d0342c; }
+    .kind { font: 600 0.7rem var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .title { font-weight: 600; margin: 3px 0 0; line-height: 1.4; }
+    .title a { color: var(--ink); text-decoration: none; }
+    .title a:hover { color: var(--primary); text-decoration: underline; }
+    .body { margin: 6px 0 0; color: var(--muted); font-size: 0.88rem; line-height: 1.5; white-space: pre-line; }
+    .when { color: var(--muted); font-size: 0.8rem; white-space: nowrap; text-align: right; }
+    .when button { display: block; margin: 6px 0 0 auto; border: 0; background: none; color: var(--primary); font: inherit; font-size: 0.8rem; cursor: pointer; padding: 0; }
+    .when button:hover { text-decoration: underline; }
+    .empty { padding: 48px 24px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--card-bg); }
+    .empty strong { display: block; color: var(--ink); margin-bottom: 6px; font-size: 1rem; }
+    @media (max-width: 640px) {
+      .page { padding: 24px 16px 48px; }
+      .item { grid-template-columns: 10px 1fr; }
+      .when { grid-column: 2; text-align: left; }
+      .when button { margin: 4px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="shell-mount" data-active="notifications"></div>
+  <div class="main-area">
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <h1>Notifications</h1>
+          <p>Changes to projects shared with you, updates to the projects your forks came from, invitations, forks of your work, runs that ended badly and issues.</p>
+        </div>
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Show">
+            <button type="button" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="unread" aria-pressed="false">Unread</button>
+          </div>
+          <button type="button" class="btn btn-sm btn-plain" id="read-all" disabled>Mark all as read</button>
+        </div>
+      </div>
+      <div id="out"></div>
+    </div>
+  </div>
+
+  <script src="notifications.js"></script>
+  <script>
+    if (!localStorage.getItem('token')) location.href = 'index.html#login';
+    SiteShell.mount();
+    const esc = SiteShell.esc;
+    const H = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
+    const LABEL = {
+      upstream_changed: 'Original updated', shared_changed: 'Shared project changed', invitation: 'Invitation',
+      forked: 'Forked', run_problem: 'Run', issue: 'Issue',
+    };
+    let items = [];
+    let filter = 'all';
+
+    function ago(ts) {
+      const s = Math.round((Date.now() - ts) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.round(s / 60) + ' min ago';
+      if (s < 86400) return Math.round(s / 3600) + ' h ago';
+      if (s < 86400 * 7) return Math.round(s / 86400) + ' d ago';
+      return new Date(ts).toLocaleDateString();
+    }
+
+    function render() {
+      const shown = filter === 'unread' ? items.filter(n => !n.read_at) : items;
+      const unread = items.filter(n => !n.read_at).length;
+      document.getElementById('read-all').disabled = unread === 0;
+      window.AIOrcNotifications?.show(unread);
+      const out = document.getElementById('out');
+      if (!shown.length) {
+        out.innerHTML = filter === 'unread'
+          ? '<div class="empty"><strong>Nothing unread</strong>You are up to date.</div>'
+          : '<div class="empty"><strong>No notifications yet</strong>When something you use changes, or someone invites you or forks your work, it shows up here.</div>';
+        return;
+      }
+      out.innerHTML = '<ul class="list">' + shown.map(n => `
+        <li class="item${n.read_at ? '' : ' unread'}" data-id="${esc(n.id)}">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <div class="kind">${esc(LABEL[n.kind] || n.kind)}</div>
+            <p class="title">${n.link ? `<a href="${esc(n.link)}" data-open="${esc(n.id)}">${esc(n.title)}</a>` : esc(n.title)}</p>
+            ${n.body ? `<p class="body">${esc(n.body)}</p>` : ''}
+          </div>
+          <div class="when"><time title="${esc(new Date(n.created_at).toLocaleString())}">${ago(n.created_at)}</time>${n.read_at ? '' : `<button type="button" data-read="${esc(n.id)}">Mark as read</button>`}</div>
+        </li>`).join('') + '</ul>';
+    }
+
+    async function markRead(id) {
+      const r = await fetch(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', headers: H() });
+      if (!r.ok) return;
+      const n = items.find(x => x.id === id);
+      if (n) n.read_at = Date.now();
+    }
+
+    document.getElementById('out').addEventListener('click', async (e) => {
+      const readBtn = e.target.closest('[data-read]');
+      if (readBtn) { await markRead(readBtn.dataset.read); render(); return; }
+      const link = e.target.closest('[data-open]');
+      if (link) {
+        e.preventDefault();
+        await markRead(link.dataset.open);
+        location.href = link.getAttribute('href');
+      }
+    });
+    document.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => {
+      filter = b.dataset.filter;
+      document.querySelectorAll('[data-filter]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      render();
+    }));
+    document.getElementById('read-all').addEventListener('click', async () => {
+      const r = await fetch('/notifications/read-all', { method: 'POST', headers: H() });
+      if (r.ok) { items.forEach(n => { n.read_at = n.read_at || Date.now(); }); render(); }
+    });
+
+    fetch('/notifications?limit=200', { headers: H() })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(b => { items = b.items; render(); })
+      .catch(() => { document.getElementById('out').innerHTML = '<div class="empty"><strong>Could not load notifications</strong>Reload the page to try again.</div>'; });
+  </script>
+</body>
+</html>

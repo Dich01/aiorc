@@ -6,6 +6,8 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Context, ContextInvitation } from '../db/schema';
 import { normalizeFiles, writeEntityFiles, loadEntityFiles, CONTEXT_FILES } from '../lib/entityFiles';
+import { recordVersion, notifyForked } from '../lib/versions';
+import { notify, displayName } from '../lib/notify';
 
 const router = Router();
 
@@ -35,6 +37,7 @@ function enrichContext(c: Context, viewerId?: string) {
     ...c,
     files: loadEntityFiles(c.id, CONTEXT_FILES),
     project_attachments: loadProjectAttachmentsForContext(c.id),
+    agent_ids: (db.prepare('SELECT agent_id FROM agent_contexts WHERE context_id = ?').all(c.id) as { agent_id: string }[]).map(r => r.agent_id),
     stars_count: (contextStarsCount.get(c.id) as { n: number }).n,
     forks_count: (contextForksCount.get(c.id) as { n: number }).n,
     is_starred: viewerId ? !!contextStarredBy.get(c.id, viewerId) : undefined,
@@ -80,6 +83,13 @@ function replaceContextProjects(
   return { ok: true };
 }
 
+// A context's project attachments are part of each project's version: record
+// every project it is (or was, before this change) attached to.
+function recordProjectsOfContext(contextId: string, before: string[], authorId: string): void {
+  const now = loadProjectAttachmentsForContext(contextId).map(a => a.project_id);
+  for (const pid of new Set([...before, ...now])) recordVersion('project', pid, authorId);
+}
+
 // GET /contexts/public — public contexts with optional filters & sort.
 router.get('/public', (req: Request, res: Response): void => {
   const query = req.query as { q?: string; owner?: string; sort?: string };
@@ -100,13 +110,15 @@ router.get('/public', (req: Request, res: Response): void => {
   if (q) { where.push('(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?) OR LOWER(c.tags) LIKE LOWER(?))'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (owner) { where.push('LOWER(u.nickname) = LOWER(?)'); params.push(owner); }
 
-  // A context is emitted into every compiled workflow of the projects that
-  // include it, so usage = runs of those projects.
+  // Usage = runs that delivered the context: every run of a project it is
+  // attached to, plus runs where an agent carrying it completed a step.
   const rows = db.prepare(`
     SELECT c.*, u.email as owner_email, u.nickname as owner_nickname,
-           (SELECT COUNT(*) FROM runs r
-              JOIN project_contexts pc ON pc.project_id = r.project_id
-              WHERE pc.context_id = c.id) as usage_runs
+           (SELECT COUNT(*) FROM (
+              SELECT r.id FROM runs r JOIN project_contexts pc ON pc.project_id = r.project_id WHERE pc.context_id = c.id
+              UNION
+              SELECT au.run_id FROM agent_contexts ac JOIN agent_usage au ON au.agent_id = ac.agent_id AND au.source != 'planned'
+              WHERE ac.context_id = c.id)) as usage_runs
     FROM contexts c JOIN users u ON u.id = c.user_id
     WHERE ${where.join(' AND ')}
     ORDER BY ${orderBy}
@@ -121,13 +133,21 @@ router.get('/public', (req: Request, res: Response): void => {
   }));
 });
 
-// GET /contexts — list user's contexts (admin sees all). Optional ?project_id= filter.
+// GET /contexts — list user's contexts (admin sees all). Optional filters:
+//   ?project_id=   contexts attached to that project (the whole-flow ones);
+//   ?for_project=  every context the project's agents can carry: those owned by
+//                  the project's owner (the flow editor's contexts panel).
 router.get('/', requireAuth, (req: AuthRequest, res: Response): void => {
   const admin = isAdmin(req.userId!);
   const projectId = typeof req.query['project_id'] === 'string' ? req.query['project_id'] : '';
+  const forProject = typeof req.query['for_project'] === 'string' ? req.query['for_project'] : '';
 
   let rows: Context[];
-  if (projectId) {
+  if (forProject) {
+    const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(forProject) as { user_id: string } | undefined;
+    if (!project || (!admin && project.user_id !== req.userId)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    rows = db.prepare('SELECT * FROM contexts WHERE user_id = ? ORDER BY name ASC').all(project.user_id) as Context[];
+  } else if (projectId) {
     const ownerClause = admin ? '' : 'AND c.user_id = ?';
     const params: unknown[] = [projectId, projectId];
     if (!admin) params.push(req.userId!, req.userId!);
@@ -196,6 +216,8 @@ router.post('/', requireAuth, (req: AuthRequest, res: Response): void => {
     }
   }
 
+  recordVersion('context', id, req.userId!, 'created');
+  recordProjectsOfContext(id, [], req.userId!);
   const created = db.prepare('SELECT * FROM contexts WHERE id = ?').get(id) as Context;
   res.status(201).json(enrichContext(created, req.userId!));
 });
@@ -229,11 +251,14 @@ router.put('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
     ctx.id
   );
 
+  const attachedBefore = loadProjectAttachmentsForContext(ctx.id).map(a => a.project_id);
   if (Array.isArray(project_attachments)) {
     const result = replaceContextProjects(ctx.id, req.userId!, project_attachments);
     if (!result.ok) { res.status(400).json({ error: result.error }); return; }
   }
 
+  recordVersion('context', ctx.id, req.userId!, String((req.body as { version_note?: unknown }).version_note ?? ''));
+  recordProjectsOfContext(ctx.id, attachedBefore, req.userId!);
   const updated = db.prepare('SELECT * FROM contexts WHERE id = ?').get(ctx.id) as Context;
   res.json(enrichContext(updated, req.userId!));
 });
@@ -267,6 +292,7 @@ router.patch('/:id/share-on-fork', requireAuth, (req: AuthRequest, res: Response
   if (result.changes === 0) {
     res.status(404).json({ error: 'Context is not attached to this project' }); return;
   }
+  recordVersion('project', project_id, req.userId!, `context "${ctx.name}" ${share_on_fork ? 'shared with' : 'kept private from'} forks`);
   res.json({ ok: true, share_on_fork });
 });
 
@@ -323,6 +349,7 @@ router.post('/:id/invitations', requireAuth, (req: AuthRequest, res: Response): 
     'INSERT INTO context_invitations (id, context_id, inviter_user_id, invitee_email, invitee_user_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(id, ctx.id, req.userId!, cleanEmail, inviteeUser?.id ?? null, 'pending', Date.now());
   sendInvitationEmail({ inviterUserId: req.userId!, inviteeEmail: cleanEmail, entityType: 'context', entityName: ctx.name });
+  if (inviteeUser?.id) notify({ userId: inviteeUser.id, kind: 'invitation', title: `${displayName(req.userId!)} invited you to the context "${ctx.name}"`, link: 'dashboard.html?tab=team', entityKind: 'context', entityId: ctx.id });
   res.status(201).json(db.prepare('SELECT * FROM context_invitations WHERE id = ?').get(id));
 });
 
@@ -390,6 +417,8 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   try { fork(); }
   catch (err) { res.status(500).json({ error: 'Fork failed', detail: String(err) }); return; }
 
+  recordVersion('context', newContextId, req.userId!, `forked from "${source.name}"`);
+  notifyForked('context', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM contexts WHERE id = ?').get(newContextId) as Context;
   res.status(201).json(enrichContext(created, req.userId!));
 });
@@ -401,6 +430,17 @@ router.delete('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
 
   if (!isAdmin(req.userId!) && ctx.user_id !== req.userId) {
     res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  // Refuse while the context is attached to a project that has a flow.
+  const usedBy = db.prepare(
+    `SELECT p.id AS project_id, p.name FROM project_contexts pc JOIN projects p ON p.id = pc.project_id
+     JOIN project_flows f ON f.project_id = p.id
+     WHERE pc.context_id = ? AND f.flow_json != '{"nodes":[],"edges":[]}'`
+  ).all(ctx.id) as { project_id: string; name: string }[];
+  if (usedBy.length > 0) {
+    res.status(409).json({ error: `This context is attached to ${usedBy.map(p => `"${p.name}"`).join(', ')}, which have flows. Detach it first.`, projects: usedBy });
+    return;
   }
 
   db.prepare('DELETE FROM project_contexts WHERE context_id = ?').run(ctx.id);

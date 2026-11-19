@@ -44,6 +44,7 @@ rsync -az --delete \
   --exclude='.env' \
   --exclude='.jwt-secret' \
   --exclude='.audit-secret' \
+  --exclude='.audit-ed25519.key' \
   --exclude='.mail-config.json' \
   -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" \
   ./ "$HOST:$REMOTE_DIR/"

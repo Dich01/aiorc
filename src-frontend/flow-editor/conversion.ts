@@ -37,6 +37,8 @@ export function toReactFlow(
     type: 'conditional',
     data: {
       condition: be.condition,
+      when: be.when,
+      isDefault: be.default,
       priority: be.priority,
     },
   }));
@@ -68,13 +70,16 @@ export function toBackend(
     return bn;
   });
 
-  const edges: BackendEdge[] = rfEdges.map((re) => ({
-    id: re.id,
-    from: re.source,
-    to: re.target,
-    condition: re.data?.condition,
-    priority: re.data?.priority,
-  }));
+  // `when` and `default` are not editable in the canvas yet, but they must
+  // round-trip unchanged or saving a flow would silently drop its rules.
+  const edges: BackendEdge[] = rfEdges.map((re) => {
+    const be: BackendEdge = { id: re.id, from: re.source, to: re.target };
+    if (re.data?.condition) be.condition = re.data.condition;
+    if (re.data?.when) be.when = re.data.when;
+    if (re.data?.isDefault) be.default = true;
+    if (typeof re.data?.priority === 'number') be.priority = re.data.priority;
+    return be;
+  });
 
   return { nodes, edges };
 }

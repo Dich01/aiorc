@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["files", "note"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["path", "comments_removed", "strings_removed", "stripped_preview", "truncated"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "comments_removed": { "type": "integer", "minimum": 0 },
+          "strings_removed": { "type": "integer", "minimum": 0 },
+          "stripped_preview": { "type": "string", "maxLength": 4000 },
+          "truncated": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "note": { "type": "string", "maxLength": 1000 }
+  },
+  "additionalProperties": false
+}

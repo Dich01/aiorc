@@ -104,8 +104,8 @@ export function sendInvitationEmail(opts: InvitationMail): void {
       </p>
       <p style="font-size:0.9rem;line-height:1.6">
         To accept, sign in with this address (<strong>${opts.inviteeEmail}</strong>).
-        If you do not have an account yet, create one with this same address and the
-        invitation will be waiting in the <strong>Team</strong> section of the dashboard.
+        If you do not have an account yet, ask an administrator to create one with this
+        address; the invitation will then be waiting in the <strong>Team</strong> section of the dashboard.
       </p>
       <a href="${config.publicUrl}" style="display:inline-block;background:#4361ee;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:0.9rem;font-weight:600;margin:10px 0">
         Open AIOrc

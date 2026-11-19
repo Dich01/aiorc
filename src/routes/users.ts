@@ -3,6 +3,8 @@ import db from '../db/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { User } from '../db/schema';
 import { NICKNAME_REGEX, BIO_MAX_LENGTH } from './auth';
+import { v4 as uuidv4 } from 'uuid';
+import { newSecret, USER_TOKEN_PREFIX } from '../lib/secrets';
 
 const router = Router();
 
@@ -103,6 +105,36 @@ router.get('/by-nickname/:nick', (req: Request, res: Response): void => {
     avatar: u.avatar, created_at: u.created_at, last_login: u.last_login ?? null,
     stats: userStats(u.id),
   });
+});
+
+// ── Personal access tokens ──────────────────────────────────────────────────
+// Sent as `Authorization: Bearer aiorc_pat_...` to /mcp alongside the project
+// key, they make the run's caller a verified identity instead of a declared
+// email. The plaintext is returned once, at creation; only a hash is stored.
+
+router.get('/me/tokens', requireAuth, (req: AuthRequest, res: Response): void => {
+  res.json(db.prepare(
+    'SELECT id, name, token_hint, created_at, last_used_at, revoked_at FROM user_tokens WHERE user_id = ? ORDER BY created_at DESC'
+  ).all(req.userId!));
+});
+
+router.post('/me/tokens', requireAuth, (req: AuthRequest, res: Response): void => {
+  const name = String((req.body as { name?: unknown }).name ?? '').trim().slice(0, 80);
+  if (!name) { res.status(400).json({ error: 'name is required' }); return; }
+  const active = (db.prepare('SELECT COUNT(*) AS n FROM user_tokens WHERE user_id = ? AND revoked_at IS NULL').get(req.userId!) as { n: number }).n;
+  if (active >= 20) { res.status(400).json({ error: 'At most 20 active tokens per user. Revoke one first.' }); return; }
+  const token = newSecret(USER_TOKEN_PREFIX);
+  const id = uuidv4();
+  db.prepare('INSERT INTO user_tokens (id, user_id, name, token_hash, token_hint, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, req.userId!, name, token.hash, token.display, Date.now());
+  res.status(201).json({ id, name, token_hint: token.display, token: token.plaintext });
+});
+
+router.delete('/me/tokens/:tokenId', requireAuth, (req: AuthRequest, res: Response): void => {
+  const r = db.prepare('UPDATE user_tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL')
+    .run(Date.now(), req.params['tokenId'], req.userId!);
+  if (r.changes === 0) { res.status(404).json({ error: 'Token not found' }); return; }
+  res.status(204).end();
 });
 
 export default router;

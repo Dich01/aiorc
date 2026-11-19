@@ -1,118 +1,113 @@
 # Recording the rejection demo
 
-The clearest thing AIOrc can show in 20 seconds is the server **refusing** a step that an LLM tried to skip. This is the script for recording that with asciinema. Every command here was executed against a clean instance and the output is what it actually printed.
+The clearest thing AIOrc can show in 30 seconds is the server **refusing** a call
+that does not follow the flow, then proving afterwards what ran. This script
+drives MCP contract v2.1 with `curl` against a throwaway instance, so it can be
+recorded with asciinema. The server messages quoted below are the strings the
+engine returns (`src/orchestrator/engine.ts`, `src/orchestrator/engineCore.ts`);
+re-run the script before recording and use what your instance prints.
 
-The point of the recording is beat 3. Everything before it is setup, everything after it is proof.
+## Setup, off camera
 
-## Record against a clean instance, not your own
-
-The database lives at `$(pwd)/data/aiorc.db` — `src/db/client.ts` resolves it from the working directory. So running the server from a scratch directory gives you an isolated instance without touching your development database or production.
-
-Do this before recording, off camera:
+Use a scratch database so nothing touches your development or production data.
 
 ```bash
-mkdir -p ~/aiorc-demo && cd ~/aiorc-demo
+cd /path/to/AIOrc
+export AIORC_DB_PATH=/tmp/aiorc-demo/aiorc.db PORT=3999
 
-# Seeds automatically on first boot (src/index.ts calls seed() before listen).
-PORT=3999 JWT_SECRET=demo \
-  /path/to/AIOrc/node_modules/.bin/ts-node --transpile-only \
-  /path/to/AIOrc/src/index.ts &
+AIORC_ADMIN_EMAIL=demo@example.com AIORC_ADMIN_PASSWORD='demo-password-123' npm run admin:create
+npm run harness:apply -- harnesses/code-review    # prints each project key once
+npm run dev &                                     # API + UI on http://localhost:3999
 
-# Required: the seeded flows predate the mandatory Start node, so
-# workflow.start rejects them until this runs. See issue #2.
-/path/to/AIOrc/node_modules/.bin/ts-node --transpile-only \
-  /path/to/AIOrc/src/migrate-add-start.ts
-
-K=$(sqlite3 data/aiorc.db "SELECT api_key FROM projects WHERE name='Main Project'")
-U=http://localhost:3999/mcp
-
-# The audit export uses JWT auth, not the project key — two different
-# mechanisms. Fetch the token now so no login noise appears on camera.
-TOKEN=$(curl -s -X POST localhost:3999/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"user1@aiorc.dev","password":"password123"}' \
-  | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+K=aiorc_pk_...        # the key printed for code-review-pre-pr
+U=http://localhost:3999
 ```
 
-The example project is the seeded **Main Project**: a linear flow, `task-planner → backend-dev → security-qa`. Linear is the right choice — jumping to the last agent is unambiguously illegal, with no conditions to explain on camera.
+The demo uses the `code-review-pre-pr` project of the reference harness. Its
+first agent, `scope`, has rule exits: the server picks the next step from the
+output (`risk: "trivial"` ends the run at `skipped-trivial`, anything else goes
+to the review fork). The client never chooses there.
 
-## The helper
-
-`workflow.start` returns over 1200 characters of agent instructions. Without truncation it floods the screen and the recording is unreadable. Define this before recording:
+Helper that prints the first lines of the answer and its `_meta`:
 
 ```bash
-mcp() { curl -s -X POST $U -H 'Content-Type: application/json' -H "x-project-key: $K" \
+mcp() { curl -s -X POST $U/mcp -H 'Content-Type: application/json' -H "x-project-key: $K" \
   -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"$1\",\"arguments\":$2}}" \
-  | python3 -c 'import sys,json;d=json.load(sys.stdin);r=d["result"];print("\n".join(r["content"][0]["text"].splitlines()[:6]));print("meta:",json.dumps(r["_meta"]))'; }
+  | python3 -c 'import sys,json;r=json.load(sys.stdin);r=r.get("result",r);print("\n".join(r["content"][0]["text"].splitlines()[:6]) if "content" in r else r);print("meta:",json.dumps(r.get("_meta")))'; }
+
+IN='{"input":{"repo":"acme/api","base_sha":"'$(printf 'a%.0s' {1..40})'","head_sha":"'$(printf 'b%.0s' {1..40})'","diff_sha256":"'$(printf 'c%.0s' {1..64})'","changed_files":["README.md"]}}'
 ```
 
 ## The recording
 
-**Beat 1 — the server hands over exactly one agent.**
+**Beat 1: the server hands over exactly one step.**
 
 ```bash
-mcp workflow.start '{"request":"Add rate limiting to the login endpoint"}'
+mcp workflow.start "$IN"
 ```
 
-```
-# AIOrc — stepped workflow (server-verified mode)
+The answer starts with `# AIOrc: server-orchestrated workflow` and dispatches
+step 1 (`scope`) with its output schema. Capture `_meta.runId` into `R`.
 
-The server orchestrates this workflow: it hands you ONE step at a time and validates
-every transition against the flow graph. Execute only what you are given.
-
-## Execute this agent NOW
-meta: {"runId":"...","mode":"stepped","done":false}
-```
-
-Capture the `runId` into `R`.
-
-**Beats 2 and 3 — the client tries to jump to the last agent. The server refuses.**
+**Beat 2: the client tries to pick the path itself. The server refuses.**
 
 ```bash
-mcp workflow.next "{\"runId\":\"$R\",\"output\":\"Plan ready\",\"next\":\"security-qa\"}"
+mcp workflow.next '{"runId":"'$R'","step":1,"outputs":[{"node":"scope","output":{"risk":"high","areas":["auth"],"reasons":"touches login"}}],"transition":"e-review"}'
 ```
 
-```
-Transition rejected: "security-qa" is not a legal transition from the current step.
+> Rejected: the next step is decided by the server from your output; do not send `transition`.
+>
+> The run is still at step 1 and nothing was consumed. ...
 
-Allowed transitions from the current step:
-- → backend-dev (no condition — fallback)
+A made-up edge id on a node whose exits the client does choose is refused the
+same way (`"<id>" is not an edge id leaving this step. Allowed: ...`), and so is
+an output that does not match the agent's schema.
 
-The run is still open and no step was consumed. Call `workflow.next` again with the
-same `runId` and `output`, setting `next` to one of the transitions above. Pass
-`"next": "none"` if no condition matched.
-```
-
-This is the frame worth freezing on. `security-qa` is a real agent in the flow, and it is still refused, because it is not reachable from where the run currently is.
-
-**Beat 4 — the legal path, through to End.**
+**Beat 3: the legal call.** Same step, a valid output, no `transition`:
 
 ```bash
-mcp workflow.next "{\"runId\":\"$R\",\"output\":\"Plan ready\",\"next\":\"backend-dev\"}"
-mcp workflow.next "{\"runId\":\"$R\",\"output\":\"Limiter in rateLimit.ts\",\"next\":\"security-qa\"}"
-mcp workflow.next "{\"runId\":\"$R\",\"output\":\"No bypass found\",\"next\":\"none\"}"
+mcp workflow.next '{"runId":"'$R'","step":1,"outputs":[{"node":"scope","output":{"risk":"trivial","areas":[],"reasons":"docs only"}}]}'
 ```
 
-The last call returns `Workflow completed` with `done=true`. Note that `security-qa` is accepted on the second call and was refused on the first — same agent, different position in the run.
+> Workflow completed: reached End "skipped-trivial". Report the result to the user.
 
-**Beat 5 — the signed audit export.**
+The server evaluated the rule edge `e-trivial` on the output and closed the run.
+
+**Beat 4: the signed export, verified offline.**
 
 ```bash
-curl -s "localhost:3999/runs/$R/export" -H "Authorization: Bearer $TOKEN" \
-  | python3 -c 'import sys,json;d=json.load(sys.stdin);print("signature:",d["signature"][:32]+"...");print("algorithm:",d["algorithm"]);print("verified path:",[s["agent"] for s in d["payload"]["verified_execution"]["path"]])'
+curl -s "$U/api/runs/$R/export" -H "x-project-key: $K" > export.json
+curl -s "$U/audit/keys" | python3 -c 'import sys,json;print(json.load(sys.stdin)["keys"][0]["public_key_pem"])' > aiorc-public.pem
+npm run audit:verify -- export.json --key aiorc-public.pem
 ```
 
-```
-signature: 628010e6c7aa3ab30b0a12e479b6c3b1...
-algorithm: HMAC-SHA256 over JSON.stringify(payload)
-verified path: ['task-planner', 'backend-dev', 'security-qa']
+`audit:verify` prints `VALID  run <id>  status=completed  outcome=skipped-trivial ...`.
+The export (`aiorc.audit.v2`) carries the hash-chained events, including the
+`step.completed` and `transition.taken` (`decided_by: "rule"`) of beat 3, the
+frozen agent hashes and the accepted output. The rejected call of beat 2 left
+no event: nothing was consumed.
+
+## Model-orchestrated mode (optional, for contrast)
+
+Switch the project in **Settings → Execution mode** (or
+`PATCH /projects/:id/execution-mode {"mode":"compiled"}` with a session token).
+The same `workflow.start` now returns the whole flow in one document
+(`# AIOrc: model-orchestrated workflow (self-declared)`) with
+`_meta.status: "delivered"`. The model finishes with its own account:
+
+```bash
+mcp workflow.report '{"runId":"'$R2'","report":{"path":["scope"],"invocations_per_agent":{"scope":1},"ended_at":"End: skipped-trivial","final_summary":"docs only"}}'
 ```
 
-Each step in `verified_execution.path` carries `{node, agent, at, output}`, so the summary typed into every `workflow.next` is inside the signed evidence. That is worth saying out loud if the recording has narration: the signature covers what actually ran, not a self-report written afterwards.
+> Report stored as self-declared (model-orchestrated mode: the server did not verify it).
+
+The run is `reported`, never `completed`; Audit and Analytics label it
+self-declared, and `audit:verify` adds `(self-declared report, not server-verified)`.
+Switch the project back before recording anything else.
 
 ## Notes
 
-- The signature verifies externally. Recompute `HMAC-SHA256(JSON.stringify(payload))` with the key in `.audit-secret` and it matches.
-- The rejected hop is not wasted: state is persisted so the output summary survives, and no invocation is counted against the agent's cap.
-- Total is five commands on camera. Editing the pauses out is usually enough to land under 30 seconds.
-- If you re-record, use a fresh run. A completed `runId` answers `This run has already finished`, which is correct and not what you want on camera.
+- `workflow.next` with a step number other than the current one is refused too,
+  and resending the last accepted call returns the same answer without advancing.
+- If you re-record, start a new run: a finished run answers
+  `This run has already completed. No further steps will run.`

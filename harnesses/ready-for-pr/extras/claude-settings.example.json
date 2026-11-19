@@ -1,0 +1,14 @@
+{
+  "$comment": "Optional. Copy into the repository's .claude/settings.json to turn some ready-for-pr rules into hard limits that Claude Code enforces, instead of instructions the model may ignore. Check the rule syntax against your Claude Code version.",
+  "permissions": {
+    "deny": [
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit -n *)",
+      "Bash(git push --no-verify *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Edit(.github/workflows/**)",
+      "Edit(.claude/**)"
+    ]
+  }
+}

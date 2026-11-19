@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "required": ["findings", "discarded"],
+  "properties": {
+    "findings": { "type": "array", "items": { "$include": "../../schemas/finding.schema.json" }, "maxItems": 100 },
+    "discarded": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": ["id", "reason"],
+        "properties": { "id": { "type": "string" }, "reason": { "type": "string", "maxLength": 500 } },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

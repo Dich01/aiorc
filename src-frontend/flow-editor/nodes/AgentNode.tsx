@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { AgentNodeData, SkillSummary } from '../types';
+import type { AgentNodeData, SkillSummary, ContextSummary } from '../types';
 
 export default function AgentNode({ id, data, selected }: NodeProps) {
   const d = data as AgentNodeData;
@@ -22,12 +22,15 @@ export default function AgentNode({ id, data, selected }: NodeProps) {
       setDropTarget(false);
       const skillId = e.dataTransfer.getData('skill-id');
       if (skillId && d.onDropSkill) d.onDropSkill(d.agentId, skillId);
+      const contextId = e.dataTransfer.getData('context-id');
+      if (contextId && d.onDropContext) d.onDropContext(d.agentId, contextId);
     },
     [d]
   );
 
   const initials = (d.agentName || '?').slice(0, 2).toUpperCase();
   const skills = d.skills || [];
+  const contexts = d.contexts || [];
 
   return (
     <div
@@ -82,9 +85,9 @@ export default function AgentNode({ id, data, selected }: NodeProps) {
         )}
       </div>
 
-      {skills.length > 0 ? (
+      {skills.length > 0 || contexts.length > 0 ? (
         <div className="fe-node-body">
-          <div className="fe-node-section-label">SKILLS</div>
+          {skills.length > 0 && <div className="fe-node-section-label">SKILLS</div>}
           <div className="fe-skills-list">
             {skills.map((s: SkillSummary) => (
               <div key={s.id} className="fe-skill-pill" title={s.description}>
@@ -104,10 +107,30 @@ export default function AgentNode({ id, data, selected }: NodeProps) {
               </div>
             ))}
           </div>
+          {contexts.length > 0 && <div className="fe-node-section-label">CONTEXTS</div>}
+          <div className="fe-skills-list">
+            {contexts.map((c: ContextSummary) => (
+              <div key={c.id} className="fe-skill-pill fe-context-pill" title={c.description}>
+                <span className="fe-skill-name">{c.name}</span>
+                {d.onRemoveContext && (
+                  <button
+                    className="fe-skill-remove"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      d.onRemoveContext!(d.agentId, c.id);
+                    }}
+                    title="Remove context"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="fe-node-body fe-node-body-empty">
-          <span className="fe-node-hint">Drop a skill here</span>
+          <span className="fe-node-hint">Drop a skill or a context here</span>
         </div>
       )}
 

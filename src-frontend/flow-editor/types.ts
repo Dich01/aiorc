@@ -1,4 +1,5 @@
-// Mirror of backend schema — keep in sync with src/db/schema.ts
+// Mirror of backend schema. Flow types and validation come from src/shared/flow.ts.
+import type { Rule } from '../../src/shared/flow';
 
 export type FlowNodeType = 'start' | 'agent' | 'parallel' | 'end';
 
@@ -19,6 +20,8 @@ export interface BackendEdge {
   from: string;
   to: string;
   condition?: string;
+  when?: Rule;        // rule edge: evaluated by the server; not editable here yet
+  default?: boolean;
   priority?: number;
 }
 
@@ -31,7 +34,15 @@ export interface AgentSummary {
   id: string;
   name: string;
   description: string;
+  output_schema?: Record<string, unknown> | null;
   skills?: SkillSummary[];
+  contexts?: ContextSummary[];
+}
+
+export interface ContextSummary {
+  id: string;
+  name: string;
+  description: string;
 }
 
 export interface SkillSummary {
@@ -47,8 +58,11 @@ export interface AgentNodeData extends Record<string, unknown> {
   agentName: string;
   maxInvocations: number;
   skills?: SkillSummary[];
+  contexts?: ContextSummary[];
   onDropSkill?: (agentId: string, skillId: string) => void;
   onRemoveSkill?: (agentId: string, skillId: string) => void;
+  onDropContext?: (agentId: string, contextId: string) => void;
+  onRemoveContext?: (agentId: string, contextId: string) => void;
   onShowContent?: (agentId: string, agentName: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   onEditMaxInvocations?: (nodeId: string) => void;
@@ -77,6 +91,8 @@ export type AnyNodeData = AgentNodeData | StartNodeData | EndNodeData | Parallel
 
 export interface EdgeData extends Record<string, unknown> {
   condition?: string;
+  when?: Rule;
+  isDefault?: boolean;
   priority?: number;
   onEditCondition?: (edgeId: string) => void;
 }

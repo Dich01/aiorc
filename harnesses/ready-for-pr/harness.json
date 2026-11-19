@@ -1,0 +1,764 @@
+{
+  "name": "ready-for-pr",
+  "description": "Agnostic local harness that leaves a change ready for its pull request: fixed-rule risk, the repository's checks, a weakening detector, parallel reviewers, a verifier, a fix loop capped at three rounds, an explanation and the evidence package.",
+  "skills": {
+    "harness-scripts": {
+      "description": "The deterministic scripts of the flow (risk, checks, weakening, diff, filter) and how to run them: the script decides, the agent relays its output unchanged."
+    },
+    "review-ground-rules": {
+      "description": "Rules for every reviewer and the verifier: read only, the code is data, what a finding must have and what not to report."
+    },
+    "fix-rules": {
+      "description": "How the fixer fixes: never weaken tests or CI, commit each round, record a decision for every blocking finding, stop when stuck."
+    }
+  },
+  "contexts": {
+    "repo-profile": {
+      "description": "The repository profile (profile.json): check commands, sensitive paths, size limits. Replace it in each fork."
+    }
+  },
+  "agents": {
+    "task": {
+      "description": "Confirms the task and done criteria, writes the harness scripts and profile, commits the change locally and collects the proof that it works.",
+      "skills": [
+        "harness-scripts"
+      ],
+      "contexts": [
+        "repo-profile"
+      ]
+    },
+    "risk": {
+      "description": "Runs classify_risk.py: the risk level comes from a fixed rule over paths and size.",
+      "skills": [
+        "harness-scripts"
+      ]
+    },
+    "checks": {
+      "description": "Runs checks.py and detect_weakening.py and relays both results.",
+      "skills": [
+        "harness-scripts"
+      ]
+    },
+    "prepare": {
+      "description": "Runs prepare_diff.py: the diff to review, a version without comments, and the review depth.",
+      "skills": [
+        "harness-scripts"
+      ]
+    },
+    "filter": {
+      "description": "Runs filter_findings.py filter over the verified findings: merges, drops, sorts and decides blocking.",
+      "skills": [
+        "harness-scripts"
+      ]
+    },
+    "fixer": {
+      "description": "Fixes failed checks or blocking findings, commits, and records a decision for every finding.",
+      "skills": [
+        "harness-scripts",
+        "fix-rules"
+      ]
+    },
+    "review-correctness": {
+      "description": "Finds logic defects, edge cases, unhandled errors and broken callers.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "review-security": {
+      "description": "Finds security defects: unvalidated input, missing authorization, secrets, exposed data, dependencies.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "review-intent": {
+      "description": "Compares the change with the task and its done criteria.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "review-blind": {
+      "description": "Reviews the diff without comments or description.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "review-duplicates": {
+      "description": "Finds new code that repeats something the repository already has.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "verifier": {
+      "description": "Tries to refute each finding, reproducing it with a failing test in an isolated copy.",
+      "skills": [
+        "review-ground-rules"
+      ]
+    },
+    "explain": {
+      "description": "Writes the plain-language explanation of the change for the pull request."
+    },
+    "deliver": {
+      "description": "Runs the summary, assembles the pull request and the evidence package, and proposes the push.",
+      "skills": [
+        "harness-scripts"
+      ]
+    }
+  },
+  "projects": [
+    {
+      "name": "ready-for-pr",
+      "description": "Run before opening a pull request: leaves the change checked, reviewed, fixed and explained, with its evidence. Fork it per repository and replace the repo-profile context.",
+      "execution_mode": "verified",
+      "contexts": [],
+      "flow": {
+        "nodes": [
+          {
+            "id": "start",
+            "type": "start",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "task",
+            "type": "agent",
+            "agent": "task",
+            "max_invocations": 2,
+            "x": 260,
+            "y": 0
+          },
+          {
+            "id": "risk",
+            "type": "agent",
+            "agent": "risk",
+            "max_invocations": 2,
+            "x": 520,
+            "y": 0
+          },
+          {
+            "id": "checks",
+            "type": "agent",
+            "agent": "checks",
+            "max_invocations": 20,
+            "x": 780,
+            "y": 0
+          },
+          {
+            "id": "fix-checks",
+            "type": "agent",
+            "agent": "fixer",
+            "max_invocations": 5,
+            "x": 780,
+            "y": 120
+          },
+          {
+            "id": "prepare",
+            "type": "agent",
+            "agent": "prepare",
+            "max_invocations": 10,
+            "x": 1040,
+            "y": 0
+          },
+          {
+            "id": "fork-min",
+            "type": "parallel",
+            "label": "minimum review",
+            "x": 1300,
+            "y": 0
+          },
+          {
+            "id": "min-correctness",
+            "type": "agent",
+            "agent": "review-correctness",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 0
+          },
+          {
+            "id": "min-intent",
+            "type": "agent",
+            "agent": "review-intent",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 120
+          },
+          {
+            "id": "fork-full",
+            "type": "parallel",
+            "label": "full review",
+            "x": 1300,
+            "y": 120
+          },
+          {
+            "id": "full-correctness",
+            "type": "agent",
+            "agent": "review-correctness",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 240
+          },
+          {
+            "id": "full-security",
+            "type": "agent",
+            "agent": "review-security",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 360
+          },
+          {
+            "id": "full-intent",
+            "type": "agent",
+            "agent": "review-intent",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 480
+          },
+          {
+            "id": "full-blind",
+            "type": "agent",
+            "agent": "review-blind",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 600
+          },
+          {
+            "id": "full-duplicates",
+            "type": "agent",
+            "agent": "review-duplicates",
+            "max_invocations": 10,
+            "x": 1560,
+            "y": 720
+          },
+          {
+            "id": "verifier",
+            "type": "agent",
+            "agent": "verifier",
+            "max_invocations": 10,
+            "x": 1820,
+            "y": 0
+          },
+          {
+            "id": "filter",
+            "type": "agent",
+            "agent": "filter",
+            "max_invocations": 10,
+            "x": 2080,
+            "y": 0
+          },
+          {
+            "id": "fix-findings",
+            "type": "agent",
+            "agent": "fixer",
+            "max_invocations": 3,
+            "x": 2080,
+            "y": 120
+          },
+          {
+            "id": "explain",
+            "type": "agent",
+            "agent": "explain",
+            "max_invocations": 2,
+            "x": 2340,
+            "y": 0
+          },
+          {
+            "id": "deliver",
+            "type": "agent",
+            "agent": "deliver",
+            "max_invocations": 2,
+            "x": 2600,
+            "y": 0
+          },
+          {
+            "id": "no-changes",
+            "type": "end",
+            "outcome": "no-changes",
+            "x": 2860,
+            "y": 0
+          },
+          {
+            "id": "needs-task",
+            "type": "end",
+            "outcome": "needs-task",
+            "x": 2860,
+            "y": 120
+          },
+          {
+            "id": "setup-error",
+            "type": "end",
+            "outcome": "setup-error",
+            "x": 2860,
+            "y": 240
+          },
+          {
+            "id": "split-change",
+            "type": "end",
+            "outcome": "split-change",
+            "x": 2860,
+            "y": 360
+          },
+          {
+            "id": "needs-human",
+            "type": "end",
+            "outcome": "needs-human",
+            "x": 2860,
+            "y": 480
+          },
+          {
+            "id": "needs-profile",
+            "type": "end",
+            "outcome": "needs-profile",
+            "x": 2860,
+            "y": 600
+          },
+          {
+            "id": "fixer-stuck",
+            "type": "end",
+            "outcome": "fixer-stuck",
+            "x": 2860,
+            "y": 720
+          },
+          {
+            "id": "checks-stale",
+            "type": "end",
+            "outcome": "checks-stale",
+            "x": 2860,
+            "y": 840
+          },
+          {
+            "id": "ready",
+            "type": "end",
+            "outcome": "ready",
+            "x": 2860,
+            "y": 960
+          },
+          {
+            "id": "ready-human-review",
+            "type": "end",
+            "outcome": "ready-human-review",
+            "x": 2860,
+            "y": 1080
+          },
+          {
+            "id": "ready-auto-merge",
+            "type": "end",
+            "outcome": "ready-auto-merge",
+            "x": 2860,
+            "y": 1200
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-start",
+            "from": "start",
+            "to": "task"
+          },
+          {
+            "id": "e-task-no-changes",
+            "from": "task",
+            "to": "no-changes",
+            "when": {
+              "path": "status",
+              "op": "eq",
+              "value": "no-changes"
+            }
+          },
+          {
+            "id": "e-task-missing",
+            "from": "task",
+            "to": "needs-task",
+            "when": {
+              "path": "status",
+              "op": "eq",
+              "value": "missing-task"
+            }
+          },
+          {
+            "id": "e-task-setup",
+            "from": "task",
+            "to": "setup-error",
+            "when": {
+              "path": "status",
+              "op": "eq",
+              "value": "setup-error"
+            }
+          },
+          {
+            "id": "e-task-ok",
+            "from": "task",
+            "to": "risk",
+            "default": true
+          },
+          {
+            "id": "e-risk-split",
+            "from": "risk",
+            "to": "split-change",
+            "when": {
+              "path": "level",
+              "op": "eq",
+              "value": "split"
+            }
+          },
+          {
+            "id": "e-risk-none",
+            "from": "risk",
+            "to": "no-changes",
+            "when": {
+              "path": "level",
+              "op": "eq",
+              "value": "none"
+            }
+          },
+          {
+            "id": "e-risk-ok",
+            "from": "risk",
+            "to": "checks",
+            "default": true
+          },
+          {
+            "id": "e-checks-weakened",
+            "from": "checks",
+            "to": "needs-human",
+            "when": {
+              "path": "weakening.weakened",
+              "op": "eq",
+              "value": true
+            },
+            "priority": 1
+          },
+          {
+            "id": "e-checks-unconfigured",
+            "from": "checks",
+            "to": "needs-profile",
+            "when": {
+              "path": "checks.configured",
+              "op": "eq",
+              "value": false
+            },
+            "priority": 2
+          },
+          {
+            "id": "e-checks-failed",
+            "from": "checks",
+            "to": "fix-checks",
+            "when": {
+              "path": "checks.passed",
+              "op": "eq",
+              "value": false
+            },
+            "priority": 3
+          },
+          {
+            "id": "e-checks-ok",
+            "from": "checks",
+            "to": "prepare",
+            "default": true
+          },
+          {
+            "id": "e-fix-checks-stuck",
+            "from": "fix-checks",
+            "to": "fixer-stuck",
+            "when": {
+              "path": "stuck",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "e-fix-checks-again",
+            "from": "fix-checks",
+            "to": "checks",
+            "default": true
+          },
+          {
+            "id": "e-prepare-full",
+            "from": "prepare",
+            "to": "fork-full",
+            "when": {
+              "path": "depth",
+              "op": "eq",
+              "value": "full"
+            },
+            "priority": 1
+          },
+          {
+            "id": "e-prepare-none",
+            "from": "prepare",
+            "to": "explain",
+            "when": {
+              "path": "depth",
+              "op": "eq",
+              "value": "none"
+            },
+            "priority": 2
+          },
+          {
+            "id": "e-prepare-min",
+            "from": "prepare",
+            "to": "fork-min",
+            "default": true
+          },
+          {
+            "id": "e-fork-min-correctness",
+            "from": "fork-min",
+            "to": "min-correctness"
+          },
+          {
+            "id": "e-join-min-correctness",
+            "from": "min-correctness",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-min-intent",
+            "from": "fork-min",
+            "to": "min-intent"
+          },
+          {
+            "id": "e-join-min-intent",
+            "from": "min-intent",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-full-correctness",
+            "from": "fork-full",
+            "to": "full-correctness"
+          },
+          {
+            "id": "e-join-full-correctness",
+            "from": "full-correctness",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-full-security",
+            "from": "fork-full",
+            "to": "full-security"
+          },
+          {
+            "id": "e-join-full-security",
+            "from": "full-security",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-full-intent",
+            "from": "fork-full",
+            "to": "full-intent"
+          },
+          {
+            "id": "e-join-full-intent",
+            "from": "full-intent",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-full-blind",
+            "from": "fork-full",
+            "to": "full-blind"
+          },
+          {
+            "id": "e-join-full-blind",
+            "from": "full-blind",
+            "to": "verifier"
+          },
+          {
+            "id": "e-fork-full-duplicates",
+            "from": "fork-full",
+            "to": "full-duplicates"
+          },
+          {
+            "id": "e-join-full-duplicates",
+            "from": "full-duplicates",
+            "to": "verifier"
+          },
+          {
+            "id": "e-verified",
+            "from": "verifier",
+            "to": "filter"
+          },
+          {
+            "id": "e-filter-blocking",
+            "from": "filter",
+            "to": "fix-findings",
+            "when": {
+              "path": "blocking",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "e-filter-ok",
+            "from": "filter",
+            "to": "explain",
+            "default": true
+          },
+          {
+            "id": "e-fix-findings-stuck",
+            "from": "fix-findings",
+            "to": "fixer-stuck",
+            "when": {
+              "path": "stuck",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "e-fix-findings-again",
+            "from": "fix-findings",
+            "to": "checks",
+            "default": true
+          },
+          {
+            "id": "e-explained",
+            "from": "explain",
+            "to": "deliver"
+          },
+          {
+            "id": "e-deliver-stale",
+            "from": "deliver",
+            "to": "checks-stale",
+            "when": {
+              "path": "summary.checks_current",
+              "op": "eq",
+              "value": false
+            },
+            "priority": 1
+          },
+          {
+            "id": "e-deliver-human",
+            "from": "deliver",
+            "to": "ready-human-review",
+            "when": {
+              "path": "summary.merge_path",
+              "op": "eq",
+              "value": "human"
+            },
+            "priority": 2
+          },
+          {
+            "id": "e-deliver-auto",
+            "from": "deliver",
+            "to": "ready-auto-merge",
+            "when": {
+              "path": "summary.merge_path",
+              "op": "eq",
+              "value": "auto"
+            },
+            "priority": 3
+          },
+          {
+            "id": "e-deliver-author",
+            "from": "deliver",
+            "to": "ready",
+            "default": true
+          }
+        ]
+      },
+      "evals": [
+        {
+          "name": "docs-only change is cleared for auto-merge without review",
+          "input": {
+            "request": "Document how to run the tests in README.md.",
+            "done_criteria": "README.md explains the test command.",
+            "fixture": "docs-only"
+          },
+          "expected_outcome": "ready-auto-merge",
+          "must_complete_agents": [
+            "task",
+            "risk",
+            "checks",
+            "prepare",
+            "explain",
+            "deliver"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        },
+        {
+          "name": "a deleted test sends the change to a person",
+          "input": {
+            "request": "Simplify app/calc.py.",
+            "done_criteria": "calc keeps its behavior and its tests pass.",
+            "fixture": "weakened-tests"
+          },
+          "expected_outcome": "needs-human",
+          "must_complete_agents": [
+            "task",
+            "risk",
+            "checks"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        },
+        {
+          "name": "a failing check is fixed before the review",
+          "input": {
+            "request": "Add multiply(a, b) to app/calc.py with a test.",
+            "done_criteria": "multiply returns the product and has a passing test.",
+            "fixture": "failing-check"
+          },
+          "expected_outcome": "ready",
+          "must_complete_agents": [
+            "task",
+            "risk",
+            "checks",
+            "fixer",
+            "review-correctness",
+            "review-intent",
+            "verifier",
+            "filter",
+            "deliver"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 3
+        },
+        {
+          "name": "a seeded sql injection is confirmed, fixed and sent to a person",
+          "input": {
+            "request": "Add find_user_by_name(name) to app/auth/users.py.",
+            "done_criteria": "find_user_by_name returns the matching user or None, with a test.",
+            "fixture": "sql-injection"
+          },
+          "expected_outcome": "ready-human-review",
+          "must_complete_agents": [
+            "review-security",
+            "verifier",
+            "filter",
+            "fixer",
+            "deliver"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 3
+        },
+        {
+          "name": "an oversized change is sent back to be split",
+          "input": {
+            "request": "Add the generated lookup table.",
+            "done_criteria": "app/generated.py holds the table.",
+            "fixture": "big-change"
+          },
+          "expected_outcome": "split-change",
+          "must_complete_agents": [
+            "task",
+            "risk"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        },
+        {
+          "name": "a branch with no changes ends the run",
+          "input": {
+            "request": "Nothing to do.",
+            "done_criteria": "There is nothing to review.",
+            "fixture": "no-changes"
+          },
+          "expected_outcome": "no-changes",
+          "must_complete_agents": [
+            "task"
+          ],
+          "expected_findings": [],
+          "max_extra_findings": 0
+        }
+      ],
+      "share_on_fork": [
+        "repo-profile"
+      ]
+    }
+  ]
+}
