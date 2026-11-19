@@ -313,8 +313,8 @@ router.post('/:id/star', requireAuth, (req: AuthRequest, res: Response): void =>
   if (!isOwn && !isPublic) {
     const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
     const invited = me ? db.prepare(
-      'SELECT 1 FROM project_invitations WHERE project_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-    ).get(project.id, 'revoked', req.userId!, me.email) : null;
+      `SELECT 1 FROM project_invitations WHERE project_id = ? AND status IN ('pending', 'accepted') AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+    ).get(project.id, req.userId!, me.email) : null;
     if (!invited) { res.status(403).json({ error: 'Cannot star this project' }); return; }
   }
 

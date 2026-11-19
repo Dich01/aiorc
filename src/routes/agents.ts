@@ -9,6 +9,7 @@ import { checkOutputSchema, parseStoredSchema } from '../lib/outputSchema';
 import { flowsReferencingAgents } from '../orchestrator';
 import { normalizeToolList } from '../lib/mcpServers';
 import { copyAgentContexts } from '../lib/agentContexts';
+import { canReadContent, withoutContent } from '../lib/access';
 
 // output_schema arrives as a JSON Schema object, null/'' to clear it, or a
 // JSON string. Returns the column value, or an error.
@@ -236,19 +237,11 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params['id']) as Agent | undefined;
   if (!agent) { res.status(404).json({ error: 'Agent not found' }); return; }
 
-  const admin = isAdmin(req.userId!);
-  const isOwn = agent.user_id === req.userId;
-  if (!admin && !isOwn) {
-    if (!agent.is_public) {
-      const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
-      const invited = me ? db.prepare(
-        'SELECT 1 FROM agent_invitations WHERE agent_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-      ).get(agent.id, 'revoked', req.userId!, me.email) : null;
-      if (!invited) { res.status(403).json({ error: 'Forbidden' }); return; }
-    }
-  }
-
-  res.json(enrichAgent(agent, req.userId!));
+  // Content: owner, admin or a live invitation. A public agent shows only its
+  // card to anyone else; its instructions are read by forking it.
+  if (canReadContent('agent', agent.id, req.userId!)) { res.json(enrichAgent(agent, req.userId!)); return; }
+  if (!agent.is_public) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json(withoutContent(enrichAgent(agent, req.userId!)));
 });
 
 // POST /agents — create agent
@@ -398,8 +391,8 @@ router.post('/:id/star', requireAuth, (req: AuthRequest, res: Response): void =>
   if (!isOwn && !agent.is_public) {
     const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
     const invited = me ? db.prepare(
-      'SELECT 1 FROM agent_invitations WHERE agent_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-    ).get(agent.id, 'revoked', req.userId!, me.email) : null;
+      `SELECT 1 FROM agent_invitations WHERE agent_id = ? AND status IN ('pending', 'accepted') AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+    ).get(agent.id, req.userId!, me.email) : null;
     if (!invited) { res.status(403).json({ error: 'Cannot star this agent' }); return; }
   }
 
@@ -502,6 +495,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   };
 
   const newAgentId = uuidv4();
+  let contextsWithheld = 0;
   const now = Date.now();
 
   const fork = db.transaction(() => {
@@ -534,8 +528,9 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
       db.prepare('INSERT INTO agent_skills (agent_id, skill_id, ordinal) VALUES (?, ?, ?)').run(newAgentId, newSkillId, s._ord);
     }
 
-    // Contexts attached to the agent travel with it, like its skills.
-    copyAgentContexts(source.id, newAgentId, req.userId!, now);
+    // Contexts attached to the agent travel with it only when the forker may
+    // take them (theirs, public, or shared with them); private ones stay.
+    contextsWithheld = copyAgentContexts(source.id, newAgentId, req.userId!, now);
 
     if (invitation && invitation.status === 'pending') {
       db.prepare('UPDATE agent_invitations SET status = ?, responded_at = ?, invitee_user_id = COALESCE(invitee_user_id, ?) WHERE id = ?').run(
@@ -550,7 +545,7 @@ router.post('/:id/fork', requireAuth, (req: AuthRequest, res: Response): void =>
   recordAgentTree(newAgentId, req.userId!, `forked from "${source.name}"`);
   notifyForked('agent', source.id, source.name, source.user_id, req.userId!);
   const created = db.prepare('SELECT * FROM agents WHERE id = ?').get(newAgentId) as Agent;
-  res.status(201).json(enrichAgent(created, req.userId!));
+  res.status(201).json({ ...enrichAgent(created, req.userId!), contexts_withheld: contextsWithheld });
 });
 
 // DELETE /agents/:id

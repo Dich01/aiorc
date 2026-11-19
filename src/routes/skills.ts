@@ -8,6 +8,7 @@ import { Skill, SkillFile, SkillInvitation } from '../db/schema';
 import { flowsReferencingAgents } from '../orchestrator';
 import { recordVersion, notifyForked } from '../lib/versions';
 import { notify, displayName } from '../lib/notify';
+import { canReadContent, withoutContent } from '../lib/access';
 
 const router = Router();
 
@@ -244,19 +245,11 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response): void => {
   const skill = db.prepare('SELECT * FROM skills WHERE id = ?').get(req.params['id']) as Skill | undefined;
   if (!skill) { res.status(404).json({ error: 'Skill not found' }); return; }
 
-  const admin = isAdmin(req.userId!);
-  const isOwn = skill.user_id === req.userId;
-  if (!admin && !isOwn) {
-    if (!skill.is_public) {
-      const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
-      const invited = me ? db.prepare(
-        'SELECT 1 FROM skill_invitations WHERE skill_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-      ).get(skill.id, 'revoked', req.userId!, me.email) : null;
-      if (!invited) { res.status(403).json({ error: 'Forbidden' }); return; }
-    }
-  }
-
-  res.json(enrichSkill(skill, req.userId!));
+  // Content: owner, admin or a live invitation. A public skill shows only its
+  // card to anyone else; its files are read by forking it.
+  if (canReadContent('skill', skill.id, req.userId!)) { res.json(enrichSkill(skill, req.userId!)); return; }
+  if (!skill.is_public) { res.status(403).json({ error: 'Forbidden' }); return; }
+  res.json(withoutContent(enrichSkill(skill, req.userId!)));
 });
 
 // POST /skills — create skill. Accepts `files: [...]` or legacy `content: "..."`.
@@ -356,8 +349,8 @@ router.post('/:id/star', requireAuth, (req: AuthRequest, res: Response): void =>
   if (!isOwn && !skill.is_public) {
     const me = db.prepare('SELECT email FROM users WHERE id = ?').get(req.userId!) as { email: string } | undefined;
     const invited = me ? db.prepare(
-      'SELECT 1 FROM skill_invitations WHERE skill_id = ? AND status != ? AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))'
-    ).get(skill.id, 'revoked', req.userId!, me.email) : null;
+      `SELECT 1 FROM skill_invitations WHERE skill_id = ? AND status IN ('pending', 'accepted') AND (invitee_user_id = ? OR LOWER(invitee_email) = LOWER(?))`
+    ).get(skill.id, req.userId!, me.email) : null;
     if (!invited) { res.status(403).json({ error: 'Cannot star this skill' }); return; }
   }
 

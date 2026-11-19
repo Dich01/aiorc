@@ -6,6 +6,7 @@ import { upstreamStatus } from './forkSync';
 import { loadEntityFiles, AGENT_FILES, SKILL_FILES, CONTEXT_FILES } from './entityFiles';
 import { displayName, notify, projectMembers } from './notify';
 import { flowsReferencingAgents } from '../orchestrator';
+import { hasLiveInvitation } from './access';
 
 // Version history of agents, skills, contexts and projects.
 //
@@ -192,16 +193,19 @@ export function entityOwner(kind: EntityKind, id: string): { user_id: string; na
   return (db.prepare(`SELECT user_id, name, is_public FROM ${TABLE[kind]} WHERE id = ?`).get(id) as { user_id: string; name: string; is_public: number } | undefined) ?? null;
 }
 
-// Everyone with access sees the history: the owner, an admin, anyone when the
-// entity is public, and the owner, members or (if public) anyone of a project
-// that uses it.
+// The history holds full content, so it follows content access, not visibility:
+// the owner, an admin, someone with a live invitation to it, and the owner or
+// members of a project that uses it (who receive it when they run the project).
+// Being public is not enough: public content is read by forking it.
 export function canViewHistory(kind: EntityKind, id: string, userId: string): boolean {
   const e = entityOwner(kind, id);
   if (!e) return false;
-  if (e.user_id === userId || e.is_public || isAdminUser(userId)) return true;
+  if (e.user_id === userId || isAdminUser(userId)) return true;
+  if (kind === 'project') return isMemberOf(userId, id);
+  if (hasLiveInvitation(kind, id, userId)) return true;
   for (const pid of projectsUsing(kind, id)) {
-    const p = db.prepare('SELECT user_id, is_public FROM projects WHERE id = ?').get(pid) as { user_id: string; is_public: number } | undefined;
-    if (p && (p.user_id === userId || p.is_public || isMemberOf(userId, pid))) return true;
+    const p = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(pid) as { user_id: string } | undefined;
+    if (p && (p.user_id === userId || isMemberOf(userId, pid))) return true;
   }
   return false;
 }
